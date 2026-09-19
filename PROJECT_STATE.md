@@ -1,8 +1,19 @@
 # Project State — Turna
 
-**Last Updated**: 2025-01-19
-**Current Phase**: Phase 17 — Documentation
+**Last Updated**: 2025-09-19
+**Current Phase**: Phase 19 — Deployment
 **Overall Status**: 🟡 In Progress
+
+## Production
+
+| Item | Value |
+|------|-------|
+| **Production URL** | https://turnaapp.vercel.app |
+| **Vercel Project** | prj_8VPRC7xoqlKomwV4PHzSr2TRTgbJ |
+| **Supabase Project** | dhedoxczmbwrgetibvmy (eu-west-1) |
+| **GitHub Repo** | https://github.com/Brave290/Turna (private) |
+| **Custom Domain** | turna.name.ng (pending DNS) |
+| **Keep-Alive Cron** | /api/health (Vercel cron) + cron-job.org backup |
 
 ---
 

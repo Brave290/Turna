@@ -92,26 +92,38 @@ pnpm build:mobile     # Android/iOS build
 
 ### Environment Variables
 
-Copy `.env.local.example` to `.env.local` and fill:
+Copy `.env.example` to `.env.local` and fill:
 
 ```bash
+# Local Development
 NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 NEXT_PUBLIC_APP_URL=http://localhost:3000
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-RESEND_API_KEY=re_your-resend-api-key
-SMTP_FROM_EMAIL=Turna <noreply@turna.name.ng>
+NODE_ENV=development
+
+# Production (Vercel)
+NEXT_PUBLIC_SUPABASE_URL=https://dhedoxczmbwrgetibvmy.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+SUPABASE_SERVICE_ROLE_KEY=eyJ...
+NEXT_PUBLIC_APP_URL=https://turnaapp.vercel.app
+NODE_ENV=production
 ```
 
-Get keys from `supabase status` after `supabase start`.
+Get local keys from `supabase status` after `supabase start`.
 
 ---
 
 ## Current Work Context
 
-### Phase 17: Documentation — In Progress
+### Phase 19: Deployment — In Progress
+
+**Production**:
+- **URL**: https://turnaapp.vercel.app
+- **Vercel Project**: prj_8VPRC7xoqlKomwV4PHzSr2TRTgbJ
+- **Supabase**: dhedoxczmbwrgetibvmy (eu-west-1)
+- **GitHub**: https://github.com/Brave290/Turna (private)
+- **Custom Domain**: turna.name.ng (pending DNS)
 
 **What's Done**:
 - Monorepo structure with all packages configured
