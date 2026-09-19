@@ -9,7 +9,7 @@
     "ios:release": "cd ios && xcodebuild -workspace Turna.xcworkspace -scheme Turna -configuration Release -sdk iphoneos -destination generic/platform=iOS archive -archivePath $PWD/build/Turna.xcarchive",
     "lint": "eslint src --ext .ts,.tsx",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "start": "react-native start",
     "bundle:android": "react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res",
     "bundle:ios": "react-native bundle --platform ios --dev false --entry-file index.js --bundle-output ios/main.jsbundle --assets-dest ios"

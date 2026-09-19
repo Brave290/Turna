@@ -2,21 +2,21 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase';
-import { Eye, EyeOff, Loader2, Check, AlertCircle, Phone, Lock, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Check, AlertCircle, Mail, Lock, ArrowLeft } from 'lucide-react';
 
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 const OTP_RESEND_COOLDOWN_MS = 60 * 1000; // 60 seconds
 
 export default function LoginPage() {
-  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
-  const [step, setStep] = useState<'phone' | 'otp'>('phone');
+  const [step, setStep] = useState<'email' | 'otp'>('email');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [showOtp, setShowOtp] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
-  const [phoneTouched, setPhoneTouched] = useState(false);
+  const [emailTouched, setEmailTouched] = useState(false);
   const [otpTouched, setOtpTouched] = useState(false);
   const otpInputsRef = useRef<(HTMLInputElement | null)[]>([]);
   const supabase = createClient();
@@ -34,7 +34,7 @@ export default function LoginPage() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_OUT') {
         setMessage('Session expired. Please sign in again.');
-        setStep('phone');
+        setStep('email');
         setOtp(['', '', '', '', '', '']);
       }
     });
@@ -46,19 +46,16 @@ export default function LoginPage() {
       const timeout = setTimeout(() => {
         supabase.auth.signOut();
         setError('Session expired. Please sign in again.');
-        setStep('phone');
+        setStep('email');
         setOtp(['', '', '', '', '', '']);
       }, SESSION_TIMEOUT_MS);
       return () => clearTimeout(timeout);
     }
   }, [step, supabase]);
 
-  const validatePhone = (value: string): string | null => {
-    const cleaned = value.replace(/\D/g, '');
-    if (!cleaned) return 'Phone number is required';
-    if (!/^(\+?234|0)[789]\d{9}$/.test(cleaned)) {
-      return 'Enter a valid Nigerian phone number';
-    }
+  const validateEmail = (value: string): string | null => {
+    if (!value.trim()) return 'Email address is required';
+    if (!/^\S+@\S+\.\S+$/.test(value)) return 'Enter a valid email address';
     return null;
   };
 
@@ -68,32 +65,25 @@ export default function LoginPage() {
     return null;
   };
 
-  const formatPhone = (value: string): string => {
-    const cleaned = value.replace(/\D/g, '');
-    if (cleaned.startsWith('234')) return '+' + cleaned;
-    if (cleaned.startsWith('0')) return '+234' + cleaned.slice(1);
-    return '+234' + cleaned;
-  };
-
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatPhone(e.target.value);
-    setPhone(formatted);
-    if (phoneTouched) {
-      const err = validatePhone(formatted);
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setEmail(value);
+    if (emailTouched) {
+      const err = validateEmail(value);
       if (err) setError(err);
       else setError('');
     }
   };
 
-  const handlePhoneBlur = () => {
-    setPhoneTouched(true);
-    const err = validatePhone(phone);
+  const handleEmailBlur = () => {
+    setEmailTouched(true);
+    const err = validateEmail(email);
     if (err) setError(err);
   };
 
-  const handlePhoneSubmit = async (e: React.FormEvent) => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const err = validatePhone(phone);
+    const err = validateEmail(email);
     if (err) { setError(err); return; }
 
     setError('');
@@ -101,13 +91,12 @@ export default function LoginPage() {
 
     try {
       const { error } = await supabase.auth.signInWithOtp({
-        phone,
-        options: { channel: 'sms' },
+        email,
       });
 
       if (error) throw error;
 
-      setMessage('OTP sent! Check your messages.');
+      setMessage('OTP sent! Check your email.');
       setStep('otp');
       setResendCooldown(OTP_RESEND_COOLDOWN_MS);
       setOtpTouched(false);
@@ -162,9 +151,9 @@ export default function LoginPage() {
 
     try {
       const { error } = await supabase.auth.verifyOtp({
-        phone,
+        email,
         token: otp.join(''),
-        type: 'sms',
+        type: 'email',
       });
 
       if (error) throw error;
@@ -184,13 +173,12 @@ export default function LoginPage() {
 
     try {
       const { error } = await supabase.auth.signInWithOtp({
-        phone,
-        options: { channel: 'sms' },
+        email,
       });
 
       if (error) throw error;
 
-      setMessage('New OTP sent!');
+      setMessage('New OTP sent! Check your email.');
       setResendCooldown(OTP_RESEND_COOLDOWN_MS);
     } catch (err: any) {
       setError(err.message);
@@ -200,7 +188,7 @@ export default function LoginPage() {
   };
 
   const handleBack = () => {
-    setStep('phone');
+    setStep('email');
     setOtp(['', '', '', '', '', '']);
     setError('');
     setMessage('');
@@ -239,38 +227,38 @@ export default function LoginPage() {
             </div>
           )}
 
-          {step === 'phone' && (
-            <form onSubmit={handlePhoneSubmit} className="space-y-6" noValidate>
+          {step === 'email' && (
+            <form onSubmit={handleEmailSubmit} className="space-y-6" noValidate>
               <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-text-primary mb-2 flex items-center gap-1.5">
-                  <Phone className="w-4 h-4 text-text-secondary" />
-                  Phone Number
+                <label htmlFor="email" className="block text-sm font-medium text-text-primary mb-2 flex items-center gap-1.5">
+                  <Mail className="w-4 h-4 text-text-secondary" />
+                  Email Address
                 </label>
                 <div className="relative">
                   <input
-                    id="phone"
-                    type="tel"
-                    autoComplete="tel"
-                    value={phone}
-                    onChange={handlePhoneChange}
-                    onBlur={handlePhoneBlur}
-                    placeholder="+234 801 234 5678"
-                    className={`input ${phoneTouched && validatePhone(phone) ? 'border-error focus:ring-error' : ''}`}
+                    id="email"
+                    type="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={handleEmailChange}
+                    onBlur={handleEmailBlur}
+                    placeholder="you@example.com"
+                    className={`input ${emailTouched && validateEmail(email) ? 'border-error focus:ring-error' : ''}`}
                     required
                     disabled={loading}
-                    aria-invalid={phoneTouched && !!validatePhone(phone)}
+                    aria-invalid={emailTouched && !!validateEmail(email)}
                   />
                 </div>
-                {phoneTouched && validatePhone(phone) && (
+                {emailTouched && validateEmail(email) && (
                   <p className="mt-1 text-xs text-error flex items-center gap-1">
                     <AlertCircle className="w-3 h-3" />
-                    {validatePhone(phone)}
+                    {validateEmail(email)}
                   </p>
                 )}
-                {!phoneTouched && (
+                {!emailTouched && (
                   <p className="mt-1 text-xs text-text-secondary flex items-center gap-1">
-                    <Phone className="w-3 h-3" />
-                    We&apos;ll send a 6-digit code via SMS
+                    <Mail className="w-3 h-3" />
+                    We&apos;ll send a 6-digit code via email
                   </p>
                 )}
               </div>
@@ -377,7 +365,7 @@ export default function LoginPage() {
                   disabled={loading}
                 >
                   <ArrowLeft className="w-4 h-4" />
-                  Change phone number
+                  Change email address
                 </button>
               </div>
             </form>

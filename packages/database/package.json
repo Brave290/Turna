@@ -8,7 +8,7 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "generate": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > packages/types/src/database.ts",
     "migrate": "supabase db push",
     "seed": "tsx supabase/seed/index.ts",

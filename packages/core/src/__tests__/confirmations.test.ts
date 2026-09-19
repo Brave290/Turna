@@ -22,7 +22,7 @@ function createConfirmation(reporterId: string, treasurerId: string): TwoPartyCo
 }
 
 function confirmByReporter(confirmation: TwoPartyConfirmation): TwoPartyConfirmation {
-  if (confirmation.status !== 'pending') {
+  if (confirmation.status !== 'pending' || confirmation.reporterConfirmed) {
     throw new Error('Can only confirm pending transactions');
   }
   return { ...confirmation, reporterConfirmed: true, status: getOverallStatus(true, confirmation.treasurerConfirmed) };

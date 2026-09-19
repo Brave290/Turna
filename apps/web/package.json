@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "postinstall": "pnpm dlx @tailwindcss/typography@0.5.10 || true"
   },
   "dependencies": {

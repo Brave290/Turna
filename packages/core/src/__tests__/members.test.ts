@@ -9,6 +9,7 @@ const ROLE_PERMISSIONS: Record<MemberRole, string[]> = {
     'circle.delete',
     'circle.activate',
     'member.invite',
+    'member.view',
     'member.remove',
     'member.update_role',
     'contribution.confirm',
