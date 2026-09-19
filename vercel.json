@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
-  "buildCommand": "pnpm --filter @turna/web build",
+  "buildCommand": "pnpm -r build && pnpm --filter @turna/web build",
   "outputDirectory": "apps/web/.next",
   "installCommand": "pnpm install",
   "regions": ["iad1"],
