@@ -24,9 +24,7 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 9
-          run_install: false
+        run_install: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -66,7 +64,7 @@ jobs:
           SIGNING_STORE_PASSWORD: ${{ secrets.ANDROID_SIGNING_STORE_PASSWORD }}
           SIGNING_STORE_FILE: ${{ secrets.ANDROID_SIGNING_STORE_FILE }}
 
-      - name: Build Android Release APK (for direct install/testing)
+      - name: Build Android Release APK
         run: ./gradlew assembleRelease
         working-directory: apps/mobile/android
         env:
@@ -80,23 +78,18 @@ jobs:
           VERSION=${{ steps.version.outputs.version }}
           APP_NAME=${{ env.APP_NAME }}
           
-          # Create release directory
           mkdir -p release-artifacts
           
-          # Copy AAB with proper naming
           cp apps/mobile/android/app/build/outputs/bundle/release/app-release.aab \
             release-artifacts/${APP_NAME}-${VERSION}.aab
           
-          # Copy APK with proper naming
           cp apps/mobile/android/app/build/outputs/apk/release/app-release.apk \
             release-artifacts/${APP_NAME}-${VERSION}.apk
           
-          # Create source code archive (excluding node_modules, build artifacts)
           git archive --format=tar.gz --prefix=${APP_NAME}-${VERSION}/ \
             -o release-artifacts/${APP_NAME}-${VERSION}-source.tar.gz \
             HEAD
           
-          # Create checksums
           cd release-artifacts
           sha256sum ${APP_NAME}-${VERSION}.aab > ${APP_NAME}-${VERSION}.aab.sha256
           sha256sum ${APP_NAME}-${VERSION}.apk > ${APP_NAME}-${VERSION}.apk.sha256
@@ -128,9 +121,9 @@ jobs:
             ${{ steps.changelog.outputs.changelog }}
             
             ### Downloads
-            - **Android App Bundle (for Play Store)**: \`turna-${{ steps.version.outputs.version }}.aab\`
-            - **Android APK (for direct install)**: \`turna-${{ steps.version.outputs.version }}.apk\`
-            - **Source Code**: \`turna-${{ steps.version.outputs.version }}-source.tar.gz\`
+            - **Android App Bundle (for Play Store)**: `turna-${{ steps.version.outputs.version }}.aab`
+            - **Android APK (for direct install)**: `turna-${{ steps.version.outputs.version }}.apk`
+            - **Source Code**: `turna-${{ steps.version.outputs.version }}-source.tar.gz`
             
             ### Verification
             All artifacts include SHA256 checksums (`.sha256` files).
@@ -149,9 +142,18 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Check Vercel token
+        id: check-vercel
+        run: |
+          if [ -n "${{ secrets.VERCEL_TOKEN }}" ]; then
+            echo "available=true" >> $GITHUB_OUTPUT
+          else
+            echo "available=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Deploy to Vercel (Production)
         uses: amondnet/vercel-action@v25
-        if: ${{ secrets.VERCEL_TOKEN != '' }}
+        if: steps.check-vercel.outputs.available == 'true'
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}

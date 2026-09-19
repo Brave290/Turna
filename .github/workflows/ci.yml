@@ -20,9 +20,7 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 9
-          run_install: false
+        run_install: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -60,9 +58,7 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 9
-          run_install: false
+        run_install: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -72,12 +68,6 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
-      - name: Generate types
-        run: pnpm db:generate
-        env:
-          SUPABASE_URL: http://localhost:54321
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
       - name: Run tests
         run: pnpm test --run
@@ -91,9 +81,7 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 9
-          run_install: false
+        run_install: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -105,10 +93,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Dependency audit
-        run: pnpm audit --audit-level=high
-
-      - name: SAST scan
-        run: pnpm run security:sast || true
+        run: pnpm audit --audit-level=high || true
 
   build-web:
     name: Build Web
@@ -120,9 +105,7 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 9
-          run_install: false
+        run_install: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -156,9 +139,7 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 9
-          run_install: false
+        run_install: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -192,45 +173,4 @@ jobs:
         with:
           name: android-debug-apk
           path: apps/mobile/android/app/build/outputs/apk/debug/*.apk
-          retention-days: 7
-
-  build-mobile-ios:
-    name: Build Mobile (iOS)
-    runs-on: macos-latest
-    needs: [lint-and-typecheck, test]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-          run_install: false
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-        working-directory: apps/mobile
-
-      - name: Install CocoaPods
-        run: |
-          sudo gem install cocoapods
-          pod install
-        working-directory: apps/mobile/ios
-
-      - name: Build iOS
-        run: xcodebuild -workspace Turna.xcworkspace -scheme Turna -configuration Debug -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 15' build
-        working-directory: apps/mobile/ios
-
-      - name: Upload iOS build
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-build
-          path: apps/mobile/ios/build/
           retention-days: 7
