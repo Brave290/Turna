@@ -81,6 +81,17 @@ export default function LoginPage() {
     if (err) setError(err);
   };
 
+  const requestEmailOtp = async () => {
+    const response = await fetch('/api/auth/request-email-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.trim().toLowerCase() }),
+    });
+    const data = await response.json();
+
+    if (!response.ok) throw new Error(data.error ?? 'Unable to send an OTP right now');
+  };
+
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const err = validateEmail(email);
@@ -90,11 +101,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-      });
-
-      if (error) throw error;
+      await requestEmailOtp();
 
       setMessage('OTP sent! Check your email.');
       setStep('otp');
@@ -172,11 +179,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-      });
-
-      if (error) throw error;
+      await requestEmailOtp();
 
       setMessage('New OTP sent! Check your email.');
       setResendCooldown(OTP_RESEND_COOLDOWN_MS);
