@@ -8,13 +8,14 @@ export default async function DashboardPage() {
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) redirect('/auth/login');
 
-  const { data: profile } = await supabase
-    .from('user_profiles')
+  const { data: profileData } = await supabase
+    .from('profiles')
     .select('*')
     .eq('user_id', user.id)
     .single();
+  const profile = profileData as { display_name: string } | null;
 
-  const { data: memberships } = await supabase
+  const { data: membershipData } = await supabase
     .from('circle_members')
     .select(`
       *,
@@ -28,13 +29,27 @@ export default async function DashboardPage() {
     `)
     .eq('user_id', user.id)
     .eq('status', 'active');
+  const memberships = (membershipData ?? []) as Array<{
+    id: string;
+    circles: {
+      id: string;
+      name: string;
+      contribution_amount: number;
+      status: string;
+      frequency: string;
+    } | null;
+  }>;
 
-  const { data: recentContributions } = await supabase
+  const { data: contributionData } = await supabase
     .from('contributions')
     .select('*, circles(name)')
     .eq('member_id', user.id)
     .order('created_at', { ascending: false })
     .limit(5);
+  const recentContributions = (contributionData ?? []) as Array<{
+    reported_amount: number | null;
+    expected_amount: number;
+  }>;
 
   return (
     <div className="min-h-screen bg-background">
@@ -80,7 +95,7 @@ export default async function DashboardPage() {
             <p className="text-sm text-text-secondary">Total Saved</p>
             <p className="text-3xl font-bold text-white mt-1">
               {formatCurrency(
-                recentContributions?.reduce((sum, c) => sum + (c.amount_minor ?? 0), 0) ?? 0
+                recentContributions.reduce((sum, c) => sum + (c.reported_amount ?? c.expected_amount), 0)
               )}
             </p>
           </div>
@@ -108,7 +123,7 @@ export default async function DashboardPage() {
                     <div>
                       <h4 className="font-medium text-white">{circle.name}</h4>
                       <p className="text-sm text-text-secondary">
-                        {formatCurrency(circle.contribution_amount_minor)} · {circle.frequency}
+                        {formatCurrency(circle.contribution_amount)} · {circle.frequency}
                       </p>
                     </div>
                     <span className={`badge ${circle.status === 'active' ? 'badge-active' : 'badge-completed'}`}>
