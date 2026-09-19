@@ -4,6 +4,10 @@
   "private": true,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./database": "./dist/database.js"
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
