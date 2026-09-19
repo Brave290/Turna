@@ -1,9 +1,7 @@
 -- Turna Database Schema
 -- Initial migration for Turna savings circle platform
 
--- Enable required extensions
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+-- gen_random_uuid() is built-in to PostgreSQL 13+ (no extension needed)
 
 -- ============================================================
 -- ENUMS
@@ -70,7 +68,7 @@ CREATE INDEX idx_profiles_email ON profiles(email);
 -- ============================================================
 
 CREATE TABLE circles (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     description TEXT,
     owner_id UUID NOT NULL REFERENCES profiles(id) ON DELETE RESTRICT,
@@ -96,7 +94,7 @@ CREATE INDEX idx_circles_status ON circles(status);
 -- ============================================================
 
 CREATE TABLE circle_members (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     circle_id UUID NOT NULL REFERENCES circles(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
     role member_role NOT NULL DEFAULT 'member',
@@ -121,7 +119,7 @@ CREATE INDEX idx_circle_members_status ON circle_members(status);
 -- ============================================================
 
 CREATE TABLE invitations (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     circle_id UUID NOT NULL REFERENCES circles(id) ON DELETE CASCADE,
     inviter_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
     invitee_email TEXT NOT NULL,
@@ -144,7 +142,7 @@ CREATE INDEX idx_invitations_status ON invitations(status);
 -- ============================================================
 
 CREATE TABLE contribution_cycles (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     circle_id UUID NOT NULL REFERENCES circles(id) ON DELETE CASCADE,
     cycle_number INT NOT NULL,
     due_date DATE NOT NULL,
@@ -167,7 +165,7 @@ CREATE INDEX idx_contribution_cycles_payout_member_id ON contribution_cycles(pay
 -- ============================================================
 
 CREATE TABLE contributions (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     cycle_id UUID NOT NULL REFERENCES contribution_cycles(id) ON DELETE CASCADE,
     member_id UUID NOT NULL REFERENCES circle_members(id) ON DELETE CASCADE,
     expected_amount BIGINT NOT NULL,
@@ -193,7 +191,7 @@ CREATE INDEX idx_contributions_status ON contributions(status);
 -- ============================================================
 
 CREATE TABLE contribution_confirmations (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     contribution_id UUID NOT NULL REFERENCES contributions(id) ON DELETE CASCADE,
     confirmer_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
     decision confirmation_decision NOT NULL,
@@ -211,7 +209,7 @@ CREATE INDEX idx_contribution_confirmations_confirmer_id ON contribution_confirm
 -- ============================================================
 
 CREATE TABLE payouts (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     cycle_id UUID NOT NULL REFERENCES contribution_cycles(id) ON DELETE CASCADE,
     recipient_member_id UUID NOT NULL REFERENCES circle_members(id) ON DELETE CASCADE,
     expected_amount BIGINT NOT NULL,
@@ -238,7 +236,7 @@ CREATE INDEX idx_payouts_status ON payouts(status);
 -- ============================================================
 
 CREATE TABLE payout_confirmations (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     payout_id UUID NOT NULL REFERENCES payouts(id) ON DELETE CASCADE,
     confirmer_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
     decision confirmation_decision NOT NULL,
@@ -256,7 +254,7 @@ CREATE INDEX idx_payout_confirmations_confirmer_id ON payout_confirmations(confi
 -- ============================================================
 
 CREATE TABLE ledger_events (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     circle_id UUID NOT NULL REFERENCES circles(id) ON DELETE CASCADE,
     actor_id UUID NOT NULL REFERENCES profiles(id) ON DELETE RESTRICT,
     event_type ledger_event_type NOT NULL,
@@ -279,7 +277,7 @@ CREATE INDEX idx_ledger_events_previous_event_id ON ledger_events(previous_event
 -- ============================================================
 
 CREATE TABLE notifications (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
     circle_id UUID REFERENCES circles(id) ON DELETE CASCADE,
     channel notification_channel NOT NULL DEFAULT 'in_app',

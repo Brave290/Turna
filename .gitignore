@@ -68,3 +68,6 @@ apps/mobile/ios/*.perspectivev3
 # Misc
 *.pem
 .cache
+# Supabase local temp
+supabase/.temp/
+node_modules/

@@ -376,7 +376,7 @@ chore:    Maintenance
 
 If you discover a security vulnerability, please report it responsibly:
 
-- **Email**: [akanjimusab@gmail.com](mailto:akanjimusab@gmail.com)
+- **Email**: [legateakanjimusab@gmail.com](mailto:legateakanjimusab@gmail.com)
 - **GitHub**: [Create an issue](https://github.com/Brave290/Turna/issues/new)
 
 ---
