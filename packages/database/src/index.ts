@@ -1,2 +1,2 @@
 export { createServerClient, createBrowserClient, createServiceClient } from './client';
-export type { Database } from '@turna/types';
+export type { SupabaseClient } from './client';

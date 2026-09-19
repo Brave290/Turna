@@ -1,5 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
-import type { Database } from '@turna/types';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -8,16 +7,16 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-export const createServerClient = () => {
+export function createServerClient<Database = any>() {
   return createClient<Database>(supabaseUrl, supabaseAnonKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
     },
   });
-};
+}
 
-export const createBrowserClient = () => {
+export function createBrowserClient<Database = any>() {
   return createClient<Database>(supabaseUrl, supabaseAnonKey, {
     auth: {
       autoRefreshToken: true,
@@ -25,9 +24,9 @@ export const createBrowserClient = () => {
       detectSessionInUrl: true,
     },
   });
-};
+}
 
-export const createServiceClient = () => {
+export function createServiceClient<Database = any>() {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
   if (!serviceRoleKey) {
     throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY');
@@ -38,4 +37,6 @@ export const createServiceClient = () => {
       persistSession: false,
     },
   });
-};
+}
+
+export type { SupabaseClient };
