@@ -14,6 +14,7 @@
     "@turna/types": "workspace:*",
     "@turna/validation": "workspace:*",
     "@supabase/supabase-js": "^2.39.0",
+    "uuid": "^9.0.0",
     "zod": "^3.22.0"
   },
   "devDependencies": {

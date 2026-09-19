@@ -26,20 +26,20 @@ export class RealtimeService {
 
     if (options.table) {
       channel = channel.on(
-        'postgres_changes',
+        'postgres_changes' as any,
         {
           event: options.event ?? '*',
           schema: options.schema ?? 'public',
           table: options.table,
           filter: options.filter ?? `circle_id=eq.${options.circleId}`,
         },
-        (payload) => callback(payload as T)
+        (payload: { [key: string]: unknown }) => callback(payload as T)
       );
     } else {
       channel = channel.on(
         'broadcast',
         { event: options.event ?? '*' },
-        (payload) => callback(payload as T)
+        (payload: { [key: string]: unknown }) => callback(payload as T)
       );
     }
 
