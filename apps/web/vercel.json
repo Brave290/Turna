@@ -1,9 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
+  "installCommand": "cd ../.. && NODE_ENV=development pnpm install --frozen-lockfile",
   "buildCommand": "cd ../.. && pnpm -r build && pnpm --filter @turna/web build",
   "outputDirectory": ".next",
-  "installCommand": "cd ../.. && pnpm install",
   "regions": ["iad1"],
   "crons": [
     {
