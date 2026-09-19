@@ -65,7 +65,7 @@ export default function ResetPasswordPage() {
             Reset Password
           </h1>
           <p className="mt-2 text-text-secondary">
-            Enter your email and we'll send you reset instructions
+            Enter your email and we&apos;ll send you reset instructions
           </p>
         </div>
 
@@ -132,7 +132,7 @@ export default function ResetPasswordPage() {
         </div>
 
         <div className="mt-8 text-center text-xs text-text-secondary/50">
-          <p>Built by Akanji Mus'ab • Brave hx Technology • Founda Technologies</p>
+          <p>Built by Akanji Mus&apos;ab • Brave hx Technology • Founda Technologies</p>
         </div>
       </div>
     </div>

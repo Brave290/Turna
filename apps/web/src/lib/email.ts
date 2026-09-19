@@ -28,7 +28,7 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
   }
 }
 
-export function emailTemplates {
+export const emailTemplates = {
   emailConfirmation(email: string, displayName: string, token: string) {
     const confirmUrl = `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?token=${token}`;
     return {

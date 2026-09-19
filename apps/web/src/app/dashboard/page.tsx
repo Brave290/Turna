@@ -71,7 +71,7 @@ export default async function DashboardPage() {
             Welcome back, {profile?.display_name?.split(' ')[0] ?? 'there'}
           </h2>
           <p className="text-text-secondary mt-1">
-            Here's your savings overview
+            Here&apos;s your savings overview
           </p>
         </div>
 

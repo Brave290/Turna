@@ -270,7 +270,7 @@ export default function LoginPage() {
                 {!phoneTouched && (
                   <p className="mt-1 text-xs text-text-secondary flex items-center gap-1">
                     <Phone className="w-3 h-3" />
-                    We'll send a 6-digit code via SMS
+                    We&apos;ll send a 6-digit code via SMS
                   </p>
                 )}
               </div>
@@ -392,7 +392,7 @@ export default function LoginPage() {
         </p>
 
         <div className="mt-8 text-center text-xs text-text-secondary/50">
-          <p>Built by Akanji Mus'ab • Brave hx Technology • Founda Technologies</p>
+          <p>Built by Akanji Mus&apos;ab • Brave hx Technology • Founda Technologies</p>
         </div>
       </div>
     </div>

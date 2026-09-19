@@ -205,7 +205,7 @@ export default function UpdatePasswordPage() {
         </div>
 
         <div className="mt-8 text-center text-xs text-text-secondary/50">
-          <p>Built by Akanji Mus'ab • Brave hx Technology • Founda Technologies</p>
+          <p>Built by Akanji Mus&apos;ab • Brave hx Technology • Founda Technologies</p>
         </div>
       </div>
     </div>
