@@ -1,0 +1,70 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Build outputs
+dist
+build
+.next
+out
+*.tsbuildinfo
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Testing
+coverage
+.nyc_output
+
+# Turbo
+.turbo
+
+# Supabase
+.supabase
+
+# Android
+apps/mobile/android/app/build
+apps/mobile/android/build
+apps/mobile/android/.gradle
+apps/mobile/android/local.properties
+apps/mobile/android/gradle.properties
+apps/mobile/android/captures
+apps/mobile/android/*.apk
+apps/mobile/android/*.aab
+apps/mobile/android/*.ap_
+
+# iOS
+apps/mobile/ios/build
+apps/mobile/ios/Pods
+apps/mobile/ios/*.xcworkspace
+apps/mobile/ios/*.xcodeproj
+apps/mobile/ios/*.pbxuser
+apps/mobile/ios/*.mode1v3
+apps/mobile/ios/*.mode2v3
+apps/mobile/ios/*.perspectivev3
+
+# Misc
+*.pem
+.cache

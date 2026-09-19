@@ -1,0 +1,162 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  APP_NAME: turna
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Extract version
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+          echo "release_name=Turna $VERSION" >> $GITHUB_OUTPUT
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: 34
+          ndk-version: r26c
+
+      - name: Build Android Release AAB
+        run: ./gradlew bundleRelease
+        working-directory: apps/mobile/android
+        env:
+          SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.ANDROID_SIGNING_STORE_PASSWORD }}
+          SIGNING_STORE_FILE: ${{ secrets.ANDROID_SIGNING_STORE_FILE }}
+
+      - name: Build Android Release APK (for direct install/testing)
+        run: ./gradlew assembleRelease
+        working-directory: apps/mobile/android
+        env:
+          SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.ANDROID_SIGNING_STORE_PASSWORD }}
+          SIGNING_STORE_FILE: ${{ secrets.ANDROID_SIGNING_STORE_FILE }}
+
+      - name: Prepare release artifacts
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          APP_NAME=${{ env.APP_NAME }}
+          
+          # Create release directory
+          mkdir -p release-artifacts
+          
+          # Copy AAB with proper naming
+          cp apps/mobile/android/app/build/outputs/bundle/release/app-release.aab \
+            release-artifacts/${APP_NAME}-${VERSION}.aab
+          
+          # Copy APK with proper naming
+          cp apps/mobile/android/app/build/outputs/apk/release/app-release.apk \
+            release-artifacts/${APP_NAME}-${VERSION}.apk
+          
+          # Create source code archive (excluding node_modules, build artifacts)
+          git archive --format=tar.gz --prefix=${APP_NAME}-${VERSION}/ \
+            -o release-artifacts/${APP_NAME}-${VERSION}-source.tar.gz \
+            HEAD
+          
+          # Create checksums
+          cd release-artifacts
+          sha256sum ${APP_NAME}-${VERSION}.aab > ${APP_NAME}-${VERSION}.aab.sha256
+          sha256sum ${APP_NAME}-${VERSION}.apk > ${APP_NAME}-${VERSION}.apk.sha256
+          sha256sum ${APP_NAME}-${VERSION}-source.tar.gz > ${APP_NAME}-${VERSION}-source.tar.gz.sha256
+          cd ..
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -z "$PREV_TAG" ]; then
+            CHANGELOG=$(git log --pretty=format:"- %s (%an)" --reverse)
+          else
+            CHANGELOG=$(git log --pretty=format:"- %s (%an)" --reverse $PREV_TAG..HEAD)
+          fi
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.release_name }}
+          body: |
+            ## Turna ${{ steps.version.outputs.version }}
+            
+            ### Changes
+            ${{ steps.changelog.outputs.changelog }}
+            
+            ### Downloads
+            - **Android App Bundle (for Play Store)**: \`turna-${{ steps.version.outputs.version }}.aab\`
+            - **Android APK (for direct install)**: \`turna-${{ steps.version.outputs.version }}.apk\`
+            - **Source Code**: \`turna-${{ steps.version.outputs.version }}-source.tar.gz\`
+            
+            ### Verification
+            All artifacts include SHA256 checksums (`.sha256` files).
+            
+            ### Built by
+            Akanji Mus'ab • Brave hx Technology • Founda Technologies
+          files: |
+            release-artifacts/turna-${{ steps.version.outputs.version }}.aab
+            release-artifacts/turna-${{ steps.version.outputs.version }}.apk
+            release-artifacts/turna-${{ steps.version.outputs.version }}-source.tar.gz
+            release-artifacts/turna-${{ steps.version.outputs.version }}.aab.sha256
+            release-artifacts/turna-${{ steps.version.outputs.version }}.apk.sha256
+            release-artifacts/turna-${{ steps.version.outputs.version }}-source.tar.gz.sha256
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy to Vercel (Production)
+        uses: amondnet/vercel-action@v25
+        if: ${{ secrets.VERCEL_TOKEN != '' }}
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}

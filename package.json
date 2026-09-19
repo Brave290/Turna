@@ -1,0 +1,28 @@
+{
+  "name": "turna",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev:web": "pnpm --filter @turna/web dev",
+    "dev:mobile": "pnpm --filter @turna/mobile dev",
+    "build": "pnpm -r build",
+    "build:web": "pnpm --filter @turna/web build",
+    "build:mobile": "pnpm --filter @turna/mobile build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "db:generate": "pnpm --filter @turna/database generate",
+    "db:migrate": "pnpm --filter @turna/database migrate",
+    "db:seed": "pnpm --filter @turna/database seed",
+    "db:reset": "pnpm --filter @turna/database reset"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "@types/node": "^20.11.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@9.0.0"
+}
