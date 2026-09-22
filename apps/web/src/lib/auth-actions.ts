@@ -1,7 +1,7 @@
 'use server';
 
 import { createServerSupabaseClient } from '@/lib/supabase-server';
-import { signUpSchema, signInSchema, resetPasswordSchema, updatePasswordSchema } from '@turna/validation';
+import { signUpSchema, signInSchema, resetPasswordSchema } from '@turna/validation';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 

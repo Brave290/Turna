@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AuthLogo } from "@/app/auth/layout";
+import { Logo } from "@/components/logo";
 
 const CODE_LENGTH = 6;
 const RESEND_SECONDS = 60;
@@ -105,7 +105,7 @@ export default function VerifyEmailPage() {
   return (
     <div className="animate-fade-in">
       <div className="text-center mb-8">
-        <AuthLogo className="w-12 h-12 text-primary mx-auto mb-4" />
+        <div className="flex justify-center mb-4"><Logo variant="on-dark" size={48} /></div>
         <h1 className="font-display text-3xl font-bold tracking-tight mb-2">
           Verify your email
         </h1>

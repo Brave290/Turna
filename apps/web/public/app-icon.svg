@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" fill="none">
+  <defs>
+    <radialGradient id="bg" cx="40%" cy="35%" r="75%">
+      <stop offset="0%" stop-color="#0A4A35"/>
+      <stop offset="55%" stop-color="#06382A"/>
+      <stop offset="100%" stop-color="#03251B"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00A878" stop-opacity="0.45"/>
+      <stop offset="70%" stop-color="#00A878" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#00A878" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="sheen" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.18"/>
+      <stop offset="40%" stop-color="#FFFFFF" stop-opacity="0.04"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="arc1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#35D6A0"/>
+      <stop offset="100%" stop-color="#00A878"/>
+    </linearGradient>
+    <linearGradient id="arc2" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#5EEBC0"/>
+      <stop offset="100%" stop-color="#35D6A0"/>
+    </linearGradient>
+    <linearGradient id="tGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#D4F5E8"/>
+    </linearGradient>
+    <linearGradient id="sweep" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#FFFFFF" stop-opacity="0.14"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="sq">
+      <rect width="1024" height="1024" rx="224"/>
+    </clipPath>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6"/>
+    </filter>
+    <filter id="drop" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <g clip-path="url(#sq)">
+    <rect width="1024" height="1024" fill="url(#bg)"/>
+    <circle cx="512" cy="512" r="420" fill="url(#glow)"/>
+    <ellipse cx="300" cy="220" rx="480" ry="340" fill="url(#sheen)"/>
+    <rect x="-200" y="-300" width="380" height="1700" fill="url(#sweep)" transform="rotate(28 512 512)"/>
+
+    <g filter="url(#drop)" transform="translate(512 512) scale(3.4) translate(-64 -64)">
+      <path d="M64 14a50 50 0 1 1-35.36 14.64" stroke="url(#arc1)" stroke-width="11" stroke-linecap="round"/>
+      <path d="M64 38a26 26 0 1 0 18.38 7.62" stroke="url(#arc2)" stroke-width="11" stroke-linecap="round"/>
+      <path d="M64 46v36" stroke="url(#tGrad)" stroke-width="9" stroke-linecap="round"/>
+      <path d="M46 54h36" stroke="url(#tGrad)" stroke-width="9" stroke-linecap="round"/>
+      <circle cx="64" cy="54" r="7.5" fill="#00A878"/>
+      <circle cx="64" cy="54" r="3.2" fill="#FFFFFF" filter="url(#soft)"/>
+      <circle cx="64" cy="54" r="3" fill="#FFFFFF"/>
+    </g>
+
+    <rect width="1024" height="1024" rx="224" fill="none" stroke="#FFFFFF" stroke-opacity="0.1" stroke-width="2"/>
+    <path d="M0 224A224 224 0 0 1 224 0h576a224 224 0 0 1 224 224v160L0 420Z" fill="#FFFFFF" fill-opacity="0.03"/>
+  </g>
+</svg>

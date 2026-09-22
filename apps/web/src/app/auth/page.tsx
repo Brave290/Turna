@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { AuthLogo } from "@/app/auth/layout";
+import { Logo } from "@/components/logo";
 
 export default function AuthSplashPage() {
   return (
     <div className="animate-fade-in flex flex-col items-center text-center py-6">
-      <AuthLogo className="w-24 h-24 text-primary mb-8" />
+      <div className="flex justify-center mb-8"><Logo variant="on-dark" size={96} /></div>
 
       <h1 className="font-display text-6xl font-bold tracking-tight mb-4">
         Turna

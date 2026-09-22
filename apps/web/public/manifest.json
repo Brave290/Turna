@@ -1,28 +1,33 @@
 {
   "name": "Turna",
   "short_name": "Turna",
-  "description": "Track contributions, know your payout date, and build real trust in your savings circle.",
+  "description": "Save Together. Grow Together. Digital Ajo, Esusu & Susu savings circles.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0F0F0F",
-  "theme_color": "#B45309",
+  "background_color": "#03251B",
+  "theme_color": "#03251B",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/icon-192.png",
+      "src": "/app-icon-192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/icon-512.png",
+      "src": "/app-icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
     },
     {
-      "src": "/icon-maskable.png",
+      "src": "/app-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    },
+    {
+      "src": "/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
     }
   ]
 }

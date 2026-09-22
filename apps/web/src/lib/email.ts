@@ -22,9 +22,10 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
       text: options.text,
     });
     return { success: true };
-  } catch (error: any) {
-    console.error('[Email] Failed to send:', error.message);
-    return { success: false, error: error.message };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to send email';
+    console.error('[Email] Failed to send:', message);
+    return { success: false, error: message };
   }
 }
 

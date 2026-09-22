@@ -1,8 +1,13 @@
-import type { SVGProps } from "react";
+import type { SVGProps, HTMLAttributes } from "react";
 
 type LogoVariant = "default" | "dark" | "primary" | "on-dark";
 
 interface LogoProps extends SVGProps<SVGSVGElement> {
+  variant?: LogoVariant;
+  size?: number;
+}
+
+interface WordmarkProps extends HTMLAttributes<HTMLSpanElement> {
   variant?: LogoVariant;
   size?: number;
 }
@@ -79,7 +84,7 @@ export function LogoWordmark({
   variant = "on-dark",
   size = 32,
   ...props
-}: LogoProps) {
+}: WordmarkProps) {
   const textColor =
     variant === "on-dark" || variant === "dark"
       ? "text-white"

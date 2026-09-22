@@ -48,8 +48,15 @@ export const metadata: Metadata = {
       "Manage your Ajo, Esusu, and Susu savings circles with transparency and trust.",
   },
   icons: {
-    icon: "/favicon.svg",
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon.png", sizes: "32x32", type: "image/png" },
+      { url: "/app-icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
+    other: [{ url: "/app-icon.svg", type: "image/svg+xml" }],
   },
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({

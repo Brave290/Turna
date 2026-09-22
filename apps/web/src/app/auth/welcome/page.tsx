@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Compass, PlusCircle, Users } from "lucide-react";
-import { AuthLogo } from "@/app/auth/layout";
+import { Logo } from "@/components/logo";
 
 const actions = [
   {
@@ -27,7 +27,7 @@ export default function WelcomePage() {
   return (
     <div className="animate-fade-in">
       <div className="text-center mb-10">
-        <AuthLogo className="w-12 h-12 text-primary mx-auto mb-4" />
+        <div className="flex justify-center mb-4"><Logo variant="on-dark" size={48} /></div>
         <h1 className="font-display text-3xl font-bold tracking-tight mb-3">
           Welcome to Turna
         </h1>
