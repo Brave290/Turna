@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
-const OTP_LIMIT = 5;
+const OTP_LIMIT = 8;
 
 export async function POST(request: Request) {
   try {

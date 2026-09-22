@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     const supabase = createServerSupabaseClient();
-    const { error } = await supabase.from('user_profiles').select('id').limit(1);
+    const { error } = await supabase.from('profiles').select('id').limit(1);
 
     if (error) {
       // Table missing or RLS-denied: still report reachable for keep-alive purposes

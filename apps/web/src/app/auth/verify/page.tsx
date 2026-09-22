@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Logo } from "@/components/logo";
 
 const CODE_LENGTH = 6;
-const RESEND_SECONDS = 60;
+const RESEND_SECONDS = 30;
 
 export default function VerifyEmailPage() {
   const router = useRouter();
