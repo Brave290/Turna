@@ -89,7 +89,7 @@ function Hero() {
             Built for Ajo, Esusu &amp; Susu circles
           </div>
 
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tight leading-[1.1] mb-6">
+          <h1 className="font-display text-4xl md:text-6xl font-bold tracking-tight leading-[1.1] mb-6">
             Save together.
             <br />
             <span className="text-primary-light">Grow together.</span>
@@ -179,7 +179,7 @@ function Features() {
           <span className="text-primary font-semibold text-sm uppercase tracking-wider">
             Features
           </span>
-          <h2 className="text-3xl md:text-4xl font-bold text-forest mt-3 mb-4">
+          <h2 className="font-display text-3xl md:text-4xl font-bold text-forest mt-3 mb-4">
             Everything your circle needs
           </h2>
           <p className="text-muted text-lg">
@@ -221,7 +221,7 @@ function HowItWorks() {
           <span className="text-primary font-semibold text-sm uppercase tracking-wider">
             How it works
           </span>
-          <h2 className="text-3xl md:text-4xl font-bold text-forest mt-3 mb-4">
+          <h2 className="font-display text-3xl md:text-4xl font-bold text-forest mt-3 mb-4">
             Four steps to a better circle
           </h2>
         </div>
@@ -253,7 +253,7 @@ function Savings() {
             <span className="text-primary-light font-semibold text-sm uppercase tracking-wider">
               Savings
             </span>
-            <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-6">
+            <h2 className="font-display text-3xl md:text-4xl font-bold mt-3 mb-6">
               Your circle, your rules
             </h2>
             <p className="text-white/60 text-lg leading-relaxed mb-8">
@@ -324,7 +324,7 @@ function CTA() {
   return (
     <section className="py-24 bg-cream">
       <div className="mx-auto max-w-6xl px-6 text-center">
-        <h2 className="text-3xl md:text-4xl font-bold text-forest mb-4">
+        <h2 className="font-display text-3xl md:text-4xl font-bold text-forest mb-4">
           Ready to start your circle?
         </h2>
         <p className="text-muted text-lg mb-8 max-w-md mx-auto">
@@ -342,6 +342,8 @@ function CTA() {
 }
 
 function Footer() {
+  const currentYear = new Date().getFullYear();
+
   return (
     <footer className="bg-forest text-white/40 py-12">
       <div className="mx-auto max-w-6xl px-6">
@@ -368,7 +370,18 @@ function Footer() {
         </div>
 
         <div className="border-t border-white/10 mt-8 pt-8 text-sm text-center md:text-left">
-          <p>© 2025 Turna. Built by Akanji Mus&apos;ab · Brave hx Technology · Founda Technologies</p>
+          <p>
+            © 2025&ndash;{currentYear} Turna. Built by Akanji Mus&apos;ab ·{" "}
+            <a
+              href="https://www.bravehx.online"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary-light hover:text-white transition-colors underline underline-offset-2 decoration-primary-light/30"
+            >
+              Brave hx Technology
+            </a>{" "}
+            · Founda Technologies
+          </p>
         </div>
       </div>
     </footer>

@@ -19,8 +19,15 @@ const config: Config = {
         warning: "#D9A441",
         success: "#00A878",
       },
+      fontSize: {
+        // Cap: nothing above 97px
+        "7xl": "4.5rem", // 72px
+        "8xl": "5rem", // 80px
+        "9xl": "6.0625rem", // 97px
+      },
       fontFamily: {
-        sans: ["var(--font-inter)", "system-ui", "sans-serif"],
+        sans: ["var(--font-jakarta)", "system-ui", "sans-serif"],
+        display: ["var(--font-playfair)", "Georgia", "serif"],
       },
       animation: {
         "fade-in": "fadeIn 0.3s ease-out",
