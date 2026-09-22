@@ -103,6 +103,19 @@
     @apply rounded-lg bg-gradient-to-r from-border via-border/50 to-border bg-[length:200%_100%] animate-shimmer;
   }
 
+  /* Glassmorphism */
+  .glass-card {
+    @apply bg-white/70 backdrop-blur-xl border border-white/40 shadow-[0_4px_30px_rgba(3,37,27,0.06)] rounded-2xl p-6;
+  }
+
+  .glass-dark {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl;
+  }
+
+  .glass-nav {
+    @apply bg-white/70 backdrop-blur-xl border border-white/40;
+  }
+
   /* Text */
   .text-body-muted {
     color: var(--muted);

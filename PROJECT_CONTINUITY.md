@@ -116,16 +116,28 @@ Get local keys from `supabase status` after `supabase start`.
 
 ## Current Work Context
 
-### Phase 19: Deployment — In Progress
+### Phase 20: UI Rebuild — In Progress (Landing + Auth Done)
 
-**Production**:
-- **URL**: https://turnaapp.vercel.app
-- **Vercel Project**: prj_8VPRC7xoqlKomwV4PHzSr2TRTgbJ
-- **Supabase**: dhedoxczmbwrgetibvmy (eu-west-1)
-- **GitHub**: https://github.com/Brave290/Turna (private)
-- **Custom Domain**: turna.name.ng (pending DNS)
+**Completed today (2026-09-22)**:
+- Stripped all old UI per Master Prompt v1.0
+- Design system: forest/cream/mint palette, Playfair Display + Plus Jakarta Sans (max 97px)
+- Unified logo: `src/components/logo.tsx` + static exports in `public/` (SVG/PNG/WEBP/JPG, 5 variants + favicon)
+- Scroll animation system: `src/components/animated.tsx` (Reveal, AnimatedCounter, Tilt) — IntersectionObserver, no libs
+- Glassmorphism: `.glass-card`, `.glass-dark`, `.glass-nav` in globals.css
+- Premium landing: phone mockup, floating badges, scroll reveals, 3D tilt, animated counters
+- Auth screens: Splash, Sign Up, Login, Email OTP (6-digit), First-time Welcome — email-only, no phone
+- Zero emojis anywhere — SVG icons only
+- Footer: dynamic year 2025–current, Brave hx → bravehx.online, Founda → foundatech.vercel.app
+- CI fixed: --if-present flags, eslint config, mobile excluded from typecheck
 
-**What's Done**:
+**Next**: Dashboard shell + navigation, then Circles CRUD.
+
+**Key files**:
+- `src/components/logo.tsx` — Logo + LogoWordmark
+- `src/components/animated.tsx` — Reveal, AnimatedCounter, Tilt
+- `src/app/page.tsx` — landing page
+- `src/app/auth/` — layout + 5 auth screens
+- `public/logo*.{svg,png,webp,jpg}` — raster logo assets
 - Monorepo structure with all packages configured
 - Database schema with 12 tables, 10 enums, 25+ indexes
 - RLS policies for all tables

@@ -1,7 +1,7 @@
 # Project State — Turna
 
-**Last Updated**: 2025-09-19
-**Current Phase**: Phase 19 — Deployment
+**Last Updated**: 2026-09-22
+**Current Phase**: Phase 20 — UI Rebuild (Landing + Auth Complete)
 **Overall Status**: 🟡 In Progress
 
 ## Production
@@ -14,6 +14,13 @@
 | **GitHub Repo** | https://github.com/Brave290/Turna (private) |
 | **Custom Domain** | turna.name.ng (pending DNS) |
 | **Keep-Alive Cron** | /api/health (Vercel cron) + cron-job.org backup |
+
+## Design System (Master Prompt v1.0)
+
+- **Fonts**: Playfair Display (display) + Plus Jakarta Sans (body), max 97px
+- **Palette**: Forest #03251B · Primary #00A878 · Mint #35D6A0 · Cream #F7F7F0
+- **Logo**: Single source `src/components/logo.tsx` + static exports in `public/` (SVG, PNG, WEBP, JPG — logo, logo-dark, logo-primary, logo-white, logo-on-dark, favicon)
+- **Rules**: No emojis anywhere (SVG icons only). No phone/SMS/OTP. Email-only auth. Glassmorphism + scroll animations + 3D tilt. No Expo.
 
 ---
 
@@ -37,13 +44,28 @@
 | 14. Notifications Abstraction | ✅ Complete | 2025-01-19 | 2025-01-19 | Multi-channel ready |
 | 15. Tests | ⏳ Pending | — | — | Security-focused test suite |
 | 16. Seed Data | ✅ Complete | 2025-01-19 | 2025-01-19 | 6 users, 1 active circle, 6 cycles |
-| 17. Documentation | 🟡 In Progress | 2025-01-19 | — | Architecture, DB, Security, API docs |
+| 17. Documentation | ✅ Complete | 2025-01-19 | 2026-09-22 | Architecture, DB, Security, API docs, Master Prompt v1.0 |
 | 18. Integration Verification | ⏳ Pending | — | — | End-to-end smoke tests |
 | 19. Android Build Config | ✅ Complete | 2025-01-19 | 2025-01-19 | Gradle, signing, release workflow |
-| 20. GitHub Actions CI/CD | ✅ Complete | 2025-01-19 | 2025-01-19 | CI + release automation |
+| 20. GitHub Actions CI/CD | ✅ Complete | 2025-01-19 | 2026-09-22 | CI + release; lint/typecheck/test fixed with --if-present |
 | 21. Email Service (Resend) | ✅ Complete | 2025-01-19 | 2025-01-19 | Email templates for auth, invitations, notifications |
 | 22. SEO Optimization | ✅ Complete | 2025-01-19 | 2025-01-19 | Sitemap, robots.txt, metadata, structured data |
-| 23. Web App Pages | ✅ Complete | 2025-01-19 | 2025-01-19 | Landing, auth, dashboard pages |
+| 23. UI Teardown | ✅ Complete | 2026-09-22 | 2026-09-22 | Old UI stripped per Master Prompt |
+| 24. Design System Foundation | ✅ Complete | 2026-09-22 | 2026-09-22 | Palette, fonts, glassmorphism, animation hooks |
+| 25. Unified Logo Assets | ✅ Complete | 2026-09-22 | 2026-09-22 | SVG component + PNG/WEBP/JPG exports in public/ |
+| 26. Landing Page (Premium) | ✅ Complete | 2026-09-22 | 2026-09-22 | Phone mockup, scroll reveals, 3D tilt, counters |
+| 27. Auth Screens | ✅ Complete | 2026-09-22 | 2026-09-22 | Splash, Sign Up, Login, Email OTP, Welcome |
+| 28. Dashboard Shell | ⏳ Pending | — | — | Sidebar + bottom nav |
+| 29. Circles (List/Create/Overview) | ⏳ Pending | — | — | |
+| 30. Members + Invite | ⏳ Pending | — | — | Email-based only |
+| 31. Contributions + Statuses | ⏳ Pending | — | — | |
+| 32. Payouts + Receipt | ⏳ Pending | — | — | |
+| 33. Ledger | ⏳ Pending | — | — | Append-only signature feature |
+| 34. Insights + Goals | ⏳ Pending | — | — | |
+| 35. Chat + Notifications + Reminders | ⏳ Pending | — | — | |
+| 36. Health + Streaks + Disputes + Corrections | ⏳ Pending | — | — | |
+| 37. Profile + Settings + Security | ⏳ Pending | — | — | |
+| 38. App Download Popup (Web) | ⏳ Pending | — | — | |
 
 ---
 
