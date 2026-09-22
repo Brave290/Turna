@@ -126,15 +126,33 @@ Get local keys from `supabase status` after `supabase start`.
 - Dashboard shell: desktop sidebar + mobile top/bottom nav, middleware + layout auth guard
 - Live pages (Supabase, not demo): overview stats, circles list/detail/create, invite form, contributions, payouts list, ledger, notifications, insights, settings/profile
 - APK fix kept: `debuggableVariants = []` so debug APKs embed JS bundle
+- CI Android fix: `@babel/runtime` direct dep + monorepo Metro `watchFolders`/`nodeModulesPaths` (pnpm does not hoist it; `createBundleDebugJsAndAssets` needs it)
+- Production deploy verified: `72ca6bc` aliased to https://turnaapp.vercel.app (home/login/dashboard 200, `/api/health` ok)
 - **Env policy**: secrets only in Vercel project env (project `turna` / `prj_8VPRC7xoqlKomwV4PHzSr2TRTgbJ`) — do not commit `.env*`
 - Vercel env already has: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_APP_URL` (=https://turnaapp.vercel.app), `NODE_ENV`
 
 **Next**:
-1. Commit + push → CI + Vercel deploy to https://turnaapp.vercel.app
-2. Verify login → `/dashboard` with real data
+1. Green CI on `main` (Android job was fixed after `72ca6bc`)
+2. Verify login → `/dashboard` with real data on prod
 3. Payout confirm actions + invite email delivery (Resend key still empty)
-4. Explain/`set` `ANDROID_SIGNING_*` GitHub secrets before first release tag
+4. Set `ANDROID_SIGNING_*` GitHub secrets before first release tag (see below)
 5. Contribution report/confirm UI flows
+
+**Android release secrets (`gh secret set … -R Brave290/Turna`)** — never commit keystore/passwords:
+
+```bash
+# Generate once (keep offline backup):
+keytool -genkeypair -v -keystore turna-release.jks -keyalg RSA -keysize 2048 \
+  -validity 10000 -alias turna
+
+# Secrets used by .github/workflows/release.yml:
+# ANDROID_SIGNING_KEY_ALIAS      e.g. turna
+# ANDROID_SIGNING_KEY_PASSWORD   key password for alias
+# ANDROID_SIGNING_STORE_PASSWORD keystore password
+# ANDROID_SIGNING_STORE_FILE     path inside runner workspace after uploading jks
+```
+
+`SIGNING_STORE_FILE` is read as a Gradle project property; upload `turna-release.jks` in the release workflow and point the secret at its path (e.g. `apps/mobile/android/app/turna-release.jks`). Without these, `release.yml` falls back to the debug keystore (not Play-Store valid).
 
 **Key files**:
 - `apps/web/src/lib/auth-actions.ts` — signIn/signUp/reset/createCircle/invite/updateProfile
@@ -143,11 +161,13 @@ Get local keys from `supabase status` after `supabase start`.
 - `apps/web/src/components/dashboard/nav.tsx` — sidebar/bottom nav
 - `supabase/migrations/20260922230000_profiles_rls_realtime.sql` — profile trigger + RLS
 - `apps/mobile/android/app/build.gradle` — `debuggableVariants = []`
+- `apps/mobile/metro.config.js` + `@babel/runtime` — monorepo Metro resolution for CI bundle
 
 **Env / deploy**:
-- Vercel CLI linked to project `turna` (GitHub Brave290/Turna → turnaapp.vercel.app)
+- Vercel CLI linked to project `turna` (GitHub Brave290/Turna → turnaapp.vercel.app); Git integration auto-deploys `main`
 - Supabase CLI linked to `dhedoxczmbwrgetibvmy` — use `supabase db query --linked` from `/public/Turna`
 - Never put API keys in tracked files
+- Do not hardcode Vercel tokens in `scripts/deploy.sh` going forward — use env/`vercel` CLI auth only
 
 ### Files to Watch
 
