@@ -1,100 +1,78 @@
-import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
-import './globals.css';
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
-const APP_NAME = 'Turna';
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://turna.name.ng';
+const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://turnaapp.vercel.app";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(appUrl),
   title: {
-    default: `${APP_NAME} — Your turn to collect`,
-    template: `%s | ${APP_NAME}`,
+    default: "Turna — Save Together. Grow Together.",
+    template: "%s | Turna",
   },
-  description: 'Turna brings esusu, ajo, and chama into one simple app. Track contributions, know your payout date, and build real trust in your savings circle.',
-  metadataBase: new URL(APP_URL),
+  description:
+    "Turna is a digital platform for managing Ajo, Esusu, and Susu savings circles. Create circles, invite members, track contributions, and grow together.",
   keywords: [
-    'savings circle', 'esusu', 'ajo', 'chama', 'rotating savings',
-    'community finance', 'Nigeria', 'Ghana', 'Kenya', 'West Africa',
-    'digital savings', 'group savings', 'tontine', 'pooling money',
+    "ajo",
+    "esusu",
+    "susu",
+    "savings circle",
+    "rotating savings",
+    "group savings",
+    "nigeria savings",
+    "african savings",
+    "turna",
   ],
-  authors: [{ name: "Akanji Mus'ab" }],
-  creator: 'Akanji Musab | Brave Hx Technology | Founda Technologies',
-  publisher: 'Turna',
   openGraph: {
-    type: 'website',
-    locale: 'en_NG',
-    url: APP_URL,
-    siteName: APP_NAME,
-    title: `${APP_NAME} — Your turn to collect`,
-    description: 'Track contributions, know your payout date, and build real trust in your savings circle.',
-    images: [
-      {
-        url: `${APP_URL}/og-image.png`,
-        width: 1200,
-        height: 630,
-        alt: `${APP_NAME} — Savings Circles`,
-      },
-    ],
+    title: "Turna — Save Together. Grow Together.",
+    description:
+      "Manage your Ajo, Esusu, and Susu savings circles with transparency and trust.",
+    url: appUrl,
+    siteName: "Turna",
+    locale: "en_US",
+    type: "website",
   },
   twitter: {
-    card: 'summary_large_image',
-    title: `${APP_NAME} — Your turn to collect`,
-    description: 'Track contributions, know your payout date, and build real trust in your savings circle.',
-    images: [`${APP_URL}/og-image.png`],
-    creator: '@turna_app',
+    card: "summary_large_image",
+    title: "Turna — Save Together. Grow Together.",
+    description:
+      "Manage your Ajo, Esusu, and Susu savings circles with transparency and trust.",
   },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
-    },
-  },
-  manifest: `${APP_URL}/manifest.json`,
   icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon-16x16.png',
-    apple: '/apple-touch-icon.png',
+    icon: "/favicon.svg",
   },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en" className={inter.variable}>
-      <head>
-        <link rel="canonical" href={APP_URL} />
-      </head>
-      <body className="min-h-screen bg-background font-sans antialiased">
+      <body className="min-h-screen bg-cream font-sans antialiased">
+        {children}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
-              '@context': 'https://schema.org',
-              '@type': 'WebApplication',
-              name: APP_NAME,
-              url: APP_URL,
-              description: 'Track contributions, know your payout date, and build real trust in your savings circle.',
-              applicationCategory: 'FinanceApplication',
-              operatingSystem: 'Web, iOS, Android',
+              "@context": "https://schema.org",
+              "@type": "WebApplication",
+              name: "Turna",
+              url: appUrl,
+              description:
+                "Digital platform for managing Ajo, Esusu, and Susu savings circles.",
+              applicationCategory: "FinanceApplication",
               offers: {
-                '@type': 'Offer',
-                price: '0',
-                priceCurrency: 'NGN',
-              },
-              author: {
-                '@type': 'Organization',
-                name: 'Brave Hx Technology',
+                "@type": "Offer",
+                price: "0",
+                priceCurrency: "NGN",
               },
             }),
           }}
         />
-        {children}
       </body>
     </html>
   );
