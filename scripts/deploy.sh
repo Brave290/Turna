@@ -1,5 +1,5 @@
 #!/bin/bash
-TOKEN="vca_7x3tAayjwRoLiHt070kju9qVtHGdjrUBPwETlFGMduLKBrtBo10hQDot"
+TOKEN="vcp_84CmqsLXJs6G9xHyR6ZGYprJEAobWSejo1qKImDUCP95UjeGDB4ESI5E"
 TEAM="team_4Oip2T1V6tsEwPsLAOZqHpsN"
 
 for i in 1 2 3 4 5; do

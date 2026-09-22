@@ -104,11 +104,11 @@
   }
 
   /* Text */
-  .text-muted {
-    @apply text-muted;
+  .text-body-muted {
+    color: var(--muted);
   }
 
   .text-primary-color {
-    @apply text-primary;
+    color: var(--primary);
   }
 }

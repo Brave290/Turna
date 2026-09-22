@@ -5,12 +5,10 @@ import "./globals.css";
 const playfair = Playfair_Display({
   subsets: ["latin"],
   variable: "--font-playfair",
-  weight: ["400", "500", "600", "700"],
 });
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
   variable: "--font-jakarta",
-  weight: ["400", "500", "600", "700"],
 });
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://turnaapp.vercel.app";
