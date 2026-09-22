@@ -380,7 +380,15 @@ function Footer() {
             >
               Brave hx Technology
             </a>{" "}
-            · Founda Technologies
+            ·{" "}
+            <a
+              href="https://foundatech.vercel.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary-light hover:text-white transition-colors underline underline-offset-2 decoration-primary-light/30"
+            >
+              Founda Technologies
+            </a>
           </p>
         </div>
       </div>
