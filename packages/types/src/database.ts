@@ -6,16 +6,16 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
-export interface Profile {
+export type Profile = {
   id: string;
   email: string;
   display_name: string;
   avatar_url: string | null;
   created_at: string;
   updated_at: string;
-}
+};
 
-export interface Circle {
+export type Circle = {
   id: string;
   name: string;
   description: string | null;
@@ -29,9 +29,9 @@ export interface Circle {
   start_date: string | null;
   created_at: string;
   updated_at: string;
-}
+};
 
-export interface CircleMember {
+export type CircleMember = {
   id: string;
   circle_id: string;
   user_id: string;
@@ -42,9 +42,9 @@ export interface CircleMember {
   left_at: string | null;
   created_at: string;
   updated_at: string;
-}
+};
 
-export interface Invitation {
+export type Invitation = {
   id: string;
   circle_id: string;
   inviter_id: string;
@@ -54,21 +54,28 @@ export interface Invitation {
   expires_at: string;
   created_at: string;
   accepted_at: string | null;
-}
+};
 
-export interface ContributionCycle {
+export type ContributionCycle = {
   id: string;
   circle_id: string;
   cycle_number: number;
   due_date: string;
   payout_member_id: string | null;
   expected_amount: number;
-  status: 'pending' | 'collecting' | 'payout_pending' | 'payout_initiated' | 'payout_confirmed' | 'completed' | 'disputed';
+  status:
+    | 'pending'
+    | 'collecting'
+    | 'payout_pending'
+    | 'payout_initiated'
+    | 'payout_confirmed'
+    | 'completed'
+    | 'disputed';
   created_at: string;
   completed_at: string | null;
-}
+};
 
-export interface Contribution {
+export type Contribution = {
   id: string;
   cycle_id: string;
   member_id: string;
@@ -80,18 +87,18 @@ export interface Contribution {
   confirmed_at: string | null;
   created_at: string;
   updated_at: string;
-}
+};
 
-export interface ContributionConfirmation {
+export type ContributionConfirmation = {
   id: string;
   contribution_id: string;
   confirmer_id: string;
   decision: 'approved' | 'rejected';
   note: string | null;
   created_at: string;
-}
+};
 
-export interface Payout {
+export type Payout = {
   id: string;
   cycle_id: string;
   recipient_member_id: string;
@@ -104,28 +111,16 @@ export interface Payout {
   notes: string | null;
   created_at: string;
   updated_at: string;
-}
+};
 
-export interface PayoutConfirmation {
+export type PayoutConfirmation = {
   id: string;
   payout_id: string;
   confirmer_id: string;
   decision: 'approved' | 'rejected';
   note: string | null;
   created_at: string;
-}
-
-export interface LedgerEvent {
-  id: string;
-  circle_id: string;
-  actor_id: string;
-  event_type: LedgerEventType;
-  entity_type: string;
-  entity_id: string;
-  payload: Json;
-  previous_event_id: string | null;
-  created_at: string;
-}
+};
 
 export type LedgerEventType =
   | 'CIRCLE_CREATED'
@@ -156,7 +151,19 @@ export type LedgerEventType =
   | 'CYCLE_COMPLETED'
   | 'SETTINGS_CHANGED';
 
-export interface Notification {
+export type LedgerEvent = {
+  id: string;
+  circle_id: string;
+  actor_id: string;
+  event_type: LedgerEventType;
+  entity_type: string;
+  entity_id: string;
+  payload: Json;
+  previous_event_id: string | null;
+  created_at: string;
+};
+
+export type Notification = {
   id: string;
   user_id: string;
   circle_id: string | null;
@@ -169,7 +176,23 @@ export interface Notification {
   delivered_at: string | null;
   read_at: string | null;
   created_at: string;
-}
+};
+
+export type EmailOtpRequest = {
+  id: string;
+  email: string;
+  request_count: number;
+  window_start: string;
+  created_at: string;
+  updated_at: string;
+};
+
+type TableDef<Row, Insert = Row, Update = Partial<Row>> = {
+  Row: Row;
+  Insert: Insert;
+  Update: Update;
+  Relationships: [];
+};
 
 export type Tables = {
   profiles: Profile;
@@ -186,26 +209,87 @@ export type Tables = {
 };
 
 export type Enums = {
-  circle_status: 'draft' | 'active' | 'paused' | 'completed' | 'cancelled';
-  circle_frequency: 'weekly' | 'biweekly' | 'monthly';
-  member_role: 'owner' | 'treasurer' | 'member';
-  member_status: 'pending' | 'active' | 'left' | 'removed';
-  invitation_status: 'pending' | 'accepted' | 'expired' | 'cancelled';
-  cycle_status: 'pending' | 'collecting' | 'payout_pending' | 'payout_initiated' | 'payout_confirmed' | 'completed' | 'disputed';
-  contribution_status: 'pending' | 'reported' | 'confirmed' | 'rejected' | 'disputed';
-  confirmation_decision: 'approved' | 'rejected';
-  payout_status: 'pending' | 'initiated' | 'sent' | 'received' | 'disputed';
+  circle_status: Circle['status'];
+  circle_frequency: Circle['frequency'];
+  member_role: CircleMember['role'];
+  member_status: CircleMember['status'];
+  invitation_status: Invitation['status'];
+  cycle_status: ContributionCycle['status'];
+  contribution_status: Contribution['status'];
+  confirmation_decision: ContributionConfirmation['decision'];
+  payout_status: Payout['status'];
   ledger_event_type: LedgerEventType;
-  notification_channel: 'in_app' | 'push' | 'sms' | 'whatsapp' | 'email';
-  notification_status: 'pending' | 'sent' | 'delivered' | 'failed' | 'read';
+  notification_channel: Notification['channel'];
+  notification_status: Notification['status'];
 };
 
 export type Database = {
   public: {
-    Tables: Tables;
-    Enums: Enums;
-    CompositeTypes: {
-      [_ in never]: never;
+    Tables: {
+      profiles: TableDef<Profile, Profile, Partial<Profile>>;
+      circles: TableDef<
+        Circle,
+        Omit<Circle, 'id' | 'created_at' | 'updated_at'> & {
+          id?: string;
+          created_at?: string;
+          updated_at?: string;
+        },
+        Partial<Circle>
+      >;
+      circle_members: TableDef<
+        CircleMember,
+        Omit<CircleMember, 'id' | 'created_at' | 'updated_at'> & {
+          id?: string;
+          created_at?: string;
+          updated_at?: string;
+        },
+        Partial<CircleMember>
+      >;
+      invitations: TableDef<
+        Invitation,
+        Omit<Invitation, 'id' | 'created_at' | 'accepted_at'> & {
+          id?: string;
+          created_at?: string;
+          accepted_at?: string | null;
+        },
+        Partial<Invitation>
+      >;
+      contribution_cycles: TableDef<ContributionCycle>;
+      contributions: TableDef<Contribution>;
+      contribution_confirmations: TableDef<ContributionConfirmation>;
+      payouts: TableDef<Payout>;
+      payout_confirmations: TableDef<PayoutConfirmation>;
+      ledger_events: TableDef<
+        LedgerEvent,
+        Omit<LedgerEvent, 'id' | 'created_at'> & {
+          id?: string;
+          created_at?: string;
+        },
+        never
+      >;
+      notifications: TableDef<Notification>;
+      email_otp_requests: TableDef<EmailOtpRequest>;
     };
+    Views: Record<string, never>;
+    Functions: {
+      consume_email_otp_rate_limit: {
+        Args: { p_email: string };
+        Returns: {
+          allowed: boolean;
+          request_count: number;
+          retry_after_seconds: number;
+        }[];
+      };
+      is_circle_member: {
+        Args: { p_circle_id: string };
+        Returns: boolean;
+      };
+      is_circle_owner: {
+        Args: { p_circle_id: string };
+        Returns: boolean;
+      };
+    };
+    Enums: Enums;
+    CompositeTypes: Record<string, never>;
   };
 };

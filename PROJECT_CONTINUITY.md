@@ -116,45 +116,38 @@ Get local keys from `supabase status` after `supabase start`.
 
 ## Current Work Context
 
-### Phase 20: UI Rebuild — In Progress (Landing + Auth Done)
+### Phase 28: Dashboard Shell + Real Auth — In Progress (2026-09-22)
 
-**Completed today (2026-09-22)**:
-- Stripped all old UI per Master Prompt v1.0
-- Design system: forest/cream/mint palette, Playfair Display + Plus Jakarta Sans (max 97px)
-- Unified logo: `src/components/logo.tsx` + static exports in `public/` (SVG/PNG/WEBP/JPG, 5 variants + favicon)
-- Scroll animation system: `src/components/animated.tsx` (Reveal, AnimatedCounter, Tilt) — IntersectionObserver, no libs
-- Glassmorphism: `.glass-card`, `.glass-dark`, `.glass-nav` in globals.css
-- Premium landing: phone mockup, floating badges, scroll reveals, 3D tilt, animated counters
-- Auth screens: Splash, Sign Up, Login, Email OTP (6-digit), First-time Welcome — email-only, no phone
-- Zero emojis anywhere — SVG icons only
-- Footer: dynamic year 2025–current, Brave hx → bravehx.online, Founda → foundatech.vercel.app
-- CI fixed: --if-present flags, eslint config, mobile excluded from typecheck
+**Completed this session**:
+- Real auth: login/signup/forgot-password call Supabase server actions with spinners + error surfaces
+- `signIn` honors `?redirect=` safely; signup redirects to `/dashboard` when session exists
+- OAuth/OTP callback route: `apps/web/src/app/auth/callback/route.ts`
+- Profile auto-create trigger + backfill + full RLS policies applied via `supabase db query --linked` (`20260922230000_profiles_rls_realtime.sql`)
+- Dashboard shell: desktop sidebar + mobile top/bottom nav, middleware + layout auth guard
+- Live pages (Supabase, not demo): overview stats, circles list/detail/create, invite form, contributions, payouts list, ledger, notifications, insights, settings/profile
+- APK fix kept: `debuggableVariants = []` so debug APKs embed JS bundle
+- **Env policy**: secrets only in Vercel project env (project `turna` / `prj_8VPRC7xoqlKomwV4PHzSr2TRTgbJ`) — do not commit `.env*`
+- Vercel env already has: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_APP_URL` (=https://turnaapp.vercel.app), `NODE_ENV`
 
-**Next**: Dashboard shell + navigation, then Circles CRUD.
+**Next**:
+1. Commit + push → CI + Vercel deploy to https://turnaapp.vercel.app
+2. Verify login → `/dashboard` with real data
+3. Payout confirm actions + invite email delivery (Resend key still empty)
+4. Explain/`set` `ANDROID_SIGNING_*` GitHub secrets before first release tag
+5. Contribution report/confirm UI flows
 
 **Key files**:
-- `src/components/logo.tsx` — Logo + LogoWordmark
-- `src/components/animated.tsx` — Reveal, AnimatedCounter, Tilt
-- `src/app/page.tsx` — landing page
-- `src/app/auth/` — layout + 5 auth screens
-- `public/logo*.{svg,png,webp,jpg}` — raster logo assets
-- Monorepo structure with all packages configured
-- Database schema with 12 tables, 10 enums, 25+ indexes
-- RLS policies for all tables
-- Authentication: Email/Password + Google OAuth
-- Core business logic services (circles, members, contributions, payouts, cycles, ledger, notifications, realtime)
-- Seed data: 6 users, 1 active circle, 6 cycles
-- Web app: Landing page, auth pages, dashboard
-- Email service with Resend (5 templates)
-- SEO: Sitemap, robots.txt, metadata, structured data
-- Android build configuration with Gradle
-- GitHub Actions CI/CD with release automation
+- `apps/web/src/lib/auth-actions.ts` — signIn/signUp/reset/createCircle/invite/updateProfile
+- `apps/web/src/lib/dashboard-data.ts` — server data loaders
+- `apps/web/src/app/dashboard/**` — shell + pages
+- `apps/web/src/components/dashboard/nav.tsx` — sidebar/bottom nav
+- `supabase/migrations/20260922230000_profiles_rls_realtime.sql` — profile trigger + RLS
+- `apps/mobile/android/app/build.gradle` — `debuggableVariants = []`
 
-**What's Next**:
-1. Complete documentation (architecture, API, security)
-2. Write security-focused tests (Phase 15)
-3. Integration verification (Phase 18)
-4. Set up GitHub repo and push code
+**Env / deploy**:
+- Vercel CLI linked to project `turna` (GitHub Brave290/Turna → turnaapp.vercel.app)
+- Supabase CLI linked to `dhedoxczmbwrgetibvmy` — use `supabase db query --linked` from `/public/Turna`
+- Never put API keys in tracked files
 
 ### Files to Watch
 

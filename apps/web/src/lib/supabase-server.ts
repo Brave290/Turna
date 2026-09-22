@@ -1,11 +1,12 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import type { Database } from '@turna/types';
 
 export function createServerSupabaseClient() {
   const cookieStore = cookies();
 
-  return createServerClient<Database>(
+  // Untyped on purpose: generated Database shape must match supabase-js exactly;
+  // domain types live in @turna/types and are applied at call sites.
+  return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -19,9 +20,7 @@ export function createServerSupabaseClient() {
               cookieStore.set(name, value, options)
             );
           } catch {
-            // The `setAll` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
+            // Server Component cookie writes are ignored; middleware refreshes session.
           }
         },
       },

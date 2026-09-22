@@ -1,7 +1,7 @@
 # Project State — Turna
 
 **Last Updated**: 2026-09-22
-**Current Phase**: Phase 20 — UI Rebuild (Landing + Auth Complete)
+**Current Phase**: Phase 28 — Dashboard Shell (Auth wired, live Supabase)
 **Overall Status**: 🟡 In Progress
 
 ## Production
@@ -31,8 +31,8 @@
 | 1. Project Initialization | ✅ Complete | 2025-01-19 | 2025-01-19 | Monorepo, pnpm workspace, TypeScript configs, all package.json |
 | 2. Supabase Configuration | ✅ Complete | 2025-01-19 | 2025-01-19 | config.toml, local dev ready |
 | 3. Database Schema & Migrations | ✅ Complete | 2025-01-19 | 2025-01-19 | 12 tables, 10 enums, 25+ indexes |
-| 4. RLS & Security Policies | ✅ Complete | 2025-01-19 | 2025-01-19 | All tables have RLS policies |
-| 5. Authentication | ✅ Complete | 2025-01-19 | 2025-01-19 | Email/Password + Google OAuth |
+| 4. RLS & Security Policies | ✅ Complete | 2025-01-19 | 2026-09-22 | Full per-table policies + helpers reapplied via Supabase CLI |
+| 5. Authentication | ✅ Complete | 2025-01-19 | 2026-09-22 | Real signIn/signUp/reset server actions + OAuth callback |
 | 6. Core Domain Logic | ✅ Complete | 2025-01-19 | 2025-01-19 | Services: circles, members, contributions, payouts, cycles, ledger, notifications, realtime |
 | 7. Circle Lifecycle | ✅ Complete | 2025-01-19 | 2025-01-19 | CRUD + state machine |
 | 8. Member Invitations | ✅ Complete | 2025-01-19 | 2025-01-19 | Token-based, email deep link |
@@ -54,17 +54,18 @@
 | 24. Design System Foundation | ✅ Complete | 2026-09-22 | 2026-09-22 | Palette, fonts, glassmorphism, animation hooks |
 | 25. Unified Logo Assets | ✅ Complete | 2026-09-22 | 2026-09-22 | SVG component + PNG/WEBP/JPG exports in public/ |
 | 26. Landing Page (Premium) | ✅ Complete | 2026-09-22 | 2026-09-22 | Phone mockup, scroll reveals, 3D tilt, counters |
-| 27. Auth Screens | ✅ Complete | 2026-09-22 | 2026-09-22 | Splash, Sign Up, Login, Email OTP, Welcome |
-| 28. Dashboard Shell | ⏳ Pending | — | — | Sidebar + bottom nav |
-| 29. Circles (List/Create/Overview) | ⏳ Pending | — | — | |
-| 30. Members + Invite | ⏳ Pending | — | — | Email-based only |
-| 31. Contributions + Statuses | ⏳ Pending | — | — | |
-| 32. Payouts + Receipt | ⏳ Pending | — | — | |
-| 33. Ledger | ⏳ Pending | — | — | Append-only signature feature |
-| 34. Insights + Goals | ⏳ Pending | — | — | |
-| 35. Chat + Notifications + Reminders | ⏳ Pending | — | — | |
+| 27. Auth Screens | ✅ Complete | 2026-09-22 | 2026-09-22 | Splash, Sign Up, Login, Email OTP, Welcome, Forgot password |
+| 27b. Auth wiring (real) | ✅ Complete | 2026-09-22 | 2026-09-22 | Server actions, spinners, errors, profile trigger, callback |
+| 28. Dashboard Shell | ✅ Complete | 2026-09-22 | 2026-09-22 | Sidebar + mobile bottom nav + auth guard |
+| 29. Circles (List/Create/Overview) | ✅ Complete | 2026-09-22 | 2026-09-22 | Live list, create form, detail page |
+| 30. Members + Invite | ✅ Complete | 2026-09-22 | 2026-09-22 | Members list + email invite action (UI) |
+| 31. Contributions + Statuses | ✅ Complete | 2026-09-22 | 2026-09-22 | Live table from DB |
+| 32. Payouts + Receipt | ⏳ Partial | 2026-09-22 | — | Live list; confirm receipt actions still needed |
+| 33. Ledger | ✅ Complete | 2026-09-22 | 2026-09-22 | Live append-only feed |
+| 34. Insights + Goals | ⏳ Partial | 2026-09-22 | — | Live stats; goals not built |
+| 35. Chat + Notifications + Reminders | ⏳ Partial | 2026-09-22 | — | Notifications list live; chat/reminders pending |
 | 36. Health + Streaks + Disputes + Corrections | ⏳ Pending | — | — | |
-| 37. Profile + Settings + Security | ⏳ Pending | — | — | |
+| 37. Profile + Settings + Security | ✅ Complete | 2026-09-22 | 2026-09-22 | Profile form + sign out |
 | 38. App Download Popup (Web) | ⏳ Pending | — | — | |
 
 ---

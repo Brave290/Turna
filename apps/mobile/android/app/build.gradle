@@ -12,6 +12,8 @@ react {
     codegenDir = new File(rnCanonicalParent, "@react-native/codegen")
     cliFile = new File(rnPackageDir, "cli.js")
     hermesFlags = ["-O"]
+    // Bundle JS into every APK so installs work without Metro
+    debuggableVariants = []
 }
 
 def enableProguardInReleaseBuilds = false

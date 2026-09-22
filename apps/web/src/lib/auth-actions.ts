@@ -1,11 +1,30 @@
 'use server';
 
 import { createServerSupabaseClient } from '@/lib/supabase-server';
-import { signUpSchema, signInSchema, resetPasswordSchema } from '@turna/validation';
+import {
+  signUpSchema,
+  signInSchema,
+  resetPasswordSchema,
+  createCircleSchema,
+  inviteMemberSchema,
+} from '@turna/validation';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
+import { revalidatePath } from 'next/cache';
 
-export async function signUp(formData: FormData) {
+type AuthError = {
+  error?: Record<string, string[] | undefined> & { form?: string[] };
+  success?: string;
+};
+
+function safeNext(raw: FormDataEntryValue | null): string {
+  if (typeof raw === 'string' && raw.startsWith('/') && !raw.startsWith('//')) {
+    return raw;
+  }
+  return '/dashboard';
+}
+
+export async function signUp(formData: FormData): Promise<AuthError> {
   const rawData = {
     email: formData.get('email') as string,
     password: formData.get('password') as string,
@@ -19,7 +38,7 @@ export async function signUp(formData: FormData) {
 
   const supabase = createServerSupabaseClient();
 
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
@@ -34,10 +53,15 @@ export async function signUp(formData: FormData) {
     return { error: { form: [error.message] } };
   }
 
+  // Session may exist when email autoconfirm is on
+  if (data.session) {
+    redirect('/dashboard');
+  }
+
   return { success: 'Check your email to confirm your account.' };
 }
 
-export async function signIn(formData: FormData) {
+export async function signIn(formData: FormData): Promise<AuthError> {
   const rawData = {
     email: formData.get('email') as string,
     password: formData.get('password') as string,
@@ -59,7 +83,7 @@ export async function signIn(formData: FormData) {
     return { error: { form: [error.message] } };
   }
 
-  redirect('/dashboard');
+  redirect(safeNext(formData.get('redirect')));
 }
 
 export async function signInWithGoogle() {
@@ -93,7 +117,7 @@ export async function signOut() {
   redirect('/auth/login');
 }
 
-export async function resetPassword(formData: FormData) {
+export async function resetPassword(formData: FormData): Promise<AuthError> {
   const rawData = {
     email: formData.get('email') as string,
   };
@@ -116,19 +140,22 @@ export async function resetPassword(formData: FormData) {
   return { success: 'Check your email for password reset instructions.' };
 }
 
-export async function updatePassword(formData: FormData) {
+export async function updatePassword(formData: FormData): Promise<AuthError> {
   const rawData = {
     password: formData.get('password') as string,
     confirmPassword: formData.get('confirmPassword') as string,
   };
 
-  const parsed = z.object({
-    password: z.string().min(8, 'Password must be at least 8 characters'),
-    confirmPassword: z.string(),
-  }).refine(data => data.password === data.confirmPassword, {
-    message: 'Passwords do not match',
-    path: ['confirmPassword'],
-  }).safeParse(rawData);
+  const parsed = z
+    .object({
+      password: z.string().min(8, 'Password must be at least 8 characters'),
+      confirmPassword: z.string(),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+      message: 'Passwords do not match',
+      path: ['confirmPassword'],
+    })
+    .safeParse(rawData);
 
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
@@ -149,27 +176,252 @@ export async function updatePassword(formData: FormData) {
 
 export async function getSession() {
   const supabase = createServerSupabaseClient();
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   return session;
 }
 
 export async function getUser() {
   const supabase = createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   return user;
 }
 
 export async function getProfile() {
   const supabase = createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   if (!user) return null;
 
   const { data: profile } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', user.id)
+    .maybeSingle();
+
+  if (profile) return profile;
+
+  // Fallback if trigger hasn't created the row yet
+  const meta = user.user_metadata ?? {};
+  const fallback = {
+    id: user.id,
+    email: user.email ?? '',
+    display_name:
+      (meta.display_name as string) ||
+      (meta.name as string) ||
+      (user.email ?? 'Member').split('@')[0],
+    avatar_url: (meta.avatar_url as string | null) ?? null,
+  };
+
+  const { data: inserted } = await supabase
+    .from('profiles')
+    .upsert(fallback, { onConflict: 'id', ignoreDuplicates: true })
+    .select()
+    .maybeSingle();
+
+  return inserted ?? fallback;
+}
+
+export type CircleActionState = {
+  error?: Record<string, string[] | undefined> & { form?: string[] };
+  success?: string;
+  circleId?: string;
+} | null;
+
+export async function createCircle(
+  _prev: CircleActionState,
+  formData: FormData
+): Promise<CircleActionState> {
+  const supabase = createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect('/auth/login?redirect=/dashboard/circles/new');
+  }
+
+  const amountRaw = String(formData.get('contribution_amount') ?? '');
+  const amountNumber = Number(amountRaw.replace(/[^\d.]/g, ''));
+  if (!Number.isFinite(amountNumber) || amountNumber <= 0) {
+    return { error: { contribution_amount: ['Enter a valid amount'] } };
+  }
+
+  const parsed = createCircleSchema.safeParse({
+    name: String(formData.get('name') ?? '').trim(),
+    description: String(formData.get('description') ?? '').trim() || undefined,
+    contribution_amount: Math.round(amountNumber * 100),
+    currency: String(formData.get('currency') ?? 'NGN'),
+    frequency: String(formData.get('frequency') ?? 'monthly'),
+    member_limit: Number(formData.get('member_limit') ?? 10),
+    start_date: String(formData.get('start_date') ?? '') || undefined,
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.flatten().fieldErrors };
+  }
+
+  const { data: circle, error } = await supabase
+    .from('circles')
+    .insert({
+      name: parsed.data.name,
+      description: parsed.data.description ?? null,
+      owner_id: user.id,
+      contribution_amount: parsed.data.contribution_amount,
+      currency: parsed.data.currency,
+      frequency: parsed.data.frequency,
+      member_limit: parsed.data.member_limit,
+      status: 'draft',
+      current_cycle: 0,
+      start_date: parsed.data.start_date ?? null,
+    })
+    .select('id')
     .single();
 
-  return profile;
+  if (error || !circle) {
+    return { error: { form: [error?.message ?? 'Could not create circle'] } };
+  }
+
+  const { error: memberError } = await supabase.from('circle_members').insert({
+    circle_id: circle.id,
+    user_id: user.id,
+    role: 'owner',
+    payout_position: 1,
+    status: 'active',
+    joined_at: new Date().toISOString(),
+  });
+
+  if (memberError) {
+    return { error: { form: [`Circle created but owner membership failed: ${memberError.message}`] } };
+  }
+
+  await supabase.from('ledger_events').insert({
+    circle_id: circle.id,
+    actor_id: user.id,
+    event_type: 'CIRCLE_CREATED',
+    entity_type: 'circle',
+    entity_id: circle.id,
+    payload: { name: parsed.data.name },
+    previous_event_id: null,
+  });
+
+  revalidatePath('/dashboard');
+  revalidatePath('/dashboard/circles');
+  return { success: 'Circle created', circleId: circle.id };
+}
+
+export type InviteActionState = {
+  error?: Record<string, string[] | undefined> & { form?: string[] };
+  success?: string;
+} | null;
+
+export async function inviteMember(
+  _prev: InviteActionState,
+  formData: FormData
+): Promise<InviteActionState> {
+  const supabase = createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect('/auth/login');
+  }
+
+  const parsed = inviteMemberSchema.safeParse({
+    circle_id: String(formData.get('circle_id') ?? ''),
+    invitee_email: String(formData.get('invitee_email') ?? '').trim().toLowerCase(),
+    payout_position: Number(formData.get('payout_position') ?? 1),
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.flatten().fieldErrors };
+  }
+
+  const { data: circle } = await supabase
+    .from('circles')
+    .select('id, owner_id, member_limit')
+    .eq('id', parsed.data.circle_id)
+    .maybeSingle();
+
+  if (!circle) {
+    return { error: { form: ['Circle not found'] } };
+  }
+  if (circle.owner_id !== user.id) {
+    return { error: { form: ['Only the circle owner can invite members'] } };
+  }
+
+  const { count } = await supabase
+    .from('circle_members')
+    .select('*', { count: 'exact', head: true })
+    .eq('circle_id', circle.id);
+
+  if ((count ?? 0) >= circle.member_limit) {
+    return { error: { form: ['Member limit reached'] } };
+  }
+
+  const token = crypto.randomUUID();
+  const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  const { error } = await supabase.from('invitations').insert({
+    circle_id: circle.id,
+    inviter_id: user.id,
+    invitee_email: parsed.data.invitee_email,
+    token,
+    status: 'pending',
+    expires_at: expires,
+  });
+
+  if (error) {
+    return { error: { form: [error.message] } };
+  }
+
+  await supabase.from('ledger_events').insert({
+    circle_id: circle.id,
+    actor_id: user.id,
+    event_type: 'MEMBER_INVITED',
+    entity_type: 'invitation',
+    entity_id: circle.id,
+    payload: { invitee_email: parsed.data.invitee_email },
+    previous_event_id: null,
+  });
+
+  revalidatePath(`/dashboard/circles/${circle.id}`);
+  return { success: `Invite created for ${parsed.data.invitee_email}` };
+}
+
+export type ProfileActionState = {
+  error?: Record<string, string[] | undefined> & { form?: string[] };
+  success?: string;
+} | null;
+
+export async function updateProfile(
+  _prev: ProfileActionState,
+  formData: FormData
+): Promise<ProfileActionState> {
+  const supabase = createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect('/auth/login');
+
+  const displayName = String(formData.get('display_name') ?? '').trim();
+  if (!displayName) {
+    return { error: { display_name: ['Name is required'] } };
+  }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ display_name: displayName })
+    .eq('id', user.id);
+
+  if (error) {
+    return { error: { form: [error.message] } };
+  }
+
+  revalidatePath('/dashboard/settings');
+  return { success: 'Profile updated' };
 }

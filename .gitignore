@@ -73,3 +73,5 @@ apps/mobile/ios/*.perspectivev3
 # Supabase local temp
 supabase/.temp/
 node_modules/
+.vercel
+.env*

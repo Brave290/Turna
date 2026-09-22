@@ -1,10 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import { useFormState, useFormStatus } from "react-dom";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
+import { signUp } from "@/lib/auth-actions";
 import { Logo } from "@/components/logo";
+import { Spinner } from "@/components/spinner";
+
+type AuthState = {
+  error?: Record<string, string[] | undefined> & { form?: string[] };
+  success?: string;
+} | null;
 
 function GoogleIcon({ className = "" }: { className?: string }) {
   return (
@@ -29,56 +36,91 @@ function GoogleIcon({ className = "" }: { className?: string }) {
   );
 }
 
+function SubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button type="submit" className="btn-primary w-full" disabled={pending}>
+      {pending ? (
+        <>
+          <Spinner />
+          Creating account...
+        </>
+      ) : (
+        "Create Account"
+      )}
+    </button>
+  );
+}
+
 export default function SignUpPage() {
-  const router = useRouter();
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [state, formAction] = useFormState(
+    (_: AuthState, formData: FormData) => signUp(formData),
+    null as AuthState
+  );
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  const formError = state?.error?.form?.[0];
+  const nameError = state?.error?.display_name?.[0];
+  const emailError = state?.error?.email?.[0];
+  const passwordError = state?.error?.password?.[0];
 
-    if (!form.name.trim()) {
-      setError("Please enter your full name.");
-      return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-      setError("Please enter a valid email address.");
-      return;
-    }
-    if (form.password.length < 8) {
-      setError("Password must be at least 8 characters.");
-      return;
-    }
-
-    setError(null);
-    router.push("/auth/verify");
+  if (state?.success && !state.error) {
+    return (
+      <div className="animate-fade-in text-center">
+        <div className="flex justify-center mb-4">
+          <Logo variant="on-dark" size={48} />
+        </div>
+        <h1 className="font-display text-3xl font-bold tracking-tight mb-2">
+          Check your email
+        </h1>
+        <p className="text-white/55 mb-8">{state.success}</p>
+        <Link href="/auth/verify" className="btn-primary w-full inline-flex">
+          Enter verification code
+        </Link>
+        <p className="text-sm text-white/50 mt-6">
+          Wrong address?{" "}
+          <Link
+            href="/auth/signup"
+            className="text-primary hover:text-primary-light font-medium"
+          >
+            Try again
+          </Link>
+        </p>
+      </div>
+    );
   }
 
   return (
     <div className="animate-fade-in">
       <div className="text-center mb-8">
-        <div className="flex justify-center mb-4"><Logo variant="on-dark" size={48} /></div>
+        <div className="flex justify-center mb-4">
+          <Logo variant="on-dark" size={48} />
+        </div>
         <h1 className="font-display text-3xl font-bold tracking-tight mb-2">
           Create your account
         </h1>
         <p className="text-white/55">Start saving with your circle today.</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+      <form action={formAction} className="space-y-5" noValidate>
         <div>
-          <label htmlFor="name" className="label text-white/80">
+          <label htmlFor="display_name" className="label text-white/80">
             Full name
           </label>
           <input
-            id="name"
+            id="display_name"
+            name="display_name"
             type="text"
             autoComplete="name"
             placeholder="Ada Obi"
-            className="input"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            className={`input${nameError ? " input-error" : ""}`}
+            required
           />
+          {nameError && (
+            <p className="text-sm text-error mt-1.5" role="alert">
+              {nameError}
+            </p>
+          )}
         </div>
 
         <div>
@@ -87,13 +129,18 @@ export default function SignUpPage() {
           </label>
           <input
             id="email"
+            name="email"
             type="email"
             autoComplete="email"
             placeholder="you@example.com"
-            className="input"
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
+            className={`input${emailError ? " input-error" : ""}`}
+            required
           />
+          {emailError && (
+            <p className="text-sm text-error mt-1.5" role="alert">
+              {emailError}
+            </p>
+          )}
         </div>
 
         <div>
@@ -103,12 +150,12 @@ export default function SignUpPage() {
           <div className="relative">
             <input
               id="password"
+              name="password"
               type={showPassword ? "text" : "password"}
               autoComplete="new-password"
               placeholder="Min. 8 characters"
-              className="input pr-11"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              className={`input pr-11${passwordError ? " input-error" : ""}`}
+              required
             />
             <button
               type="button"
@@ -126,17 +173,23 @@ export default function SignUpPage() {
           <p className="text-xs text-white/40 mt-1.5">
             Must be at least 8 characters.
           </p>
+          {passwordError && (
+            <p className="text-sm text-error mt-1.5" role="alert">
+              {passwordError}
+            </p>
+          )}
         </div>
 
-        {error && (
-          <p className="text-sm text-error" role="alert">
-            {error}
-          </p>
+        {formError && (
+          <div
+            className="rounded-xl border border-error/30 bg-error/10 px-4 py-3 text-sm text-error"
+            role="alert"
+          >
+            {formError}
+          </div>
         )}
 
-        <button type="submit" className="btn-primary w-full">
-          Create Account
-        </button>
+        <SubmitButton />
       </form>
 
       <div className="flex items-center gap-4 my-6">

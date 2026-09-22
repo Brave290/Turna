@@ -1,10 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useFormState, useFormStatus } from "react-dom";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
+import { signIn } from "@/lib/auth-actions";
 import { Logo } from "@/components/logo";
+import { Spinner } from "@/components/spinner";
+
+type AuthState = {
+  error?: Record<string, string[] | undefined> & { form?: string[] };
+  success?: string;
+} | null;
 
 function GoogleIcon({ className = "" }: { className?: string }) {
   return (
@@ -29,52 +36,64 @@ function GoogleIcon({ className = "" }: { className?: string }) {
   );
 }
 
+function SubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button type="submit" className="btn-primary w-full" disabled={pending}>
+      {pending ? (
+        <>
+          <Spinner />
+          Signing in...
+        </>
+      ) : (
+        "Sign In"
+      )}
+    </button>
+  );
+}
+
 export default function LoginPage() {
-  const router = useRouter();
-  const [form, setForm] = useState({ email: "", password: "" });
+  const [state, formAction] = useFormState(
+    (_: AuthState, formData: FormData) => signIn(formData),
+    null as AuthState
+  );
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-      setError("Please enter a valid email address.");
-      return;
-    }
-    if (form.password.length < 8) {
-      setError("Password must be at least 8 characters.");
-      return;
-    }
-
-    setError(null);
-    router.push("/dashboard");
-  }
+  const formError = state?.error?.form?.[0];
+  const emailError = state?.error?.email?.[0];
+  const passwordError = state?.error?.password?.[0];
 
   return (
     <div className="animate-fade-in">
       <div className="text-center mb-8">
-        <div className="flex justify-center mb-4"><Logo variant="on-dark" size={48} /></div>
+        <div className="flex justify-center mb-4">
+          <Logo variant="on-dark" size={48} />
+        </div>
         <h1 className="font-display text-3xl font-bold tracking-tight mb-2">
           Welcome back
         </h1>
         <p className="text-white/55">Sign in to your Turna account.</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+      <form action={formAction} className="space-y-5" noValidate>
         <div>
           <label htmlFor="email" className="label text-white/80">
             Email
           </label>
           <input
             id="email"
+            name="email"
             type="email"
             autoComplete="email"
             placeholder="you@example.com"
-            className="input"
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
+            className={`input${emailError ? " input-error" : ""}`}
+            required
           />
+          {emailError && (
+            <p className="text-sm text-error mt-1.5" role="alert">
+              {emailError}
+            </p>
+          )}
         </div>
 
         <div>
@@ -83,7 +102,7 @@ export default function LoginPage() {
               Password
             </label>
             <Link
-              href="/auth/login"
+              href="/auth/forgot-password"
               className="text-xs text-primary hover:text-primary-light transition-colors"
             >
               Forgot password?
@@ -92,12 +111,12 @@ export default function LoginPage() {
           <div className="relative">
             <input
               id="password"
+              name="password"
               type={showPassword ? "text" : "password"}
               autoComplete="current-password"
               placeholder="Enter your password"
-              className="input pr-11"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              className={`input pr-11${passwordError ? " input-error" : ""}`}
+              required
             />
             <button
               type="button"
@@ -112,17 +131,23 @@ export default function LoginPage() {
               )}
             </button>
           </div>
+          {passwordError && (
+            <p className="text-sm text-error mt-1.5" role="alert">
+              {passwordError}
+            </p>
+          )}
         </div>
 
-        {error && (
-          <p className="text-sm text-error" role="alert">
-            {error}
-          </p>
+        {formError && (
+          <div
+            className="rounded-xl border border-error/30 bg-error/10 px-4 py-3 text-sm text-error"
+            role="alert"
+          >
+            {formError}
+          </div>
         )}
 
-        <button type="submit" className="btn-primary w-full">
-          Sign In
-        </button>
+        <SubmitButton />
       </form>
 
       <div className="flex items-center gap-4 my-6">
