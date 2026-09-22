@@ -1,5 +1,57 @@
 rootProject.name = 'Turna'
 
-apply from: file("../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesSettingsGradle(settings)
+def nodeModulesDirs = [
+    new File(rootDir, "../node_modules"),
+    new File(rootDir, "../../../node_modules"),
+    new File(rootDir, "../../../../node_modules"),
+]
+
+def cliAndroidGradle = nodeModulesDirs.collect {
+    new File(it, "@react-native-community/cli-platform-android/native_modules.gradle")
+}.find { it.exists() }
+
+if (cliAndroidGradle == null) {
+    def rn = nodeModulesDirs.collect { new File(it, "react-native") }.find { it.exists() }
+    if (rn != null) {
+        def sibling = new File(rn.canonicalFile.parentFile, "@react-native-community/cli-platform-android/native_modules.gradle")
+        if (sibling.exists()) {
+            cliAndroidGradle = sibling
+        }
+    }
+}
+
+if (cliAndroidGradle == null) {
+    throw new GradleException(
+        "Cannot find @react-native-community/cli-platform-android/native_modules.gradle. " +
+        "Run pnpm install in the monorepo root."
+    )
+}
+
+def gradlePluginDir = null
+for (File dir : nodeModulesDirs) {
+    def direct = new File(dir, "@react-native/gradle-plugin")
+    if (new File(direct, "settings.gradle.kts").exists() || new File(direct, "settings.gradle").exists()) {
+        gradlePluginDir = direct
+        break
+    }
+    def rn = new File(dir, "react-native")
+    if (rn.exists()) {
+        def sibling = new File(rn.canonicalFile.parentFile, "@react-native/gradle-plugin")
+        if (new File(sibling, "settings.gradle.kts").exists() || new File(sibling, "settings.gradle").exists()) {
+            gradlePluginDir = sibling
+            break
+        }
+    }
+}
+
+if (gradlePluginDir == null) {
+    throw new GradleException(
+        "Cannot find @react-native/gradle-plugin. Run pnpm install in the monorepo root."
+    )
+}
+
+apply from: cliAndroidGradle
+applyNativeModulesSettingsGradle(settings)
 
 include ':app'
+includeBuild(gradlePluginDir.absolutePath)

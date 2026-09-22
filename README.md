@@ -28,6 +28,7 @@ Track contributions, know your payout date, and build **real trust**.
 
 - [✨ Features](#-features)
 - [🏗️ Architecture](#%EF%B8%8F-architecture)
+- [🎨 Design System](#-design-system)
 - [⚡ Tech Stack](#-tech-stack)
 - [🚀 Quick Start](#-quick-start)
 - [📁 Project Structure](#-project-structure)
@@ -223,6 +224,26 @@ pnpm dev:web
 ```
 
 Visit [http://localhost:3000](http://localhost:3000) 🎉
+
+---
+
+## 🎨 Design System
+
+| Token | Value |
+|-------|-------|
+| Forest | `#03251B` |
+| Dark Green | `#06382A` |
+| Primary | `#00A878` |
+| Mint | `#35D6A0` |
+| Cream | `#F7F7F0` |
+| Muted | `#8D9B95` |
+| Border | `#DDE5E0` |
+| Error | `#D94A4A` |
+| Warning | `#D9A441` |
+
+**Fonts**: Playfair Display (display) + Plus Jakarta Sans (body), max 97px  
+**Logo**: unified SVG/PNG/WebP/JPG exports in `apps/web/public/` (`logo.svg`, `app-icon.png`, `splash.svg`)  
+**Icons**: inline SVG only — no emoji anywhere in UI
 
 ---
 

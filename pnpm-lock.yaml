@@ -54,6 +54,18 @@ importers:
       '@babel/preset-typescript':
         specifier: ^7.23.0
         version: 7.29.7(@babel/core@7.29.7)
+      '@react-native-community/cli':
+        specifier: ^12.3.6
+        version: 12.3.6
+      '@react-native-community/cli-platform-android':
+        specifier: ^12.3.6
+        version: 12.3.6
+      '@react-native-community/cli-platform-ios':
+        specifier: ^12.3.6
+        version: 12.3.6
+      '@react-native-community/cli-tools':
+        specifier: ^12.3.6
+        version: 12.3.6
       '@react-native/eslint-config':
         specifier: ^0.73.0
         version: 0.73.2(eslint@8.57.1)(prettier@3.9.8)(typescript@5.9.3)
@@ -6682,9 +6694,7 @@ snapshots:
     transitivePeerDependencies:
       - '@babel/core'
       - '@babel/preset-env'
-      - bufferutil
       - supports-color
-      - utf-8-validate
 
   '@react-native/normalize-colors@0.73.2': {}
 

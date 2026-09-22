@@ -2,22 +2,29 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
-import com.android.build.OutputFile
+def rnPackageDir = file("../../node_modules/react-native")
+def rnCanonicalParent = rnPackageDir.exists() ? rnPackageDir.canonicalFile.parentFile : file("../../node_modules")
 
-project.ext.react = [
-    enableHermes: true,
-    hermesCommand: "$rootDir/../node_modules/.bin/hermes",
-    hermesFlags: "-O",
-]
+react {
+    // package.json lives at apps/mobile (two levels up from android/app)
+    root = file("../..")
+    reactNativeDir = rnPackageDir
+    codegenDir = new File(rnCanonicalParent, "@react-native/codegen")
+    cliFile = new File(rnPackageDir, "cli.js")
+    hermesFlags = ["-O"]
+}
 
-apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesAppBuildGradle(project)
+def enableProguardInReleaseBuilds = false
+def jscFlavor = 'org.webkit:android-jsc:+'
 
 def DEFAULT_VERSION_CODE = 1
 def DEFAULT_VERSION_NAME = "1.0.0"
 
 android {
     namespace "com.hx.turna"
-    compileSdkVersion rootProject.ext.compileSdkVersion
+    ndkVersion rootProject.ext.ndkVersion
+    buildToolsVersion rootProject.ext.buildToolsVersion
+    compileSdk rootProject.ext.compileSdkVersion
 
     defaultConfig {
         applicationId "com.hx.turna"
@@ -25,7 +32,6 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode DEFAULT_VERSION_CODE
         versionName DEFAULT_VERSION_NAME
-        buildConfigField "boolean", "IS_NEW_ARCHITECTURE_ENABLED", "false"
         vectorDrawables.useSupportLibrary = true
     }
 
@@ -47,35 +53,23 @@ android {
         }
     }
 
-    splits {
-        abi {
-            reset()
-            enable enableSeparateBuildPerCPUArchitecture
-            universalApk false
-            include "armeabi-v7a", "x86", "arm64-v8a", "x86_64"
-        }
-    }
-
-    signingConfigs.release {
-        storeFile file('release.keystore')
-        storePassword 'android'
-        keyAlias 'turna-release-key'
-        keyPassword 'android'
-    }
-
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            signingConfig signingConfigs.release
+            if (project.hasProperty('SIGNING_STORE_FILE')) {
+                signingConfig signingConfigs.release
+            } else {
+                signingConfig signingConfigs.debug
+            }
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
     }
 
-    packagingOptions {
-        pickFirst "**/*.so"
+    buildFeatures {
+        buildConfig true
     }
 
     compileOptions {
@@ -87,34 +81,21 @@ android {
         jvmTarget = "1.8"
     }
 
-    applicationVariants.all { variant ->
-        def versionCodes = ["armeabi-v7a": 1, "x86": 2, "arm64-v8a": 3, "x86_64": 4]
-        def abi = variant.getName()
-        def versionCode = DEFAULT_VERSION_CODE
-        if (abi.contains("armeabi-v7a")) versionCode = versionCodes["armeabi-v7a"]
-        else if (abi.contains("x86")) versionCode = versionCodes["x86"]
-        else if (abi.contains("arm64-v8a")) versionCode = versionCodes["arm64-v8a"]
-        else if (abi.contains("x86_64")) versionCode = versionCodes["x86_64"]
-        variant.versionCode = versionCode
+    packagingOptions {
+        pickFirst "**/*.so"
     }
 }
 
 dependencies {
     implementation("com.facebook.react:react-android")
-    implementation("com.facebook.react:hermes-engine")
+
+    if (hermesEnabled.toBoolean()) {
+        implementation("com.facebook.react:hermes-android")
+    } else {
+        implementation jscFlavor
+    }
+
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
     implementation("com.google.android.material:material:1.11.0")
 }
-
-if (enableHermes) {
-    def hermesPath = "../../node_modules/hermes-engine/android/";
-    def hermesAar = file("$hermesPath/hermes-engine.aar")
-    if (hermesAar.exists()) {
-        implementation(files(hermesAar))
-    } else {
-        implementation("com.facebook.react:hermes-engine:+")
-    }
-}
-
-apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesAppBuildGradle(project)

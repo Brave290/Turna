@@ -49,10 +49,12 @@ apps/mobile/android/app/build
 apps/mobile/android/build
 apps/mobile/android/.gradle
 apps/mobile/android/local.properties
-apps/mobile/android/gradle.properties
 apps/mobile/android/captures
 apps/mobile/android/*.apk
 apps/mobile/android/*.aab
+apps/mobile/android/app/release.keystore
+apps/mobile/android/app/*.keystore.bak
+# Keep debug.keystore tracked for CI debug builds
 apps/mobile/android/*.ap_
 
 # iOS

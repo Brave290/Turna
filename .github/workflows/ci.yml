@@ -147,21 +147,20 @@ jobs:
           java-version: '17'
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
         with:
-          api-level: 34
-          ndk-version: r26c
-          emulator: false
+          packages: 'platform-tools platforms;android-34 build-tools;34.0.0 ndk;26.1.10909125'
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Build Android Debug
-        run: cd apps/mobile/android && ./gradlew assembleDebug
+        run: ./gradlew assembleDebug --no-daemon
+        working-directory: apps/mobile/android
 
       - name: Upload Android APK
         uses: actions/upload-artifact@v4
         with:
           name: android-debug-apk
-          path: apps/mobile/android/app/build/outputs/apk/debug/*.apk
+          path: apps/mobile/android/app/build/outputs/apk/debug/**/*.apk
           retention-days: 7
