@@ -34,6 +34,67 @@ function generateOtp(): string {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
+/** Insert an in-app notification (bell). Best-effort — never throws. */
+async function notify(
+  supabase: ReturnType<typeof createServerSupabaseClient>,
+  opts: {
+    userId: string;
+    circleId?: string | null;
+    title: string;
+    body: string;
+    data?: Record<string, unknown>;
+  }
+): Promise<void> {
+  try {
+    const { error } = await supabase.from('notifications').insert({
+      user_id: opts.userId,
+      circle_id: opts.circleId ?? null,
+      channel: 'in_app',
+      title: opts.title,
+      body: opts.body,
+      data: (opts.data ?? {}) as never,
+      status: 'delivered',
+      delivered_at: new Date().toISOString(),
+    });
+    if (error) console.error('[notify]', error.message);
+  } catch (e) {
+    console.error('[notify]', e);
+  }
+}
+
+async function notifyCircleMembers(
+  circleId: string,
+  excludeUserId: string | null,
+  payload: { title: string; body: string; data?: Record<string, unknown> }
+): Promise<void> {
+  try {
+    const admin = createAdminSupabaseClient();
+    const { data: rows } = await admin
+      .from('circle_members')
+      .select('user_id')
+      .eq('circle_id', circleId)
+      .eq('status', 'active');
+    const ids = (rows ?? [])
+      .map((r) => r.user_id)
+      .filter((id) => id && id !== excludeUserId);
+    if (ids.length === 0) return;
+    await admin.from('notifications').insert(
+      ids.map((userId) => ({
+        user_id: userId,
+        circle_id: circleId,
+        channel: 'in_app',
+        title: payload.title,
+        body: payload.body,
+        data: (payload.data ?? {}) as never,
+        status: 'delivered',
+        delivered_at: new Date().toISOString(),
+      }))
+    );
+  } catch (e) {
+    console.error('[notifyCircleMembers]', e);
+  }
+}
+
 /** Store 5-minute OTP + send via Gmail SMTP. Rate limit is a no-op (OTP always works). */
 async function issueCustomOtp(
   email: string,
@@ -267,10 +328,14 @@ export async function signIn(formData: FormData): Promise<AuthError> {
           user.id
         );
         if (otp.ok) {
+          const next = safeNext(formData.get('redirect'));
+          const verifyQs =
+            `/auth/verify?email=${encodeURIComponent(email)}` +
+            (next !== '/dashboard' ? `&redirect=${encodeURIComponent(next)}` : '');
           return {
             success: `Please verify your email first. We sent a 6-digit code to ${email} (expires in 5 minutes).`,
             needsVerify: true,
-            redirectTo: `/auth/verify?email=${encodeURIComponent(email)}`,
+            redirectTo: verifyQs,
           };
         }
         return { error: { form: [otp.error ?? 'Could not send verification code'] } };
@@ -578,6 +643,14 @@ export async function createCircle(
     previous_event_id: null,
   });
 
+  await notify(supabase, {
+    userId: user.id,
+    circleId: circle.id,
+    title: 'Circle created',
+    body: `"${parsed.data.name}" is ready. Invite members to get started.`,
+    data: { circle_id: circle.id, event: 'CIRCLE_CREATED' },
+  });
+
   revalidatePath('/dashboard');
   revalidatePath('/dashboard/circles');
   return { success: 'Circle created', circleId: circle.id };
@@ -661,6 +734,14 @@ export async function inviteMember(
     previous_event_id: null,
   });
 
+  await notify(supabase, {
+    userId: user.id,
+    circleId: circle.id,
+    title: 'Invitation sent',
+    body: `Invite sent to ${parsed.data.invitee_email} for "${circle.name}".`,
+    data: { circle_id: circle.id, event: 'MEMBER_INVITED' },
+  });
+
   // Send invitation email via Gmail SMTP (best-effort)
   try {
     const { data: inviterProfile } = await supabase
@@ -680,6 +761,7 @@ export async function inviteMember(
       to: parsed.data.invitee_email,
       subject: tmpl.subject,
       html: tmpl.html,
+      text: tmpl.text,
     });
   } catch (e) {
     console.error('[Invite] email send failed:', e);
@@ -733,18 +815,24 @@ export async function acceptInvitation(
   formData: FormData
 ): Promise<AcceptInviteState> {
   const supabase = createServerSupabaseClient();
+  const token = String(formData.get('token') ?? '').trim();
+  const joinBack = token
+    ? `/circles/join?token=${encodeURIComponent(token)}`
+    : '/circles/join';
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user?.email) {
-    redirect('/auth/login?redirect=' + encodeURIComponent('/circles/join'));
+    // Preserve full invite URL through login → auto-join on return
+    redirect('/auth/login?redirect=' + encodeURIComponent(joinBack));
   }
 
-  const token = String(formData.get('token') ?? '').trim();
   if (!token) {
     return { error: { form: ['Invalid invitation link'] } };
   }
 
+  // Recover pending invite if a callback hop dropped the query string
   const { data: invite } = await supabase
     .from('invitations')
     .select('id, circle_id, invitee_email, status, expires_at')
@@ -822,8 +910,14 @@ export async function acceptInvitation(
       joined_at: new Date().toISOString(),
     });
     if (joinErr) {
-      console.error('[AcceptInvite] join failed:', joinErr.message);
-      return { error: { form: ['Could not join the circle'] } };
+      console.error('[AcceptInvite] join failed:', joinErr.code, joinErr.message);
+      const msg =
+        joinErr.code === '23505'
+          ? 'That payout slot is already taken. Ask the owner for a new invite.'
+          : joinErr.code === '42501' || /row-level security/i.test(joinErr.message)
+            ? 'You do not have permission to join yet. Sign in with the invited email and try again.'
+            : 'Could not join the circle. Please try again.';
+      return { error: { form: [msg] } };
     }
   }
 
@@ -843,12 +937,102 @@ export async function acceptInvitation(
     previous_event_id: null,
   });
 
+  const { data: circleRow } = await supabase
+    .from('circles')
+    .select('name, owner_id')
+    .eq('id', invite.circle_id)
+    .maybeSingle();
+
+  if (circleRow) {
+    await notify(supabase, {
+      userId: user.id,
+      circleId: invite.circle_id,
+      title: 'Joined circle',
+      body: `You joined "${circleRow.name}". Welcome aboard!`,
+      data: { circle_id: invite.circle_id, event: 'MEMBER_JOINED' },
+    });
+    if (circleRow.owner_id !== user.id) {
+      await notifyCircleMembers(invite.circle_id, user.id, {
+        title: 'New member joined',
+        body: `${user.email} joined "${circleRow.name}".`,
+        data: { circle_id: invite.circle_id, event: 'MEMBER_JOINED' },
+      });
+    }
+  }
+
+  revalidatePath('/dashboard');
+  revalidatePath('/dashboard/circles');
   revalidatePath('/dashboard/circles');
   revalidatePath(`/dashboard/circles/${invite.circle_id}`);
   return {
     success: 'You have joined the circle',
     circleId: invite.circle_id,
   };
+}
+
+export type DeleteCircleState = {
+  error?: Record<string, string[] | undefined> & { form?: string[] };
+  success?: string;
+} | null;
+
+/** Owner can delete a circle in any status (draft or active). Cascades members/invites/cycles. */
+export async function deleteCircle(
+  _prev: DeleteCircleState,
+  formData: FormData
+): Promise<DeleteCircleState> {
+  const supabase = createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect('/auth/login');
+
+  const circleId = String(formData.get('circle_id') ?? '').trim();
+  if (!circleId) {
+    return { error: { form: ['Missing circle'] } };
+  }
+
+  const { data: circle } = await supabase
+    .from('circles')
+    .select('id, owner_id, name, status')
+    .eq('id', circleId)
+    .maybeSingle();
+
+  if (!circle) {
+    return { error: { form: ['Circle not found'] } };
+  }
+  if (circle.owner_id !== user.id) {
+    return { error: { form: ['Only the owner can delete this circle'] } };
+  }
+
+  // Ledger rows reference circle_id with ON DELETE CASCADE — hard delete is safe.
+  const { error: delErr } = await supabase
+    .from('circles')
+    .delete()
+    .eq('id', circleId);
+
+  if (delErr) {
+    console.error('[deleteCircle]', delErr.message);
+    return {
+      error: {
+        form: [
+          delErr.code === '23503'
+            ? 'This circle still has related records and cannot be deleted yet.'
+            : 'Could not delete circle',
+        ],
+      },
+    };
+  }
+
+  await notify(supabase, {
+    userId: user.id,
+    title: 'Circle deleted',
+    body: `"${circle.name}" was deleted.`,
+    data: { event: 'CIRCLE_DELETED', circle_id: circleId },
+  });
+
+  revalidatePath('/dashboard');
+  revalidatePath('/dashboard/circles');
+  redirect('/dashboard/circles');
 }
 
 export type DeleteAccountState = {

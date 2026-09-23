@@ -36,6 +36,20 @@ function SubmitButton() {
 export default function SignUpPage() {
   const searchParams = useSearchParams();
   const redirectTarget = searchParams.get("redirect") || "";
+
+  // Track pending invite across signup → verify → login → join
+  useEffect(() => {
+    if (redirectTarget.includes("/circles/join")) {
+      try {
+        const u = new URL(redirectTarget, window.location.origin);
+        const t = u.searchParams.get("token");
+        if (t) sessionStorage.setItem("turna_pending_invite", t);
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [redirectTarget]);
+
   const [state, formAction] = useFormState(
     (_: AuthState, formData: FormData) => {
       const email = String(formData.get("email") ?? "").trim().toLowerCase();

@@ -1,9 +1,11 @@
 export function formatCurrency(amount: number, currency = 'NGN'): string {
+  const n = Number(amount);
+  if (!Number.isFinite(n)) return '₦0';
   return new Intl.NumberFormat('en-NG', {
     style: 'currency',
     currency,
     maximumFractionDigits: 0,
-  }).format(amount / 100);
+  }).format(n / 100);
 }
 
 export function formatNumber(num: number): string {

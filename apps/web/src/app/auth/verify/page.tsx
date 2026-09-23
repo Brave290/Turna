@@ -36,6 +36,17 @@ export default function VerifyEmailPage() {
       const stored = sessionStorage.getItem("turna_pending_email");
       if (stored) setEmail(stored);
     }
+    // Keep invite token alive through verify → login
+    const redir = searchParams.get("redirect");
+    if (redir && redir.includes("/circles/join")) {
+      try {
+        const u = new URL(redir, window.location.origin);
+        const t = u.searchParams.get("token");
+        if (t) sessionStorage.setItem("turna_pending_invite", t);
+      } catch {
+        /* ignore */
+      }
+    }
   }, [searchParams]);
 
   // Resend countdown

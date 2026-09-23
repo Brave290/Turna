@@ -161,21 +161,28 @@ export function DashboardNav({
                 key={item.href}
                 href={item.href}
                 className={`relative flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors ${
-                  active ? "text-primary" : "text-muted hover:text-forest"
+                  active
+                    ? "text-[#00C2A8] font-semibold"
+                    : "text-[#4A5D73] hover:text-[#0A1628]"
                 }`}
                 aria-current={active ? "page" : undefined}
+                style={active ? { color: "#00C2A8" } : undefined}
               >
                 <AnimatePresence>
                   {active && (
                     <motion.span
                       layoutId="bottom-active"
-                      className="absolute top-1 left-1/2 -translate-x-1/2 w-8 h-1 rounded-full bg-primary"
+                      className="absolute top-1 left-1/2 -translate-x-1/2 w-8 h-1 rounded-full"
+                      style={{ background: "#00C2A8" }}
                       transition={{ type: "spring", bounce: 0.12, duration: 0.4 }}
                     />
                   )}
                 </AnimatePresence>
-                <span className="relative">
-                  <item.icon className="w-5 h-5" />
+                <span className="relative" style={active ? { color: "#00C2A8" } : undefined}>
+                  <item.icon
+                    className="w-5 h-5"
+                    style={active ? { color: "#00C2A8", stroke: "#00C2A8" } : undefined}
+                  />
                   {item.href === "/dashboard/notifications" && unreadCount > 0 && (
                     <span className="absolute -top-1 -right-1.5 min-w-[16px] h-4 rounded-full bg-error text-white text-[9px] font-bold flex items-center justify-center px-1">
                       {unreadCount > 9 ? "9+" : unreadCount}
@@ -190,11 +197,23 @@ export function DashboardNav({
             href="/dashboard/settings"
             className={`relative flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors ${
               isActive(pathname, "/dashboard/settings")
-                ? "text-primary"
-                : "text-muted hover:text-forest"
+                ? "text-[#00C2A8] font-semibold"
+                : "text-[#4A5D73] hover:text-[#0A1628]"
             }`}
+            style={
+              isActive(pathname, "/dashboard/settings")
+                ? { color: "#00C2A8" }
+                : undefined
+            }
           >
-            <Settings className="w-5 h-5" />
+            <Settings
+              className="w-5 h-5"
+              style={
+                isActive(pathname, "/dashboard/settings")
+                  ? { color: "#00C2A8", stroke: "#00C2A8" }
+                  : undefined
+              }
+            />
             Settings
           </Link>
         </div>

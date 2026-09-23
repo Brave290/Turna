@@ -14,9 +14,9 @@
   --sky: #38bdf8;
   --cream: #f4f7fb;
   --white: #ffffff;
-  /* Darkened for WCAG AA on cream bg (was #6b7c93 ~3.4:1) */
+  /* Darkened for WCAG AA on cream bg (was #6b7c93 ~3.4:1) — keep readable, not muddy grey */
   --muted: #4a5d73;
-  --border: #d8e1ec;
+  --border: #d0dbe8;
   --error: #f43f5e;
   --warning: #f59e0b;
 }
@@ -85,9 +85,15 @@
     @apply px-8 py-4 text-lg;
   }
 
-  /* Inputs */
+  /* Inputs — solid white, clear teal focus (no muddy grey fill) */
   .input {
-    @apply w-full rounded-xl border border-border bg-white px-4 py-3 text-forest placeholder:text-muted/70 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-200;
+    @apply w-full rounded-xl border border-border bg-white px-4 py-3 text-forest placeholder:text-muted/60 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-200;
+    color-scheme: light;
+  }
+
+  .input:focus {
+    border-color: var(--primary);
+    background: #fff;
   }
 
   .input-error {

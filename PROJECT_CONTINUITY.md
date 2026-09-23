@@ -438,3 +438,33 @@ Each session should append:
 4. Live: settings delete-account with wrong/right email; owned-circle block message
 5. Later: full security audit (6-phase skill) when foundation is complete
 
+### Session 2026-09-23 (Invite auto-join + delete circle + notifications + fixes)
+
+**Goal**: Invite token survives signup/verify/login and auto-joins; owner can delete circles; bell notifications for real events; fix join RLS, dashboard error, spam headers, OTP grey, bottom-nav black icon.
+
+**Completed**:
+- Join flow: `join-client.tsx` stores/recovers `turna_pending_invite`; auto-accepts once when `sessionEmail` set; signup/login/verify stash token when redirect contains `/circles/join`
+- Unauthenticated `acceptInvitation` redirects to login with full `/circles/join?token=` (was dropping token)
+- `signIn` needsVerify redirectTo now preserves `&redirect=` (invite was lost on unverified login)
+- Migration `20260923230000` applied to Supabase: LOWER() invite email match; notifications INSERT for circle members/owner
+- `deleteCircle` action + `DeleteCircleButton` on circle detail (owner, draft or active, confirm dialog)
+- `notify` / `notifyCircleMembers`: circle created, invite sent, member joined (all members)
+- Join error messages for 23505 / RLS
+- Dashboard: stats try/catch, NaN-safe `formatCurrency`, `dashboard/error.tsx`
+- Email: text part always, List-Unsubscribe, invite sends text
+- OTP solid white + teal; bottom nav active `#00C2A8` explicit; border `#D0DBE8`
+- TSC + ESLint pass
+
+**Blockers**: Mobile Android CI job still fails (pre-existing, not this batch). Security audit still deferred.
+
+**Decisions**:
+- Invite token dual-tracked: URL `?token=` + sessionStorage (callbacks must not lose it)
+- Auto-join only once per page load after auth returns
+- Circle delete is hard delete (FK cascade); owner-only any status
+
+**Next Session**:
+1. Push → Vercel Ready → live test: invite no-account email → signup → OTP → login → auto-join circle
+2. Live: owner delete draft + active circle; member sees notification bell events
+3. Live: check Gmail inbox vs Spam for OTP + invite
+4. Mobile CI failure triage if needed
+

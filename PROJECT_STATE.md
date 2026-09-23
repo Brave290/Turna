@@ -1,7 +1,7 @@
 # Project State — Turna
 
 **Last Updated**: 2026-09-23
-**Current Phase**: Phase 33 — UI/UX Polish: Theme Toggle, Notification Modal, Invite Join Flow, Settings Redesign
+**Current Phase**: Phase 34 — Invite Auto-Join Chain, Circle Delete, Notifications, Join RLS Fix, UI Fixes
 **Overall Status**: 🟡 In Progress
 
 ## Production
@@ -68,6 +68,7 @@
 | 37. Profile + Settings + Security | ✅ Complete | 2026-09-22 | 2026-09-23 | Profile form + delete account + theme toggle on settings |
 | 38. App Download Popup (Web) | ⏳ Pending | — | — | |
 | 39. UI/UX Polish (Theme, Modal, Join, Settings) | ✅ Complete | 2026-09-23 | 2026-09-23 | App-wide theme, notification modal, join accept page, branded select, no Supabase UI branding |
+| 40. Invite Auto-Join + Circle Delete + Notifications | ✅ Complete | 2026-09-23 | 2026-09-23 | Token tracked through signup/verify/login; auto-join on return; owner delete circle; bell events; join RLS case fix |
 
 ---
 
@@ -150,6 +151,22 @@
 - **Branded select**: `BrandSelect` in `components/ui.tsx`; native `<select>` removed from circles/new frequency
 - **Supabase branding removed from UI**: profile form helper text + legal privacy processors line
 - **Full security audit deferred** until project foundation complete (user request)
+
+---
+
+## Phase 34 (2026-09-23) — Invite Auto-Join, Circle Delete, Notifications, Fixes
+
+- **Invite → signup auto-join**: token stored in `sessionStorage.turna_pending_invite` on join/signup/verify/login when redirect contains `/circles/join`; join page recovers token if URL loses it; when session exists, auto-submits `acceptInvitation` once; unauthenticated accept redirects to login **with full join URL + token**
+- **Unverified login keeps invite redirect**: `signIn` needsVerify now appends `&redirect=` to verify URL (was dropping it)
+- **RLS migration applied** (`20260923230000`): case-insensitive invitee email match on invitations SELECT/UPDATE; notifications INSERT allows circle members/owner to notify each other
+- **Delete circle (owner)**: `deleteCircle` server action (owner-only, any status) + confirm dialog on circle detail; hard delete cascades members/invites/cycles/ledger via FK
+- **Notifications**: `notify` + `notifyCircleMembers` helpers — circle created, invite sent, member joined (self + other members)
+- **Join errors surfaced**: unique payout slot / RLS / generic messages instead of bare "Could not join"
+- **Dashboard overview hardening**: stats queries try/catch; `formatCurrency` NaN-safe; `dashboard/error.tsx` boundary
+- **Email deliverability**: multipart text always present; List-Unsubscribe one-click; X-MSMail-Priority; invite emails send `text` part
+- **OTP inputs**: solid white bg, teal borders (no muddy grey fill on forest auth pages)
+- **Bottom nav active icon**: explicit `#00C2A8` color/stroke (was rendering black)
+- **Border softness**: `#D0DBE8` (slightly lighter grey)
 
 ---
 

@@ -25,19 +25,30 @@ export interface EmailOptions {
 
 export async function sendEmail(options: EmailOptions): Promise<{ success: boolean; error?: string }> {
   try {
-    const messageId = `<turna-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}@turnaapp.vercel.app>`;
+    const now = new Date();
+    const dateHeader = now.toUTCString();
+    const messageId = `<turna-${now.getTime().toString(36)}-${Math.random().toString(36).slice(2, 10)}@turnaapp.vercel.app>`;
+    const textPart =
+      options.text ??
+      options.html.replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
     await transporter.sendMail({
       from: `"${APP_NAME}" <${SUPPORT_EMAIL}>`,
       to: Array.isArray(options.to) ? options.to.join(', ') : options.to,
       subject: options.subject,
       html: options.html,
-      text: options.text,
-      // Help inbox placement: stable Message-ID, reply path, no bulk headers.
+      text: textPart,
       messageId,
+      date: dateHeader,
       replyTo: SUPPORT_EMAIL,
       headers: {
         'X-Entity-Ref-ID': messageId,
         'X-Priority': '3',
+        'X-MSMail-Priority': 'Normal',
+        'Importance': 'Normal',
+        'X-Mailer': 'Turna',
+        // Transactional: no bulk/List-* headers (hurts inbox placement).
+        'List-Unsubscribe': `<mailto:${SUPPORT_EMAIL}?subject=unsubscribe>`,
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
       },
     });
     return { success: true };

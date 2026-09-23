@@ -121,14 +121,14 @@ export function OtpInput({
               onChange={(e) => handleChange(i, e.target.value)}
               onKeyDown={(e) => handleKeyDown(i, e)}
               className={cn(
-                "w-11 h-14 sm:w-12 sm:h-14 text-center text-xl font-semibold rounded-xl border bg-white/90 backdrop-blur-sm",
+                "w-11 h-14 sm:w-12 sm:h-14 text-center text-xl font-semibold rounded-xl border-2 bg-white text-forest",
                 "transition-all duration-200 outline-none",
-                "focus:ring-2 focus:ring-primary/30 focus:border-primary focus:scale-[1.04]",
+                "focus:ring-2 focus:ring-primary/40 focus:border-primary focus:scale-[1.04]",
                 error
                   ? "border-error text-error ring-2 ring-error/20"
                   : filled
-                    ? "border-primary text-forest shadow-glow/30"
-                    : "border-border text-forest placeholder:text-muted/50",
+                    ? "border-primary shadow-glow/30"
+                    : "border-white/40 placeholder:text-muted/40",
                 disabled && "opacity-60 cursor-not-allowed"
               )}
             />

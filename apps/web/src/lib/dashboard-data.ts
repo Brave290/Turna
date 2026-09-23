@@ -22,6 +22,18 @@ export async function requireUser() {
 }
 
 export async function getDashboardData() {
+  try {
+    return await loadDashboardData();
+  } catch (e) {
+    console.error('[getDashboardData]', e);
+    const fallbackUser = { id: '', email: '', created_at: new Date().toISOString(), updated_at: null } as never;
+    void fallbackUser;
+    // Re-throw as a controlled failure the page can catch
+    throw e;
+  }
+}
+
+async function loadDashboardData() {
   const { supabase, user } = await requireUser();
 
   const [profileRes, circlesRes, notificationsRes, membersRes] = await Promise.all([
@@ -73,48 +85,44 @@ export async function getDashboardData() {
   if (circles.length > 0) {
     const ids = circles.map((c) => c.id);
 
-    const [cyclesRes, contribRes, payoutRes] = await Promise.all([
-      supabase
-        .from('contribution_cycles')
-        .select('id, circle_id, status, expected_amount, due_date, cycle_number')
-        .in('circle_id', ids)
-        .order('due_date', { ascending: false })
-        .limit(100),
-      supabase
-        .from('contributions')
-        .select('id, status, reported_amount, expected_amount, cycle_id, member_id, contribution_cycles!inner(circle_id)')
-        .in('contribution_cycles.circle_id', ids)
-        .limit(200),
-      supabase
-        .from('payouts')
-        .select('id, status, expected_amount, actual_amount, cycle_id, contribution_cycles!inner(circle_id)')
-        .in('contribution_cycles.circle_id', ids)
-        .limit(200),
-    ]);
+    try {
+      const [contribRes, payoutRes] = await Promise.all([
+        supabase
+          .from('contributions')
+          .select('id, status, reported_amount, expected_amount, cycle_id, member_id, contribution_cycles!inner(circle_id)')
+          .in('contribution_cycles.circle_id', ids)
+          .limit(200),
+        supabase
+          .from('payouts')
+          .select('id, status, expected_amount, actual_amount, cycle_id, contribution_cycles!inner(circle_id)')
+          .in('contribution_cycles.circle_id', ids)
+          .limit(200),
+      ]);
 
-    const myMemberIds = new Set(memberships.map((m) => m.id));
-    const contributions = (contribRes.data ?? []) as unknown as (Contribution & {
-      contribution_cycles?: { circle_id: string };
-    })[];
-    const payouts = (payoutRes.data ?? []) as unknown as (Payout & {
-      contribution_cycles?: { circle_id: string };
-    })[];
+      const myMemberIds = new Set(memberships.map((m) => m.id));
+      const contributions = (contribRes.data ?? []) as unknown as (Contribution & {
+        contribution_cycles?: { circle_id: string };
+      })[];
+      const payouts = (payoutRes.data ?? []) as unknown as (Payout & {
+        contribution_cycles?: { circle_id: string };
+      })[];
 
-    pendingContributions = contributions.filter(
-      (c) =>
-        myMemberIds.has(c.member_id) &&
-        (c.status === 'pending' || c.status === 'reported')
-    ).length;
+      pendingContributions = contributions.filter(
+        (c) =>
+          myMemberIds.has(c.member_id) &&
+          (c.status === 'pending' || c.status === 'reported')
+      ).length;
 
-    pendingPayouts = payouts.filter(
-      (p) => p.status === 'pending' || p.status === 'initiated' || p.status === 'sent'
-    ).length;
+      pendingPayouts = payouts.filter(
+        (p) => p.status === 'pending' || p.status === 'initiated' || p.status === 'sent'
+      ).length;
 
-    totalContributed = contributions
-      .filter((c) => c.status === 'confirmed' && myMemberIds.has(c.member_id))
-      .reduce((sum, c) => sum + (c.reported_amount ?? c.expected_amount ?? 0), 0);
-
-    void cyclesRes;
+      totalContributed = contributions
+        .filter((c) => c.status === 'confirmed' && myMemberIds.has(c.member_id))
+        .reduce((sum, c) => sum + (c.reported_amount ?? c.expected_amount ?? 0), 0);
+    } catch (statsErr) {
+      console.error('[getDashboardData] stats failed:', statsErr);
+    }
   }
 
   return {

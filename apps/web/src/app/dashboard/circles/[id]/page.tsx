@@ -12,6 +12,7 @@ import { getCircleDetail } from '@/lib/dashboard-data';
 import { formatCurrency, formatDate, getInitials } from '@/lib/utils';
 import { StatusBadge } from '@/components/dashboard/status-badge';
 import { InviteForm } from '@/components/dashboard/invite-form';
+import { DeleteCircleButton } from '@/components/dashboard/delete-circle';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,11 +52,22 @@ export default async function CircleDetailPage({
             )}
           </div>
           <div className="text-sm sm:text-right">
-            <p className="text-muted text-xs">Contribution</p>
-            <p className="font-display text-2xl font-bold text-forest">
-              {formatCurrency(circle.contribution_amount, circle.currency)}
-            </p>
-            <p className="text-muted capitalize">{circle.frequency}</p>
+            <div className="flex flex-col items-start sm:items-end gap-2">
+              <div>
+                <p className="text-muted text-xs">Contribution</p>
+                <p className="font-display text-2xl font-bold text-forest">
+                  {formatCurrency(circle.contribution_amount, circle.currency)}
+                </p>
+                <p className="text-muted capitalize">{circle.frequency}</p>
+              </div>
+              {isOwner && (
+                <DeleteCircleButton
+                  circleId={circle.id}
+                  circleName={circle.name}
+                  status={circle.status}
+                />
+              )}
+            </div>
           </div>
         </div>
       </div>
