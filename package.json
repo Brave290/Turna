@@ -5,7 +5,7 @@
   "scripts": {
     "dev:web": "pnpm --filter @turna/web dev",
     "dev:mobile": "pnpm --filter @turna/mobile dev",
-    "build": "pnpm -r build",
+    "build": "pnpm --filter @turna/web build",
     "build:web": "pnpm --filter @turna/web build",
     "build:mobile": "pnpm --filter @turna/mobile build",
     "lint": "pnpm --filter @turna/web lint",
@@ -14,7 +14,8 @@
     "db:generate": "pnpm --filter @turna/database generate",
     "db:migrate": "pnpm --filter @turna/database migrate",
     "db:seed": "pnpm --filter @turna/database seed",
-    "db:reset": "pnpm --filter @turna/database reset"
+    "db:reset": "pnpm --filter @turna/database reset",
+    "build:packages": "pnpm -r --filter \"./packages/*\" build"
   },
   "devDependencies": {
     "typescript": "^5.4.0",
