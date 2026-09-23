@@ -104,6 +104,13 @@ export async function signUp(formData: FormData): Promise<AuthError> {
         if (existing.email_confirmed_at) {
           return { error: { form: ['An account with this email already exists. Sign in instead.'] } };
         }
+        const { error: updateError } = await admin.auth.admin.updateUserById(existing.id, {
+          password: parsed.data.password,
+          user_metadata: { display_name: parsed.data.display_name },
+        });
+        if (updateError) {
+          return { error: { form: ['Could not update the pending account. Try again.'] } };
+        }
       } else {
         return { error: { form: [msg] } };
       }
