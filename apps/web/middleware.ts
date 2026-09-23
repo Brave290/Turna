@@ -61,16 +61,9 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const { data: { session } } = await supabase.auth.getSession();
-
-  // If no session, redirect to login
-  if (!session) {
-    const redirectUrl = new URL('/auth/login', request.url);
-    redirectUrl.searchParams.set('redirect', pathname);
-    return NextResponse.redirect(redirectUrl);
-  }
-
-  // Refresh session if needed
+  // Validate and refresh the session from Supabase rather than trusting the
+  // locally decoded session cookie. This prevents false login redirects when
+  // the access token has expired but the refresh token is still valid.
   const { data: { user } } = await supabase.auth.getUser();
   
   if (!user) {

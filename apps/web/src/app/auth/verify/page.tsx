@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -17,6 +17,7 @@ export default function VerifyEmailPage() {
   const searchParams = useSearchParams();
   const toast = useToast();
   const [isPending, setPending] = useState(false);
+  const submittingRef = useRef(false);
 
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -56,6 +57,8 @@ export default function VerifyEmailPage() {
   }
 
   async function submitCode(token: string) {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     // startTransition expects void; wrap async work manually
     setError(null);
     const formData = new FormData();
@@ -81,6 +84,7 @@ export default function VerifyEmailPage() {
         setShakeKey((k) => k + 1);
       }
     } finally {
+      submittingRef.current = false;
       setPending(false);
     }
   }
