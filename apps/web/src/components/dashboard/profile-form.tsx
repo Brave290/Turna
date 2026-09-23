@@ -83,7 +83,7 @@ export function ProfileForm({
           disabled
         />
         <p className="text-xs text-muted mt-1.5">
-          Email changes are managed by Supabase Auth.
+          Email is tied to your sign-in identity and cannot be changed here.
         </p>
       </div>
 

@@ -1,7 +1,7 @@
 # Project State — Turna
 
 **Last Updated**: 2026-09-23
-**Current Phase**: Phase 32 — Session Cookies Fixed, Middleware Relocated, Logo Assets, Resend Removed
+**Current Phase**: Phase 33 — UI/UX Polish: Theme Toggle, Notification Modal, Invite Join Flow, Settings Redesign
 **Overall Status**: 🟡 In Progress
 
 ## Production
@@ -65,8 +65,9 @@
 | 34. Insights + Goals | ⏳ Partial | 2026-09-22 | — | Live stats; goals not built |
 | 35. Chat + Notifications + Reminders | ⏳ Partial | 2026-09-22 | — | Notifications list live; chat/reminders pending |
 | 36. Health + Streaks + Disputes + Corrections | ⏳ Pending | — | — | |
-| 37. Profile + Settings + Security | ✅ Complete | 2026-09-22 | 2026-09-22 | Profile form + sign out |
+| 37. Profile + Settings + Security | ✅ Complete | 2026-09-22 | 2026-09-23 | Profile form + delete account + theme toggle on settings |
 | 38. App Download Popup (Web) | ⏳ Pending | — | — | |
+| 39. UI/UX Polish (Theme, Modal, Join, Settings) | ✅ Complete | 2026-09-23 | 2026-09-23 | App-wide theme, notification modal, join accept page, branded select, no Supabase UI branding |
 
 ---
 
@@ -134,6 +135,21 @@
 - **Resend removed**: package + lockfile entries gone; only Gmail SMTP/nodemailer remains; `RESEND_API_KEY` removed from `.env.local`
 - **Spam reduction**: OTP subject no longer embeds the code (`Your Turna verification code`); stable `Message-ID`, `replyTo`, `X-Entity-Ref-ID`; transactional (no bulk headers)
 - **Remote sync**: pulled 6 commits (`2608595`…`c0ee9fb`) — no password sessionStorage, OTP race fixes, enhanced logo assets, theme toggle
+
+---
+
+## Phase 33 (2026-09-23) — UI/UX Polish Batch
+
+- **App-wide theme**: `ThemeProvider` in `AppProviders`; dark mode CSS now applies to body/cards/inputs/nav (not only `.landing-page`); light-mode `--muted` darkened (`#4A5D73`) for subtext contrast; Tailwind `muted` color aligned
+- **Dashboard theme toggle**: mounted in sidebar (dark variant) + mobile top bar + settings page header
+- **Notification bell → centered modal**: portal + backdrop + Escape + scroll lock; no sticky full-screen overlay that blocked clicks (double-click fix)
+- **Invitation accept page**: `/circles/join?token=` (public in middleware); `acceptInvitation` server action validates token/expiry/email match, assigns free `payout_position`, joins circle, ledger `MEMBER_JOINED`
+- **Self-invite block**: `inviteMember` rejects invitee_email === owner email
+- **Signup/verify redirect chain**: `?redirect=` flows signup → verify → login → target (needed for join links)
+- **Settings redesign**: Profile + Account + Appearance + Delete Account panel (email confirm modal); anonymize profile + admin auth delete (FK RESTRICT on ledger.actor_id)
+- **Branded select**: `BrandSelect` in `components/ui.tsx`; native `<select>` removed from circles/new frequency
+- **Supabase branding removed from UI**: profile form helper text + legal privacy processors line
+- **Full security audit deferred** until project foundation complete (user request)
 
 ---
 

@@ -119,7 +119,7 @@ function getLegalPage(slug: LegalSlug): {
           body: [
             "We do not sell your personal data to third parties.",
             "Circle members can see your display name and email within shared circles.",
-            "We use trusted third-party processors (Supabase for data hosting, email providers for transactional email) under strict data processing agreements.",
+            "We use trusted third-party processors (managed database hosting, email providers for transactional email) under strict data processing agreements.",
           ],
         },
         {

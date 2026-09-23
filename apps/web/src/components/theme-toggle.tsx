@@ -1,43 +1,69 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 
-const STORAGE_KEY = "turna-theme";
+const STORAGE_KEY = 'turna-theme';
 
-type Theme = "light" | "dark";
+type Theme = 'light' | 'dark';
 
 function getInitialTheme(): Theme {
-  if (typeof window === "undefined") return "light";
+  if (typeof window === 'undefined') return 'light';
   const stored = window.localStorage.getItem(STORAGE_KEY);
-  if (stored === "light" || stored === "dark") return stored;
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  if (stored === 'light' || stored === 'dark') return stored;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches
+    ? 'dark'
+    : 'light';
 }
 
-export function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>("light");
+/** Applies theme to <html data-theme> — mount once in root layout. */
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    const t = getInitialTheme();
+    document.documentElement.dataset.theme = t;
+    // Listen for storage changes (other tabs)
+    function onStorage(e: StorageEvent) {
+      if (e.key === STORAGE_KEY && (e.newValue === 'light' || e.newValue === 'dark')) {
+        document.documentElement.dataset.theme = e.newValue;
+      }
+    }
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  return <>{children}</>;
+}
+
+export function ThemeToggle({ className = '' }: { className?: string }) {
+  const [theme, setTheme] = useState<Theme>('light');
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const initial = getInitialTheme();
     setTheme(initial);
     document.documentElement.dataset.theme = initial;
   }, []);
 
   function toggleTheme() {
-    const next: Theme = theme === "dark" ? "light" : "dark";
+    const next: Theme = theme === 'dark' ? 'light' : 'dark';
     setTheme(next);
     window.localStorage.setItem(STORAGE_KEY, next);
     document.documentElement.dataset.theme = next;
   }
 
-  const isDark = theme === "dark";
+  if (!mounted) {
+    return <span className={`inline-flex h-9 w-9 ${className}`} aria-hidden />;
+  }
+
+  const isDark = theme === 'dark';
 
   return (
     <button
       type="button"
       onClick={toggleTheme}
-      className="theme-toggle"
-      aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
-      title={isDark ? "Switch to light theme" : "Switch to dark theme"}
+      className={`theme-toggle ${className}`}
+      aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
+      title={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
     >
       {isDark ? (
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -49,7 +75,7 @@ export function ThemeToggle() {
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" />
         </svg>
       )}
-      <span className="sr-only">{isDark ? "Light mode" : "Dark mode"}</span>
+      <span className="sr-only">{isDark ? 'Light mode' : 'Dark mode'}</span>
     </button>
   );
 }

@@ -406,3 +406,35 @@ Each session should append:
 3. Live: unverified login → forced OTP; forgot-password → reset → new password → login
 4. Optionally send test OTP and check Gmail Spam for a recipient
 
+### Session 2026-09-23 (UI/UX polish batch)
+
+**Goal**: Dashboard theme toggle + light-mode contrast, notification centered modal (double-click fix), invitation accept page, self-invite block, settings redesign + delete account, branded selects, remove Supabase UI branding. Full security audit deferred until project foundation complete (user request).
+
+**Completed**:
+- `ThemeProvider` mounted in `AppProviders`; app-wide dark CSS (body/cards/inputs/nav/glass) not only `.landing-page`; `--muted` + Tailwind `muted` → `#4A5D73` for light-mode subtext contrast
+- `ThemeToggle` in dashboard sidebar (on-dark), mobile top bar, settings header
+- `NotificationBell` → centered portal modal (z-90, Escape, scroll lock) — removed sticky full-screen overlay that swallowed clicks
+- New `/circles/join` page (public in middleware) + `acceptInvitation` server action: token/expiry/email-match checks, free `payout_position`, join, ledger `MEMBER_JOINED`
+- `inviteMember` rejects self-invite (invitee == owner email)
+- Signup/verify forward `?redirect=` so join deep-links return after OTP → login
+- Settings redesign: Profile + Account + Appearance + Delete Account (email-confirm modal); `deleteAccount` blocks owned circles, leaves memberships, anonymizes profile (ledger FK RESTRICT), admin auth delete
+- `BrandSelect` + `useConfirm` in `components/ui.tsx`; native frequency `<select>` removed
+- Removed "managed by Supabase Auth" + legal "Supabase for data hosting" user-facing copy
+- Typecheck + ESLint pass on `apps/web`; `pnpm install --frozen-lockfile --lockfile-only` pass
+
+**Blockers**:
+- Root `pnpm typecheck` fails on `@turna/database` missing local `typescript` binary (pre-existing env; not this batch)
+- Full security-audit skill run deferred by user until project foundation done
+
+**Decisions**:
+- Profile delete is anonymize + auth-user delete (cannot hard-delete profile: `ledger_events.actor_id` ON DELETE RESTRICT)
+- Notification UI is a modal, not dropdown, to stop click-through / double-click issues
+- Join route is public; accept requires authenticated session with matching invitee email
+
+**Next Session**:
+1. Commit + push + wait Vercel Ready; curl `/dashboard` still 307 unauthenticated; open `/circles/join` without token → invalid-link UI
+2. Live: create invite → accept with invited email → member appears; self-invite shows error
+3. Live: theme toggle light↔dark on dashboard + settings; notification bell opens centered modal
+4. Live: settings delete-account with wrong/right email; owned-circle block message
+5. Later: full security audit (6-phase skill) when foundation is complete
+

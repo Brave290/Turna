@@ -17,6 +17,7 @@ import {
 import { Logo } from "@/components/logo";
 import { signOut } from "@/lib/auth-actions";
 import { NotificationBell } from "@/components/dashboard/notification-bell";
+import { ThemeToggle } from "@/components/theme-toggle";
 import type { Notification } from "@turna/types";
 
 const navItems = [
@@ -97,8 +98,9 @@ export function DashboardNav({
           })}
         </nav>
 
-        <div className="px-3 py-3 border-b border-white/10">
+        <div className="px-3 py-3 border-b border-white/10 flex items-center justify-between gap-2">
           <NotificationBell notifications={notifications} unreadCount={unreadCount} />
+          <ThemeToggle className="theme-toggle-on-dark" />
         </div>
 
         <div className="px-3 py-4 border-t border-white/10">
@@ -130,6 +132,7 @@ export function DashboardNav({
             </span>
           </Link>
           <div className="flex items-center gap-1">
+            <ThemeToggle />
             <NotificationBell notifications={notifications} unreadCount={unreadCount} />
             <form action={signOut}>
               <button

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import { signUp } from "@/lib/auth-actions";
 import { Logo } from "@/components/logo";
@@ -33,10 +34,15 @@ function SubmitButton() {
 }
 
 export default function SignUpPage() {
+  const searchParams = useSearchParams();
+  const redirectTarget = searchParams.get("redirect") || "";
   const [state, formAction] = useFormState(
     (_: AuthState, formData: FormData) => {
       const email = String(formData.get("email") ?? "").trim().toLowerCase();
       if (email) sessionStorage.setItem("turna_pending_email", email);
+      if (redirectTarget && !formData.get("redirect")) {
+        formData.set("redirect", redirectTarget);
+      }
       return signUp(formData);
     },
     null as AuthState
@@ -107,6 +113,9 @@ export default function SignUpPage() {
       </div>
 
       <form action={formAction} className="space-y-5" noValidate>
+        {redirectTarget && (
+          <input type="hidden" name="redirect" value={redirectTarget} />
+        )}
         <div>
           <label htmlFor="display_name" className="label text-white/80">
             Full name

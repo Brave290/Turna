@@ -81,6 +81,8 @@ export async function signUp(formData: FormData): Promise<AuthError> {
     return { error: parsed.error.flatten().fieldErrors };
   }
 
+  const afterRedirect = safeNext(formData.get('redirect'));
+
   const admin = createAdminSupabaseClient();
   const email = parsed.data.email.trim().toLowerCase();
 
@@ -129,7 +131,7 @@ export async function signUp(formData: FormData): Promise<AuthError> {
   return {
     success: `We sent a 6-digit code to ${email}. It expires in 5 minutes — enter it soon to finish signing up.`,
     needsVerify: true,
-    redirectTo: `/auth/verify?email=${encodeURIComponent(email)}`,
+    redirectTo: `/auth/verify?email=${encodeURIComponent(email)}${afterRedirect !== '/dashboard' ? `&redirect=${encodeURIComponent(afterRedirect)}` : ''}`,
   };
 }
 
@@ -141,6 +143,9 @@ export async function verifyEmailOtp(
   const email = String(formData.get('email') ?? '').trim().toLowerCase();
   const token = String(formData.get('token') ?? '').trim().replace(/\D/g, '');
   const purpose = (String(formData.get('purpose') ?? 'signup') || 'signup') as 'signup' | 'login';
+  const nextPath = safeNext(formData.get('redirect'));
+  const loginRedirect =
+    nextPath !== '/dashboard' ? `/auth/login?redirect=${encodeURIComponent(nextPath)}` : '/auth/login';
 
   if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
     return { error: { form: ['Enter a valid email address'] } };
@@ -200,7 +205,7 @@ export async function verifyEmailOtp(
 
   return {
     success: 'Email verified. Sign in with your password to continue.',
-    redirectTo: '/auth/login',
+    redirectTo: loginRedirect,
   };
 }
 
@@ -617,6 +622,9 @@ export async function inviteMember(
   if (circle.owner_id !== user.id) {
     return { error: { form: ['Only the circle owner can invite members'] } };
   }
+  if (parsed.data.invitee_email === (user.email ?? '').toLowerCase()) {
+    return { error: { form: ['You cannot invite yourself to your own circle'] } };
+  }
 
   const { count } = await supabase
     .from('circle_members')
@@ -712,4 +720,219 @@ export async function updateProfile(
 
   revalidatePath('/dashboard/settings');
   return { success: 'Profile updated' };
+}
+
+export type AcceptInviteState = {
+  error?: Record<string, string[] | undefined> & { form?: string[] };
+  success?: string;
+  circleId?: string;
+} | null;
+
+export async function acceptInvitation(
+  _prev: AcceptInviteState,
+  formData: FormData
+): Promise<AcceptInviteState> {
+  const supabase = createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.email) {
+    redirect('/auth/login?redirect=' + encodeURIComponent('/circles/join'));
+  }
+
+  const token = String(formData.get('token') ?? '').trim();
+  if (!token) {
+    return { error: { form: ['Invalid invitation link'] } };
+  }
+
+  const { data: invite } = await supabase
+    .from('invitations')
+    .select('id, circle_id, invitee_email, status, expires_at')
+    .eq('token', token)
+    .maybeSingle();
+
+  if (!invite) {
+    return { error: { form: ['This invitation link is invalid or has expired'] } };
+  }
+  if (invite.status === 'accepted') {
+    return { error: { form: ['This invitation has already been used'] } };
+  }
+  if (invite.status === 'cancelled' || invite.status === 'expired') {
+    return { error: { form: ['This invitation is no longer active'] } };
+  }
+  if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
+    await supabase
+      .from('invitations')
+      .update({ status: 'expired' })
+      .eq('id', invite.id);
+    return { error: { form: ['This invitation has expired. Ask for a new one.'] } };
+  }
+  if (invite.invitee_email.toLowerCase() !== user.email.toLowerCase()) {
+    return {
+      error: {
+        form: ['Sign in with the email that received this invitation'],
+      },
+    };
+  }
+
+  const { data: existing } = await supabase
+    .from('circle_members')
+    .select('id, status')
+    .eq('circle_id', invite.circle_id)
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (existing && existing.status !== 'left') {
+    await supabase
+      .from('invitations')
+      .update({ status: 'accepted', accepted_at: new Date().toISOString() })
+      .eq('id', invite.id);
+    return {
+      success: 'You are already a member of this circle',
+      circleId: invite.circle_id,
+    };
+  }
+
+  if (existing && existing.status === 'left') {
+    const { error: rejoinErr } = await supabase
+      .from('circle_members')
+      .update({ status: 'active', joined_at: new Date().toISOString(), left_at: null })
+      .eq('id', existing.id);
+    if (rejoinErr) {
+      return { error: { form: ['Could not rejoin the circle'] } };
+    }
+  } else {
+    // payout_position is NOT NULL + unique per circle — assign next free slot
+    const { data: taken } = await supabase
+      .from('circle_members')
+      .select('payout_position')
+      .eq('circle_id', invite.circle_id)
+      .order('payout_position', { ascending: true });
+
+    const used = new Set((taken ?? []).map((r) => r.payout_position as number));
+    let nextPos = 1;
+    while (used.has(nextPos)) nextPos += 1;
+
+    const { error: joinErr } = await supabase.from('circle_members').insert({
+      circle_id: invite.circle_id,
+      user_id: user.id,
+      role: 'member',
+      status: 'active',
+      payout_position: nextPos,
+      joined_at: new Date().toISOString(),
+    });
+    if (joinErr) {
+      console.error('[AcceptInvite] join failed:', joinErr.message);
+      return { error: { form: ['Could not join the circle'] } };
+    }
+  }
+
+  await supabase
+    .from('invitations')
+    .update({ status: 'accepted', accepted_at: new Date().toISOString() })
+    .eq('id', invite.id);
+
+  // ledger_insert_owner requires membership first (already inserted above)
+  await supabase.from('ledger_events').insert({
+    circle_id: invite.circle_id,
+    actor_id: user.id,
+    event_type: 'MEMBER_JOINED',
+    entity_type: 'member',
+    entity_id: user.id,
+    payload: { email: user.email },
+    previous_event_id: null,
+  });
+
+  revalidatePath('/dashboard/circles');
+  revalidatePath(`/dashboard/circles/${invite.circle_id}`);
+  return {
+    success: 'You have joined the circle',
+    circleId: invite.circle_id,
+  };
+}
+
+export type DeleteAccountState = {
+  error?: Record<string, string[] | undefined> & { form?: string[] };
+  success?: string;
+} | null;
+
+export async function deleteAccount(
+  _prev: DeleteAccountState,
+  formData: FormData
+): Promise<DeleteAccountState> {
+  const supabase = createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.email) redirect('/auth/login');
+
+  const confirmEmail = String(formData.get('confirm_email') ?? '')
+    .trim()
+    .toLowerCase();
+  if (confirmEmail !== user.email.toLowerCase()) {
+    return {
+      error: { confirm_email: ['Type your account email exactly to confirm'] },
+    };
+  }
+
+  const admin = createAdminSupabaseClient();
+
+  // circles.owner_id is ON DELETE RESTRICT — must not own any circle
+  const { data: owned } = await admin
+    .from('circles')
+    .select('id')
+    .eq('owner_id', user.id);
+
+  if (owned && owned.length > 0) {
+    return {
+      error: {
+        form: [
+          'You own circles. Transfer ownership or delete them before deleting your account.',
+        ],
+      },
+    };
+  }
+
+  // Leave any circles the user is a member of (RLS + audit trail intact)
+  const { data: memberships } = await admin
+    .from('circle_members')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('status', 'active');
+
+  if (memberships && memberships.length > 0) {
+    await admin
+      .from('circle_members')
+      .update({ status: 'left', left_at: new Date().toISOString() })
+      .in('id', memberships.map((m) => m.id));
+  }
+
+  // Cleanup with service role (no user DELETE policies on these tables)
+  await admin.from('notifications').delete().eq('user_id', user.id);
+  await admin.from('invitations').delete().eq('inviter_id', user.id);
+
+  // ledger_events.actor_id is ON DELETE RESTRICT — anonymize profile, do not hard-delete
+  const { error: anonErr } = await admin
+    .from('profiles')
+    .update({
+      email: `deleted+${user.id}@deleted.turna.invalid`,
+      display_name: 'Deleted user',
+      avatar_url: null,
+    })
+    .eq('id', user.id);
+
+  if (anonErr) {
+    console.error('[DeleteAccount] anonymize failed:', anonErr.message);
+    return { error: { form: ['Could not delete account. Contact support.'] } };
+  }
+
+  const { error } = await admin.auth.admin.deleteUser(user.id);
+  if (error) {
+    console.error('[DeleteAccount] admin delete failed:', error.message);
+    // Roll back anonymization is not safe; report failure
+    return { error: { form: ['Could not delete account. Contact support.'] } };
+  }
+
+  await supabase.auth.signOut();
+  redirect('/');
 }

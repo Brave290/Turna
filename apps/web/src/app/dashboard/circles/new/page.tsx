@@ -4,6 +4,7 @@ import { useFormState, useFormStatus } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Spinner } from '@/components/spinner';
+import { BrandSelect } from '@/components/ui';
 import { createCircle, type CircleActionState } from '@/lib/auth-actions';
 
 function SubmitButton() {
@@ -108,11 +109,17 @@ export default function NewCirclePage() {
             <label htmlFor="frequency" className="label">
               Frequency
             </label>
-            <select id="frequency" name="frequency" className="input" defaultValue="weekly">
-              <option value="weekly">Weekly</option>
-              <option value="biweekly">Every 2 weeks</option>
-              <option value="monthly">Monthly</option>
-            </select>
+            <BrandSelect
+              id="frequency"
+              name="frequency"
+              defaultValue="weekly"
+              aria-label="Contribution frequency"
+              options={[
+                { value: 'weekly', label: 'Weekly' },
+                { value: 'biweekly', label: 'Every 2 weeks' },
+                { value: 'monthly', label: 'Monthly' },
+              ]}
+            />
           </div>
 
           <div>

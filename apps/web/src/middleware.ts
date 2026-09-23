@@ -19,6 +19,8 @@ const PUBLIC_PATHS = [
   '/legal/acceptable-use',
   '/legal/refund',
   '/legal/contact',
+  '/circles',
+  '/circles/join',
 ];
 
 export async function middleware(request: NextRequest) {

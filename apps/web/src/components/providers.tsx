@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, type ReactNode } from "react";
 import { ToastProvider, useToast } from "@/components/toast";
+import { ThemeProvider } from "@/components/theme-toggle";
 
 type ActionState = {
   error?: Record<string, string[] | undefined> & { form?: string[] };
@@ -36,5 +37,9 @@ export function useActionToast<TState extends ActionState>(state: TState) {
 
 /** Mount once in root layout. */
 export function AppProviders({ children }: { children: ReactNode }) {
-  return <ToastProvider>{children}</ToastProvider>;
+  return (
+    <ThemeProvider>
+      <ToastProvider>{children}</ToastProvider>
+    </ThemeProvider>
+  );
 }

@@ -14,7 +14,8 @@
   --sky: #38bdf8;
   --cream: #f4f7fb;
   --white: #ffffff;
-  --muted: #6b7c93;
+  /* Darkened for WCAG AA on cream bg (was #6b7c93 ~3.4:1) */
+  --muted: #4a5d73;
   --border: #d8e1ec;
   --error: #f43f5e;
   --warning: #f59e0b;
@@ -218,6 +219,20 @@
   stroke-linejoin: round;
 }
 
+/* On dark forest sidebar */
+.theme-toggle-on-dark,
+[data-theme="dark"] .theme-toggle {
+  color: #e8f7ee;
+  border-color: rgba(232, 247, 238, 0.16);
+  background: rgba(232, 247, 238, 0.08);
+}
+
+.theme-toggle-on-dark:hover,
+[data-theme="dark"] .theme-toggle:hover {
+  background: rgba(0, 194, 168, 0.15);
+  color: var(--primary-light);
+}
+
 .landing-logo {
   transition: filter 220ms ease;
 }
@@ -226,6 +241,84 @@
   filter: brightness(0) invert(1);
 }
 
+/* App-wide dark theme (dashboard, auth, join — not only landing) */
+[data-theme="dark"] body {
+  background-color: #08111e;
+  color: #e8f7ee;
+}
+
+[data-theme="dark"] .bg-cream {
+  background-color: #08111e;
+}
+
+[data-theme="dark"] .bg-white {
+  background-color: #101d2d;
+}
+
+[data-theme="dark"] .text-forest {
+  color: #e8f7ee;
+}
+
+[data-theme="dark"] .text-muted,
+[data-theme="dark"] .text-body-muted {
+  color: #9bb0bf;
+}
+
+[data-theme="dark"] .border-border {
+  border-color: rgba(232, 247, 238, 0.12);
+}
+
+[data-theme="dark"] .card,
+[data-theme="dark"] .glass-card,
+[data-theme="dark"] input.input,
+[data-theme="dark"] textarea.input,
+[data-theme="dark"] select.input {
+  background-color: #101d2d;
+  border-color: rgba(232, 247, 238, 0.12);
+  color: #e8f7ee;
+}
+
+[data-theme="dark"] .btn-outline {
+  color: #e8f7ee;
+  border-color: rgba(232, 247, 238, 0.2);
+}
+
+[data-theme="dark"] .btn-outline:hover {
+  background: rgba(232, 247, 238, 0.08);
+}
+
+[data-theme="dark"] .btn-ghost {
+  color: #e8f7ee;
+}
+
+[data-theme="dark"] .btn-ghost:hover {
+  background: rgba(232, 247, 238, 0.08);
+}
+
+[data-theme="dark"] .label {
+  color: #c5d6e4;
+}
+
+[data-theme="dark"] .badge-completed {
+  background: rgba(232, 247, 238, 0.1);
+  color: #e8f7ee;
+}
+
+[data-theme="dark"] .app-bg::before {
+  opacity: 0.2;
+}
+
+[data-theme="dark"] .glass-nav {
+  background: rgba(8, 17, 30, 0.88);
+  border-color: rgba(232, 247, 238, 0.12);
+}
+
+[data-theme="dark"] ::selection {
+  background: rgba(0, 194, 168, 0.35);
+  color: #e8f7ee;
+}
+
+/* Landing-specific keeps (scoped so app chrome unaffected) */
 [data-theme="dark"] .landing-page .bg-cream {
   background-color: #08111e;
 }

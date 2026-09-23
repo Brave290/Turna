@@ -65,6 +65,8 @@ export default function VerifyEmailPage() {
     formData.set("email", email);
     formData.set("token", token);
     formData.set("purpose", "signup");
+    const redirectParam = searchParams.get("redirect");
+    if (redirectParam) formData.set("redirect", redirectParam);
     setPending(true);
     try {
       const res = await verifyEmailOtp(null, formData);
