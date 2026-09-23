@@ -158,9 +158,31 @@ jobs:
         run: ./gradlew assembleDebug --no-daemon
         working-directory: apps/mobile/android
 
+      - name: Build Android Release AAB
+        run: ./gradlew bundleRelease --no-daemon
+        working-directory: apps/mobile/android
+
+      - name: Build Android Release APK
+        run: ./gradlew assembleRelease --no-daemon
+        working-directory: apps/mobile/android
+
       - name: Upload Android APK
         uses: actions/upload-artifact@v4
         with:
           name: android-debug-apk
           path: apps/mobile/android/app/build/outputs/apk/debug/**/*.apk
+          retention-days: 7
+
+      - name: Upload Android AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-aab
+          path: apps/mobile/android/app/build/outputs/bundle/release/**/*.aab
+          retention-days: 14
+
+      - name: Upload Android Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-apk
+          path: apps/mobile/android/app/build/outputs/apk/release/**/*.apk
           retention-days: 7
