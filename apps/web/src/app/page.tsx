@@ -44,14 +44,13 @@ function Nav() {
         <nav className="flex items-center justify-between h-14 px-5 rounded-2xl bg-white/70 backdrop-blur-xl border border-white/40 shadow-glass">
           <Link href="/" className="flex items-center">
             <Image
-              src="/turna-favicon.png"
+              src="/turna-logo-enhanced-trimmed.png"
               alt="Turna"
-              width={36}
-              height={36}
+              width={180}
+              height={117}
               priority
-              className="h-9 w-9 rounded-lg object-cover"
+              className="landing-logo h-10 w-auto object-contain"
             />
-            <span className="ml-2 font-display text-xl font-bold tracking-tight text-forest">Turna</span>
           </Link>
 
           <div className="hidden md:flex items-center gap-7 text-[13px] font-medium text-forest/60">

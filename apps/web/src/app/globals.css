@@ -218,6 +218,14 @@
   stroke-linejoin: round;
 }
 
+.landing-logo {
+  transition: filter 220ms ease;
+}
+
+[data-theme="dark"] .landing-logo {
+  filter: brightness(0) invert(1);
+}
+
 [data-theme="dark"] .landing-page .bg-cream {
   background-color: #08111e;
 }
@@ -256,7 +264,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .landing-page,
-  .theme-toggle {
+  .theme-toggle,
+  .landing-logo {
     transition: none;
   }
 }
