@@ -22,7 +22,7 @@ const config: Config = {
         sky: "#38BDF8",
         cream: "#F4F7FB",
         muted: "#4A5D73",
-        border: "#D8E1EC",
+        border: "#D0DBE8",
         error: "#F43F5E",
         warning: "#F59E0B",
         success: "#00C2A8",
