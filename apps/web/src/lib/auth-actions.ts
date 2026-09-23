@@ -1,6 +1,8 @@
 'use server';
 
 import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { createAdminSupabaseClient } from '@/lib/supabase-admin';
+import { sendEmail, emailTemplates } from '@/lib/email';
 import {
   signUpSchema,
   signInSchema,
@@ -23,6 +25,59 @@ function safeNext(raw: FormDataEntryValue | null): string {
     return raw;
   }
   return '/dashboard';
+}
+
+function generateOtp(): string {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+/** Store non-expiring OTP + send via Gmail SMTP. */
+async function issueCustomOtp(
+  email: string,
+  purpose: 'signup' | 'login',
+  displayName?: string,
+  userId?: string | null
+): Promise<{ ok: boolean; error?: string }> {
+  const code = generateOtp();
+  const admin = createAdminSupabaseClient();
+
+  // Rate limit first (soft — 8 / 10 min)
+  try {
+    const { data: rateLimit } = await admin.rpc('consume_email_otp_rate_limit', {
+      p_email: email,
+    });
+    const result = Array.isArray(rateLimit) ? rateLimit[0] : rateLimit;
+    if (result && result.allowed === false) {
+      const mins = Math.ceil(Number(result.retry_after_seconds ?? 600) / 60);
+      return { ok: false, error: `Too many code requests. Try again in ${mins} minutes.` };
+    }
+  } catch {
+    // rate limit is best-effort
+  }
+
+  const { error: rpcError } = await admin.rpc('create_custom_otp', {
+    p_email: email,
+    p_code: code,
+    p_purpose: purpose,
+    p_user_id: userId ?? null,
+  });
+  if (rpcError) {
+    console.error('[OTP] create failed:', rpcError.message);
+    return { ok: false, error: 'Could not create verification code' };
+  }
+
+  const tmpl = emailTemplates.otpCode(email, code, displayName);
+  const sent = await sendEmail({
+    to: email,
+    subject: tmpl.subject,
+    html: tmpl.html,
+    text: tmpl.text,
+  });
+  if (!sent.success) {
+    console.error('[OTP] send failed:', sent.error);
+    return { ok: false, error: 'Could not send verification email' };
+  }
+  return { ok: true };
 }
 
 export async function signUp(formData: FormData): Promise<AuthError> {
@@ -51,6 +106,20 @@ export async function signUp(formData: FormData): Promise<AuthError> {
   });
 
   if (error) {
+    // User may already exist — still allow OTP re-send for confirm flow
+    if (error.message?.includes('already registered')) {
+      const otp = await issueCustomOtp(
+        parsed.data.email,
+        'signup',
+        parsed.data.display_name
+      );
+      if (otp.ok) {
+        return {
+          success: `We sent a 6-digit code to ${parsed.data.email}. Enter it to finish signing up.`,
+        };
+      }
+      return { error: { form: [otp.error ?? 'Could not send code'] } };
+    }
     return { error: { form: [error.message] } };
   }
 
@@ -59,21 +128,30 @@ export async function signUp(formData: FormData): Promise<AuthError> {
     redirect('/dashboard');
   }
 
-  // Real OTP: send a 6-digit email code (Supabase signInWithOtp)
-  // Store pending email for the verify page (client will re-request if needed)
-  const email = parsed.data.email;
+  // Custom non-expiring OTP via SMTP (link user_id for reliable confirm)
+  const otp = await issueCustomOtp(
+    parsed.data.email,
+    'signup',
+    parsed.data.display_name,
+    data.user?.id ?? null
+  );
+  if (!otp.ok) {
+    return { error: { form: [otp.error ?? 'Could not send verification code'] } };
+  }
+
   return {
-    success: `We sent a 6-digit code to ${email}. Enter it to finish signing up.`,
+    success: `We sent a 6-digit code to ${parsed.data.email}. It does not expire — enter it anytime to finish signing up.`,
   };
 }
 
-// useFormState-style signature: (prev, formData)
+// Custom non-expiring OTP verification
 export async function verifyEmailOtp(
   _prev: AuthError | null,
   formData: FormData
 ): Promise<AuthError> {
   const email = String(formData.get('email') ?? '').trim().toLowerCase();
   const token = String(formData.get('token') ?? '').trim().replace(/\D/g, '');
+  const password = String(formData.get('password') ?? '');
 
   if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
     return { error: { form: ['Enter a valid email address'] } };
@@ -82,23 +160,73 @@ export async function verifyEmailOtp(
     return { error: { form: ['Enter the full 6-digit code'] } };
   }
 
-  const supabase = createServerSupabaseClient();
+  const admin = createAdminSupabaseClient();
 
-  const { data, error } = await supabase.auth.verifyOtp({
-    email,
-    token,
-    type: 'email',
-  });
+  // Fetch active OTP row first to get linked user_id (before verify consumes it)
+  const { data: otpRow } = await admin
+    .from('custom_otps')
+    .select('id, user_id')
+    .eq('email', email)
+    .eq('purpose', 'signup')
+    .is('used_at', null)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-  if (error) {
-    return { error: { form: [error.message] } };
+  const { data: verified, error: verifyError } = await admin.rpc(
+    'verify_custom_otp',
+    {
+      p_email: email,
+      p_code: token,
+      p_purpose: 'signup',
+      p_max_attempts: 5,
+    }
+  );
+
+  if (verifyError) {
+    console.error('[OTP] verify rpc error:', verifyError.message);
+    return { error: { form: ['Verification failed. Try again.'] } };
   }
 
-  if (data.session) {
-    redirect('/dashboard');
+  if (verified !== true) {
+    return { error: { form: ['That code is incorrect or has been used.'] } };
   }
 
-  return { error: { form: ['Verification failed. Try again.'] } };
+  // Confirm email in Supabase Auth so password login works
+  try {
+    let uid: string | null = (otpRow?.user_id as string | null) ?? null;
+    if (!uid) {
+      const { data: users } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      const user = users?.users?.find((u) => (u.email ?? '').toLowerCase() === email);
+      uid = user?.id ?? null;
+    }
+    if (uid) {
+      const { data: current } = await admin.auth.admin.getUserById(uid);
+      if (current?.user && !current.user.email_confirmed_at) {
+        await admin.auth.admin.updateUserById(uid, { email_confirm: true });
+      }
+    }
+  } catch (e) {
+    console.error('[OTP] confirm email failed:', e);
+  }
+
+  // Sign in with password if provided (from signup sessionStorage)
+  if (password) {
+    const supabase = createServerSupabaseClient();
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (!signInError) {
+      revalidatePath('/dashboard');
+      redirect('/dashboard');
+    }
+    // fall through — user can sign in manually
+  }
+
+  return {
+    success: 'Email verified. Sign in with your password to continue.',
+  };
 }
 
 export async function resendEmailOtp(email: string): Promise<AuthError> {
@@ -107,18 +235,12 @@ export async function resendEmailOtp(email: string): Promise<AuthError> {
     return { error: { form: ['Enter a valid email address'] } };
   }
 
-  const supabase = createServerSupabaseClient();
-
-  const { error } = await supabase.auth.signInWithOtp({
-    email: clean,
-    options: { shouldCreateUser: false },
-  });
-
-  if (error) {
-    return { error: { form: [error.message] } };
+  const otp = await issueCustomOtp(clean, 'signup');
+  if (!otp.ok) {
+    return { error: { form: [otp.error ?? 'Could not send code'] } };
   }
 
-  return { success: `New code sent to ${clean}.` };
+  return { success: `New code sent to ${clean}. It does not expire.` };
 }
 
 export async function signIn(formData: FormData): Promise<AuthError> {
@@ -412,7 +534,7 @@ export async function inviteMember(
 
   const { data: circle } = await supabase
     .from('circles')
-    .select('id, owner_id, member_limit')
+    .select('id, owner_id, member_limit, name')
     .eq('id', parsed.data.circle_id)
     .maybeSingle();
 
@@ -457,6 +579,30 @@ export async function inviteMember(
     payload: { invitee_email: parsed.data.invitee_email },
     previous_event_id: null,
   });
+
+  // Send invitation email via Gmail SMTP (best-effort)
+  try {
+    const { data: inviterProfile } = await supabase
+      .from('profiles')
+      .select('display_name')
+      .eq('id', user.id)
+      .maybeSingle();
+    const inviterName = inviterProfile?.display_name || user.email || 'A member';
+    const circleName = (circle as { name?: string }).name || 'your circle';
+    const tmpl = emailTemplates.circleInvitation(
+      parsed.data.invitee_email,
+      circleName,
+      inviterName,
+      token
+    );
+    await sendEmail({
+      to: parsed.data.invitee_email,
+      subject: tmpl.subject,
+      html: tmpl.html,
+    });
+  } catch (e) {
+    console.error('[Invite] email send failed:', e);
+  }
 
   revalidatePath(`/dashboard/circles/${circle.id}`);
   return { success: `Invite created for ${parsed.data.invitee_email}` };

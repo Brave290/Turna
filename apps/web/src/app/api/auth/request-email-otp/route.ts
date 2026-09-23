@@ -1,4 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
+import { createAdminSupabaseClient } from '@/lib/supabase-admin';
+import { sendEmail, emailTemplates } from '@/lib/email';
 import { NextResponse } from 'next/server';
 
 const OTP_LIMIT = 8;
@@ -6,25 +7,16 @@ const OTP_LIMIT = 8;
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+    const email =
+      typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
 
     if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
       return NextResponse.json({ error: 'Enter a valid email address' }, { status: 400 });
     }
 
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!serviceRoleKey) {
-      console.error('[Auth] SUPABASE_SERVICE_ROLE_KEY is not configured');
-      return NextResponse.json({ error: 'Authentication is temporarily unavailable' }, { status: 503 });
-    }
+    const admin = createAdminSupabaseClient();
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      serviceRoleKey,
-      { auth: { autoRefreshToken: false, persistSession: false } }
-    );
-
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await admin
       .from('profiles')
       .select('id')
       .eq('email', email)
@@ -42,7 +34,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { data: rateLimit, error: rateLimitError } = await supabase.rpc(
+    const { data: rateLimit, error: rateLimitError } = await admin.rpc(
       'consume_email_otp_rate_limit',
       { p_email: email }
     );
@@ -61,16 +53,36 @@ export async function POST(request: Request) {
       );
     }
 
-    const { error: otpError } = await supabase.auth.signInWithOtp({
-      email,
-      options: { shouldCreateUser: false },
+    // Custom non-expiring OTP via Gmail SMTP
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const { error: otpError } = await admin.rpc('create_custom_otp', {
+      p_email: email,
+      p_code: code,
+      p_purpose: 'login',
+      p_user_id: profile?.id ?? null,
     });
     if (otpError) {
-      console.error('[Auth] Failed to send email OTP:', otpError.message);
-      return NextResponse.json({ error: otpError.message }, { status: 429 });
+      console.error('[Auth] Failed to store custom OTP:', otpError.message);
+      return NextResponse.json({ error: otpError.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, limit: OTP_LIMIT, remaining: OTP_LIMIT - result.request_count });
+    const tmpl = emailTemplates.otpCode(email, code);
+    const sent = await sendEmail({
+      to: email,
+      subject: tmpl.subject,
+      html: tmpl.html,
+      text: tmpl.text,
+    });
+    if (!sent.success) {
+      console.error('[Auth] Failed to send OTP email:', sent.error);
+      return NextResponse.json({ error: 'Could not send verification email' }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      limit: OTP_LIMIT,
+      remaining: OTP_LIMIT - (result.request_count ?? 0),
+    });
   } catch (error) {
     console.error('[Auth] Invalid email OTP request:', error);
     return NextResponse.json({ error: 'Unable to send an OTP right now' }, { status: 400 });

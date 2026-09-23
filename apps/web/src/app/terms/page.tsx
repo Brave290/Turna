@@ -100,7 +100,7 @@ export default function TermsPage() {
               <h2 className="font-display text-xl font-bold text-forest mb-3">9. Contact</h2>
               <p className="text-muted leading-relaxed">
                 Questions? Contact us at{" "}
-                <Link href="/legal/contact" className="text-primary hover:underline">support@turna.app</Link>.
+                <Link href="/legal/contact" className="text-primary hover:underline">support.turna@gmail.com</Link>.
               </p>
             </section>
           </article>

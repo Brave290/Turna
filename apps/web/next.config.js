@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  transpilePackages: ['@turna/types', '@turna/validation', '@turna/core', '@turna/config', 'framer-motion', 'motion-dom', 'motion-utils'],
+  transpilePackages: ['@turna/types', '@turna/validation', '@turna/core', '@turna/config', 'framer-motion', 'motion-dom', 'motion-utils', 'nodemailer'],
   experimental: {
     serverActions: {
       bodySizeLimit: '2mb',

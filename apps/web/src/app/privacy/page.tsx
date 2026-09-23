@@ -75,14 +75,14 @@ export default function PrivacyPage() {
               <h2 className="font-display text-xl font-bold text-forest mb-3">6. Your Rights</h2>
               <p className="text-muted leading-relaxed">
                 You have the right to access, correct, export, and delete your personal data.
-                Manage your profile from Settings. For data deletion, contact privacy@turna.app.
+                Manage your profile from Settings. For data deletion, contact support.turna@gmail.com.
               </p>
             </section>
             <section>
               <h2 className="font-display text-xl font-bold text-forest mb-3">7. Contact</h2>
               <p className="text-muted leading-relaxed">
-                Privacy questions: privacy@turna.app. General support:{" "}
-                <Link href="/legal/contact" className="text-primary hover:underline">support@turna.app</Link>.
+                Privacy questions: support.turna@gmail.com. General support:{" "}
+                <Link href="/legal/contact" className="text-primary hover:underline">support.turna@gmail.com</Link>.
               </p>
             </section>
           </article>

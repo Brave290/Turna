@@ -88,7 +88,7 @@ function getLegalPage(slug: LegalSlug): {
         {
           heading: "9. Contact",
           body: [
-            "Questions about these Terms? Contact us at support@turna.app or through our support channels.",
+            "Questions about these Terms? Contact us at support.turna@gmail.com or through our support channels.",
           ],
         },
       ],
@@ -141,7 +141,7 @@ function getLegalPage(slug: LegalSlug): {
           body: [
             "You have the right to access, correct, export, and delete your personal data.",
             "You can manage your profile information from the Settings page.",
-            "To request data deletion, contact privacy@turna.app.",
+            "To request data deletion, contact support.turna@gmail.com.",
           ],
         },
         {
@@ -159,7 +159,7 @@ function getLegalPage(slug: LegalSlug): {
         {
           heading: "9. Contact",
           body: [
-            "Privacy questions: privacy@turna.app. General support: support@turna.app.",
+            "Privacy questions: support.turna@gmail.com. General support: support.turna@gmail.com.",
           ],
         },
       ],
@@ -245,20 +245,20 @@ function getLegalPage(slug: LegalSlug): {
         {
           heading: "General Support",
           body: [
-            "Email: support@turna.app",
+            "Email: support.turna@gmail.com",
             "Response time: within 1-2 business days.",
           ],
         },
         {
           heading: "Privacy Requests",
           body: [
-            "Email: privacy@turna.app for data access, correction, or deletion requests.",
+            "Email: support.turna@gmail.com for data access, correction, or deletion requests.",
           ],
         },
         {
           heading: "Legal",
           body: [
-            "Email: legal@turna.app for legal notices and formal communications.",
+            "Email: support.turna@gmail.com for legal notices and formal communications.",
           ],
         },
         {

@@ -322,3 +322,32 @@ Each session should append:
 3. Integration verification
 4. Set up GitHub repo and push code
 ```
+
+### Session 2026-09-23 (OTP + SMTP)
+
+**Goal**: Custom non-expiring OTP via Gmail SMTP; all site emails from support.turna@gmail.com
+
+**Completed**:
+- Migration: `custom_otps` table + `create_custom_otp` / `verify_custom_otp` (service_role only, no expiry, max 5 attempts); `user_id` column for reliable email confirm
+- `supabase-admin.ts` service-role client
+- `signUp` / `verifyEmailOtp` / `resendEmailOtp` rewritten for custom OTP + SMTP send + email confirm + password sign-in
+- Signup stashes password in sessionStorage; verify page clears it and routes correctly
+- `request-email-otp` API route uses custom OTP + SMTP
+- Invite emails send via SMTP with circleInvitation template
+- Email templates: no-expiry OTP copy; removed emoji from welcome
+- Rate limit checked before creating OTP
+- Vercel Production (+ Preview) env: SMTP_HOST/PORT/USER/PASS/FROM set (correct app password `epqwjmudbsfqvmyo`)
+- Local SMTP verify + test send succeeded
+
+**Blockers**:
+- None for OTP path. Supabase Auth password-reset email still needs Supabase SMTP config if not already set (optional follow-up: route reset through our SMTP).
+
+**Decisions**:
+- OTP codes never expire (valid until used/replaced, 5 attempts)
+- Password stashed in sessionStorage only for post-OTP seamless sign-in
+- Gmail app password is `epqwjmudbsfqvmyo` (note q-before-w order)
+
+**Next Session**:
+1. Live test: signup → OTP email → verify → dashboard on production
+2. Optional: password-reset via custom SMTP (avoid Supabase SMTP dependency)
+3. Admin dashboard (editable legal pages) + remaining roadmap phases

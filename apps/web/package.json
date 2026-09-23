@@ -12,22 +12,23 @@
     "postinstall": "pnpm dlx @tailwindcss/typography@0.5.10 || true"
   },
   "dependencies": {
-    "next": "^14.1.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "@supabase/supabase-js": "^2.39.0",
     "@supabase/ssr": "^0.3.0",
+    "@supabase/supabase-js": "^2.39.0",
+    "@turna/config": "workspace:*",
+    "@turna/core": "workspace:*",
     "@turna/types": "workspace:*",
     "@turna/validation": "workspace:*",
-    "@turna/core": "workspace:*",
-    "@turna/config": "workspace:*",
-    "zod": "^3.22.0",
-    "resend": "^3.2.0",
-    "lucide-react": "^0.344.0",
     "date-fns": "^3.3.1",
     "framer-motion": "^13.4.2",
+    "lucide-react": "^0.344.0",
     "motion-dom": "^13.4.2",
-    "motion-utils": "^13.3.0"
+    "motion-utils": "^13.3.0",
+    "next": "^14.1.0",
+    "nodemailer": "^10.0.10",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "resend": "^3.2.0",
+    "zod": "^3.22.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
