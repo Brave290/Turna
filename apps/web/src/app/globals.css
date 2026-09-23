@@ -3,36 +3,65 @@
 @tailwind utilities;
 
 :root {
-  --forest: #03251b;
-  --forest-dark: #06382a;
-  --primary: #00a878;
-  --primary-hover: #009468;
-  --primary-light: #35d6a0;
-  --cream: #f7f7f0;
+  /* Rebrand v2 — cool palette */
+  --forest: #0a1628;
+  --forest-dark: #12233d;
+  --forest-deep: #060d1a;
+  --primary: #00c2a8;
+  --primary-hover: #00a892;
+  --primary-light: #5eead4;
+  --violet: #7c5cff;
+  --sky: #38bdf8;
+  --cream: #f4f7fb;
   --white: #ffffff;
-  --muted: #8d9b95;
-  --border: #dde5e0;
-  --error: #d94a4a;
-  --warning: #d9a441;
+  --muted: #6b7c93;
+  --border: #d8e1ec;
+  --error: #f43f5e;
+  --warning: #f59e0b;
 }
 
 @layer base {
   * {
     @apply border-border;
   }
+
+  /* Rebrand v2: base type ~90% + page zoom ~95% */
+  html {
+    font-size: 90%;
+    zoom: 0.95;
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
     @apply bg-cream text-forest antialiased;
+    font-size: 1rem;
+    min-height: 100dvh;
+  }
+
+  ::selection {
+    background: rgba(0, 194, 168, 0.28);
+    color: var(--forest);
+  }
+
+  /* Smooth page lock feel — no rubber-band on app chrome */
+  html.lock-scroll {
+    overflow: hidden;
   }
 }
 
 @layer components {
   /* Buttons */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 font-medium transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .btn-primary {
     @apply btn bg-primary text-white hover:bg-primary-hover rounded-xl px-6 py-3;
+    box-shadow: 0 0 40px rgba(0, 194, 168, 0.18);
+  }
+  .btn-primary:hover {
+    box-shadow: 0 0 40px rgba(0, 194, 168, 0.25);
   }
 
   .btn-secondary {
@@ -40,7 +69,7 @@
   }
 
   .btn-outline {
-    @apply btn border border-border bg-transparent text-forest hover:bg-cream rounded-xl px-6 py-3;
+    @apply btn border border-border bg-transparent text-forest hover:bg-white/80 rounded-xl px-6 py-3;
   }
 
   .btn-ghost {
@@ -57,7 +86,7 @@
 
   /* Inputs */
   .input {
-    @apply w-full rounded-xl border border-border bg-white px-4 py-3 text-forest placeholder:text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors;
+    @apply w-full rounded-xl border border-border bg-white px-4 py-3 text-forest placeholder:text-muted/70 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-200;
   }
 
   .input-error {
@@ -70,11 +99,11 @@
 
   /* Cards */
   .card {
-    @apply rounded-2xl border border-border bg-white p-6;
+    @apply rounded-2xl border border-border bg-white p-6 shadow-card;
   }
 
   .card-hover {
-    @apply card transition-shadow hover:shadow-lg hover:shadow-forest/5;
+    @apply card transition-all duration-300 hover:shadow-card-hover hover:-translate-y-0.5 hover:border-primary/30;
   }
 
   /* Badges */
@@ -83,11 +112,11 @@
   }
 
   .badge-active {
-    @apply badge bg-primary/10 text-primary;
+    @apply badge bg-primary/12 text-primary;
   }
 
   .badge-pending {
-    @apply badge bg-warning/10 text-warning;
+    @apply badge bg-warning/15 text-warning;
   }
 
   .badge-completed {
@@ -100,20 +129,58 @@
 
   /* Skeleton loader */
   .skeleton {
-    @apply rounded-lg bg-gradient-to-r from-border via-border/50 to-border bg-[length:200%_100%] animate-shimmer;
+    @apply rounded-lg bg-gradient-to-r from-border via-cream to-border bg-[length:200%_100%] animate-shimmer;
+  }
+
+  .skeleton-text {
+    @apply skeleton h-4 w-full;
+  }
+
+  .skeleton-card {
+    @apply skeleton rounded-2xl h-32 w-full;
   }
 
   /* Glassmorphism */
   .glass-card {
-    @apply bg-white/70 backdrop-blur-xl border border-white/40 shadow-[0_4px_30px_rgba(3,37,27,0.06)] rounded-2xl p-6;
+    @apply bg-white/72 backdrop-blur-xl border border-white/50 shadow-glass rounded-2xl p-6;
   }
 
   .glass-dark {
-    @apply bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl;
+    @apply bg-white/6 backdrop-blur-xl border border-white/10 rounded-2xl;
   }
 
   .glass-nav {
-    @apply bg-white/70 backdrop-blur-xl border border-white/40;
+    @apply bg-white/78 backdrop-blur-xl border-white/50;
+  }
+
+  /* App background image layer (dashboard / auth — not landing) */
+  .app-bg {
+    position: relative;
+  }
+
+  .app-bg::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: url("/bg-app.svg");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 0.55;
+  }
+
+  .app-bg > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Bottom nav: locked, no sway */
+  .bottom-nav-stable {
+    transform: translateZ(0);
+    will-change: auto;
+    contain: layout paint style;
   }
 
   /* Text */

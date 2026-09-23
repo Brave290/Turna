@@ -4,6 +4,7 @@ import { useFormState, useFormStatus } from 'react-dom';
 import { useEffect, useRef } from 'react';
 import { inviteMember, type InviteActionState } from '@/lib/auth-actions';
 import { Spinner } from '@/components/spinner';
+import { useToast } from '@/components/toast';
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -30,12 +31,24 @@ export function InviteForm({
     null as InviteActionState
   );
   const formRef = useRef<HTMLFormElement>(null);
+  const toast = useToast();
+  const lastKeyRef = useRef('');
 
   useEffect(() => {
-    if (state?.success) {
+    if (!state) return;
+    const key = JSON.stringify({
+      s: state.success ?? null,
+      e: state.error?.form?.[0] ?? null,
+    });
+    if (key === lastKeyRef.current) return;
+    lastKeyRef.current = key;
+    if (state.success) {
       formRef.current?.reset();
+      toast.success(state.success);
+    } else if (state.error?.form?.[0]) {
+      toast.error(state.error.form[0]);
     }
-  }, [state?.success]);
+  }, [state, toast]);
 
   const emailError = state?.error?.invitee_email?.[0];
   const formError = state?.error?.form?.[0];

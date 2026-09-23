@@ -15,6 +15,7 @@ import { revalidatePath } from 'next/cache';
 type AuthError = {
   error?: Record<string, string[] | undefined> & { form?: string[] };
   success?: string;
+  circleId?: string;
 };
 
 function safeNext(raw: FormDataEntryValue | null): string {
@@ -53,12 +54,71 @@ export async function signUp(formData: FormData): Promise<AuthError> {
     return { error: { form: [error.message] } };
   }
 
-  // Session may exist when email autoconfirm is on
+  // Autoconfirm on — session exists, go straight in
   if (data.session) {
     redirect('/dashboard');
   }
 
-  return { success: 'Check your email to confirm your account.' };
+  // Real OTP: send a 6-digit email code (Supabase signInWithOtp)
+  // Store pending email for the verify page (client will re-request if needed)
+  const email = parsed.data.email;
+  return {
+    success: `We sent a 6-digit code to ${email}. Enter it to finish signing up.`,
+  };
+}
+
+// useFormState-style signature: (prev, formData)
+export async function verifyEmailOtp(
+  _prev: AuthError | null,
+  formData: FormData
+): Promise<AuthError> {
+  const email = String(formData.get('email') ?? '').trim().toLowerCase();
+  const token = String(formData.get('token') ?? '').trim().replace(/\D/g, '');
+
+  if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+    return { error: { form: ['Enter a valid email address'] } };
+  }
+  if (token.length !== 6) {
+    return { error: { form: ['Enter the full 6-digit code'] } };
+  }
+
+  const supabase = createServerSupabaseClient();
+
+  const { data, error } = await supabase.auth.verifyOtp({
+    email,
+    token,
+    type: 'email',
+  });
+
+  if (error) {
+    return { error: { form: [error.message] } };
+  }
+
+  if (data.session) {
+    redirect('/dashboard');
+  }
+
+  return { error: { form: ['Verification failed. Try again.'] } };
+}
+
+export async function resendEmailOtp(email: string): Promise<AuthError> {
+  const clean = email.trim().toLowerCase();
+  if (!clean || !/^\S+@\S+\.\S+$/.test(clean)) {
+    return { error: { form: ['Enter a valid email address'] } };
+  }
+
+  const supabase = createServerSupabaseClient();
+
+  const { error } = await supabase.auth.signInWithOtp({
+    email: clean,
+    options: { shouldCreateUser: false },
+  });
+
+  if (error) {
+    return { error: { form: [error.message] } };
+  }
+
+  return { success: `New code sent to ${clean}.` };
 }
 
 export async function signIn(formData: FormData): Promise<AuthError> {
@@ -80,9 +140,18 @@ export async function signIn(formData: FormData): Promise<AuthError> {
   });
 
   if (error) {
-    return { error: { form: [error.message] } };
+    // Friendly HBL messages for common Supabase errors
+    const msg =
+      error.message === 'Invalid login credentials'
+        ? 'That email and password don’t match. Try again.'
+        : error.message.includes('Email not confirmed')
+          ? 'Confirm your email first — check your inbox for the code.'
+          : error.message;
+    return { error: { form: [msg] } };
   }
 
+  // revalidate dashboard so middleware + layout see the new session
+  revalidatePath('/dashboard');
   redirect(safeNext(formData.get('redirect')));
 }
 

@@ -1,182 +1,274 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
+import { CheckCircle2, Loader2, Mail } from "lucide-react";
 import { Logo } from "@/components/logo";
+import { OtpInput, CODE_LENGTH } from "@/components/otp-input";
+import { verifyEmailOtp, resendEmailOtp } from "@/lib/auth-actions";
+import { useToast } from "@/components/toast";
 
-const CODE_LENGTH = 6;
 const RESEND_SECONDS = 30;
 
 export default function VerifyEmailPage() {
   const router = useRouter();
-  const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
-  const [digits, setDigits] = useState<string[]>(Array(CODE_LENGTH).fill(""));
+  const searchParams = useSearchParams();
+  const toast = useToast();
+  const [isPending, setPending] = useState(false);
+
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
   const [secondsLeft, setSecondsLeft] = useState(RESEND_SECONDS);
   const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [shakeKey, setShakeKey] = useState(0);
+  const [resending, setResending] = useState(false);
 
+  // Pick up pending email from signup query
+  useEffect(() => {
+    const q = searchParams.get("email");
+    if (q) setEmail(q);
+    else {
+      // try sessionStorage from signup
+      const stored = sessionStorage.getItem("turna_pending_email");
+      if (stored) setEmail(stored);
+    }
+  }, [searchParams]);
+
+  // Resend countdown
   useEffect(() => {
     if (secondsLeft <= 0) return;
-    const timer = setInterval(() => {
-      setSecondsLeft((s) => (s <= 1 ? 0 : s - 1));
-    }, 1000);
-    return () => clearInterval(timer);
+    const t = setInterval(() => setSecondsLeft((s) => (s <= 1 ? 0 : s - 1)), 1000);
+    return () => clearInterval(t);
   }, [secondsLeft]);
-
-  useEffect(() => {
-    inputRefs.current[0]?.focus();
-  }, []);
-
-  function setDigit(index: number, value: string) {
-    setDigits((prev) => {
-      const next = [...prev];
-      next[index] = value;
-      return next;
-    });
-  }
-
-  function handleChange(index: number, raw: string) {
-    const value = raw.replace(/\D/g, "").slice(-1);
-    setDigit(index, value);
-    setError(null);
-    if (value && index < CODE_LENGTH - 1) {
-      inputRefs.current[index + 1]?.focus();
-    }
-  }
-
-  function handleKeyDown(
-    index: number,
-    e: React.KeyboardEvent<HTMLInputElement>
-  ) {
-    if (e.key === "Backspace") {
-      if (digits[index]) {
-        setDigit(index, "");
-      } else if (index > 0) {
-        e.preventDefault();
-        inputRefs.current[index - 1]?.focus();
-        setDigit(index - 1, "");
-      }
-    } else if (e.key === "ArrowLeft" && index > 0) {
-      e.preventDefault();
-      inputRefs.current[index - 1]?.focus();
-    } else if (e.key === "ArrowRight" && index < CODE_LENGTH - 1) {
-      e.preventDefault();
-      inputRefs.current[index + 1]?.focus();
-    }
-  }
-
-  function handlePaste(e: React.ClipboardEvent<HTMLInputElement>) {
-    e.preventDefault();
-    const pasted = e.clipboardData
-      .getData("text")
-      .replace(/\D/g, "")
-      .slice(0, CODE_LENGTH);
-    if (!pasted) return;
-
-    const next = Array(CODE_LENGTH).fill("");
-    pasted.split("").forEach((ch, i) => {
-      next[i] = ch;
-    });
-    setDigits(next);
-    setError(null);
-    inputRefs.current[Math.min(pasted.length, CODE_LENGTH - 1)]?.focus();
-  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const code = digits.join("");
     if (code.length < CODE_LENGTH) {
       setError("Enter the full 6-digit code.");
+      setShakeKey((k) => k + 1);
       return;
     }
-    setSubmitting(true);
-    router.push("/auth/welcome");
+    setError(null);
+    void submitCode(code);
   }
 
-  function handleResend() {
-    if (secondsLeft > 0) return;
-    setDigits(Array(CODE_LENGTH).fill(""));
+  async function submitCode(token: string) {
+    // startTransition expects void; wrap async work manually
     setError(null);
-    setSecondsLeft(RESEND_SECONDS);
-    inputRefs.current[0]?.focus();
+    const formData = new FormData();
+    formData.set("email", email);
+    formData.set("token", token);
+    setPending(true);
+    try {
+      const res = await verifyEmailOtp(null, formData);
+      if (res?.error?.form?.[0]) {
+        setError(res.error.form[0]);
+        toast.error(res.error.form[0]);
+        setShakeKey((k) => k + 1);
+        setCode("");
+      } else if (res?.success) {
+        setSuccess(res.success);
+        toast.success(res.success);
+        setTimeout(() => router.push("/dashboard"), 800);
+      } else {
+        setError("Verification failed. Try again.");
+        toast.error("Verification failed. Try again.");
+        setShakeKey((k) => k + 1);
+      }
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function handleResend() {
+    if (secondsLeft > 0 || resending || !email) return;
+    setResending(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await resendEmailOtp(email);
+      if (res?.error?.form?.[0]) {
+        setError(res.error.form[0]);
+        toast.error(res.error.form[0]);
+      } else {
+        const msg = res?.success ?? "New code sent.";
+        setSuccess(msg);
+        toast.success(msg);
+        setSecondsLeft(RESEND_SECONDS);
+        setCode("");
+      }
+    } finally {
+      setResending(false);
+    }
+  }
+
+  // If no email yet, show email entry first (real flow, no fake hard-coded address)
+  if (!email) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 16, filter: "blur(8px)" }}
+        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+        className="text-center"
+      >
+        <div className="flex justify-center mb-4">
+          <Logo variant="on-dark" size={48} />
+        </div>
+        <h1 className="font-display text-3xl font-bold tracking-tight mb-2 text-white">
+          What&apos;s your email?
+        </h1>
+        <p className="text-white/55 text-sm mb-8">
+          We&apos;ll send a 6-digit code to finish verifying your account.
+        </p>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const input = (e.currentTarget.elements.namedItem("email") as HTMLInputElement)?.value;
+            if (input && /^\S+@\S+\.\S+$/.test(input)) {
+              setEmail(input.trim().toLowerCase());
+              sessionStorage.setItem("turna_pending_email", input.trim().toLowerCase());
+              setSecondsLeft(RESEND_SECONDS);
+            } else {
+              setError("Enter a valid email address.");
+            }
+          }}
+          className="space-y-4"
+        >
+          <input
+            name="email"
+            type="email"
+            autoComplete="email"
+            placeholder="you@example.com"
+            className="input"
+            required
+          />
+          <button type="submit" className="btn-primary w-full">
+            Send code
+          </button>
+        </form>
+        <p className="text-sm text-white/50 mt-6">
+          <Link
+            href="/auth/login"
+            className="text-primary hover:text-primary-light font-medium"
+          >
+            Back to sign in
+          </Link>
+        </p>
+      </motion.div>
+    );
   }
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-blur-in">
       <div className="text-center mb-8">
-        <div className="flex justify-center mb-4"><Logo variant="on-dark" size={48} /></div>
-        <h1 className="font-display text-3xl font-bold tracking-tight mb-2">
-          Verify your email
+        <div className="flex justify-center mb-4">
+          <Logo variant="on-dark" size={48} />
+        </div>
+        <h1 className="font-display text-3xl font-bold tracking-tight mb-2 text-white">
+          Check your inbox
         </h1>
         <p className="text-white/55 text-sm leading-relaxed">
-          We&apos;ve sent a 6-digit code to your@example.com
+          We sent a 6-digit code to
+          <br />
+          <span className="text-primary-light font-medium break-all">{email}</span>
         </p>
       </div>
 
+      {/* OTP cards with motion effects */}
       <form onSubmit={handleSubmit} className="space-y-6" noValidate>
-        <div
-          className="flex justify-between gap-2"
-          onPaste={handlePaste}
-        >
-          {digits.map((digit, i) => (
-            <input
-              key={i}
-              ref={(el) => {
-                inputRefs.current[i] = el;
-              }}
-              type="text"
-              inputMode="numeric"
-              autoComplete={i === 0 ? "one-time-code" : "off"}
-              maxLength={1}
-              aria-label={`Digit ${i + 1}`}
-              className="input text-center text-xl font-semibold py-3 px-0 w-12 h-14"
-              value={digit}
-              onChange={(e) => handleChange(i, e.target.value)}
-              onKeyDown={(e) => handleKeyDown(i, e)}
-            />
-          ))}
-        </div>
+        <OtpInput
+          value={code}
+          onChange={(v) => {
+            setCode(v);
+            setError(null);
+          }}
+          onComplete={(v) => {
+            void submitCode(v);
+          }}
+          disabled={isPending}
+          error={Boolean(error)}
+          shakeKey={shakeKey}
+        />
 
-        {error && (
-          <p className="text-sm text-error text-center" role="alert">
-            {error}
-          </p>
-        )}
+        <AnimatePresence mode="wait">
+          {error && (
+            <motion.p
+              key={error}
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="text-sm text-error text-center"
+              role="alert"
+            >
+              {error}
+            </motion.p>
+          )}
+          {success && (
+            <motion.div
+              key="ok"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex items-center justify-center gap-2 text-primary-light text-sm"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              {success}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <button
           type="submit"
           className="btn-primary w-full"
-          disabled={submitting}
+          disabled={isPending || code.length < CODE_LENGTH}
         >
-          Verify
+          {isPending ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Verifying...
+            </>
+          ) : (
+            "Verify email"
+          )}
         </button>
       </form>
 
       <div className="text-center mt-6 space-y-3">
         <p className="text-sm text-white/50">
-          Didn&apos;t get the code?{" "}
+          Didn&apos;t get it?{" "}
           {secondsLeft > 0 ? (
-            <span className="text-white/40">
-              Resend in {secondsLeft}s
-            </span>
+            <span className="text-white/40">Resend in {secondsLeft}s</span>
           ) : (
             <button
               type="button"
               onClick={handleResend}
-              className="text-primary hover:text-primary-light font-medium transition-colors"
+              disabled={resending}
+              className="text-primary hover:text-primary-light font-medium transition-colors inline-flex items-center gap-1"
             >
+              {resending && <Loader2 className="w-3 h-3 animate-spin" />}
               Resend code
             </button>
           )}
         </p>
         <p className="text-sm text-white/50">
-          <Link
-            href="/auth/signup"
+          <button
+            type="button"
+            onClick={() => {
+              setEmail("");
+              setCode("");
+              setError(null);
+              sessionStorage.removeItem("turna_pending_email");
+            }}
             className="text-primary hover:text-primary-light font-medium transition-colors"
           >
             Change email
-          </Link>
+          </button>
+        </p>
+        <p className="text-xs text-white/35 flex items-center justify-center gap-1">
+          <Mail className="w-3 h-3" />
+          Codes expire after a few minutes.
         </p>
       </div>
     </div>

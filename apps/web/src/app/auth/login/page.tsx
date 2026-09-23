@@ -2,39 +2,17 @@
 
 import { useFormState, useFormStatus } from "react-dom";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { signIn } from "@/lib/auth-actions";
 import { Logo } from "@/components/logo";
 import { Spinner } from "@/components/spinner";
+import { useToast } from "@/components/toast";
 
 type AuthState = {
   error?: Record<string, string[] | undefined> & { form?: string[] };
   success?: string;
 } | null;
-
-function GoogleIcon({ className = "" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} aria-hidden>
-      <path
-        fill="#4285F4"
-        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z"
-      />
-      <path
-        fill="#34A853"
-        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M5.84 14.1a6.6 6.6 0 0 1 0-4.2V7.06H2.18a11 11 0 0 0 0 9.88l3.66-2.84z"
-      />
-      <path
-        fill="#EA4335"
-        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15A11 11 0 0 0 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-      />
-    </svg>
-  );
-}
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -58,21 +36,33 @@ export default function LoginPage() {
     null as AuthState
   );
   const [showPassword, setShowPassword] = useState(false);
+  const toast = useToast();
+  const lastKeyRef = useRef("");
+
+  useEffect(() => {
+    if (!state) return;
+    const key = JSON.stringify({ e: state.error?.form?.[0] ?? null });
+    if (key === lastKeyRef.current) return;
+    lastKeyRef.current = key;
+    if (state.error?.form?.[0]) {
+      toast.error(state.error.form[0]);
+    }
+  }, [state, toast]);
 
   const formError = state?.error?.form?.[0];
   const emailError = state?.error?.email?.[0];
   const passwordError = state?.error?.password?.[0];
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-blur-in">
       <div className="text-center mb-8">
         <div className="flex justify-center mb-4">
           <Logo variant="on-dark" size={48} />
         </div>
-        <h1 className="font-display text-3xl font-bold tracking-tight mb-2">
+        <h1 className="font-display text-3xl font-bold tracking-tight mb-2 text-white">
           Welcome back
         </h1>
-        <p className="text-white/55">Sign in to your Turna account.</p>
+        <p className="text-white/55">Sign in to pick up where you left off.</p>
       </div>
 
       <form action={formAction} className="space-y-5" noValidate>
@@ -150,33 +140,13 @@ export default function LoginPage() {
         <SubmitButton />
       </form>
 
-      <div className="flex items-center gap-4 my-6">
-        <div className="h-px flex-1 bg-white/10" />
-        <span className="text-xs uppercase tracking-wider text-white/40">
-          or continue with
-        </span>
-        <div className="h-px flex-1 bg-white/10" />
-      </div>
-
-      <button
-        type="button"
-        disabled
-        className="btn w-full border border-white/15 bg-white/5 text-white/60 rounded-xl px-6 py-3"
-      >
-        <GoogleIcon className="w-5 h-5" />
-        Continue with Google
-        <span className="badge bg-primary/15 text-primary-light ml-auto">
-          Coming soon
-        </span>
-      </button>
-
       <p className="text-sm text-white/50 text-center mt-8">
-        Don&apos;t have an account?{" "}
+        No account yet?{" "}
         <Link
           href="/auth/signup"
           className="text-primary hover:text-primary-light font-medium transition-colors"
         >
-          Sign up
+          Create one
         </Link>
       </p>
     </div>

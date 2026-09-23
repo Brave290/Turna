@@ -23,10 +23,10 @@ export function Logo({ variant = "default", size = 32, ...props }: LogoProps) {
     LogoVariant,
     { bg?: string; arc1: string; arc2: string; t: string; node: string }
   > = {
-    default: { arc1: "#00A878", arc2: "#35D6A0", t: "#03251B", node: "#00A878" },
-    dark: { bg: "#03251B", arc1: "#00A878", arc2: "#35D6A0", t: "#FFFFFF", node: "#00A878" },
-    primary: { bg: "#00A878", arc1: "#FFFFFF", arc2: "#E8FFF5", t: "#03251B", node: "#03251B" },
-    "on-dark": { arc1: "#FFFFFF", arc2: "#35D6A0", t: "#FFFFFF", node: "#00A878" },
+    default: { arc1: "#00C2A8", arc2: "#7C5CFF", t: "#0A1628", node: "#00C2A8" },
+    dark: { bg: "#0A1628", arc1: "#00C2A8", arc2: "#7C5CFF", t: "#FFFFFF", node: "#00C2A8" },
+    primary: { bg: "#00C2A8", arc1: "#FFFFFF", arc2: "#D6FFF7", t: "#0A1628", node: "#0A1628" },
+    "on-dark": { arc1: "#FFFFFF", arc2: "#5EEAD4", t: "#FFFFFF", node: "#00C2A8" },
   };
 
   const c = palettes[variant];

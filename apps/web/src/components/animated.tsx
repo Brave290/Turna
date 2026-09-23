@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 
 type AnimationType =
   | "fade-up"
@@ -19,19 +20,15 @@ interface RevealProps {
   once?: boolean;
 }
 
-const transformMap: Record<AnimationType, string> = {
-  "fade-up": "translateY(32px)",
-  "fade-in": "translateY(0)",
-  "fade-left": "translateX(-32px)",
-  "fade-right": "translateX(32px)",
-  "scale-in": "scale(0.92)",
-  "slide-scale": "translateY(40px) scale(0.96)",
+const variants: Record<AnimationType, Record<string, unknown>> = {
+  "fade-up": { hidden: { opacity: 0, y: 32, filter: "blur(6px)" }, show: { opacity: 1, y: 0, filter: "blur(0px)" } },
+  "fade-in": { hidden: { opacity: 0 }, show: { opacity: 1 } },
+  "fade-left": { hidden: { opacity: 0, x: -32 }, show: { opacity: 1, x: 0 } },
+  "fade-right": { hidden: { opacity: 0, x: 32 }, show: { opacity: 1, x: 0 } },
+  "scale-in": { hidden: { opacity: 0, scale: 0.92, filter: "blur(8px)" }, show: { opacity: 1, scale: 1, filter: "blur(0px)" } },
+  "slide-scale": { hidden: { opacity: 0, y: 40, scale: 0.96 }, show: { opacity: 1, y: 0, scale: 1 } },
 };
 
-/**
- * Scroll-triggered reveal using IntersectionObserver.
- * No animation libraries — pure CSS transitions.
- */
 export function Reveal({
   children,
   type = "fade-up",
@@ -40,48 +37,30 @@ export function Reveal({
   className = "",
   once = true,
 }: RevealProps) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
+  const reduce = useReducedMotion();
 
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisible(true);
-          if (once) observer.unobserve(el);
-        } else if (!once) {
-          setVisible(false);
-        }
-      },
-      { threshold: 0.15, rootMargin: "0px 0px -40px 0px" }
-    );
-
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [once]);
+  if (reduce) {
+    return <div className={className}>{children}</div>;
+  }
 
   return (
-    <div
-      ref={ref}
+    <motion.div
       className={className}
-      style={{
-        opacity: visible ? 1 : 0,
-        transform: visible ? "none" : transformMap[type],
-        transition: `opacity ${duration}ms cubic-bezier(0.16,1,0.3,1) ${delay}ms, transform ${duration}ms cubic-bezier(0.16,1,0.3,1) ${delay}ms`,
-        willChange: "opacity, transform",
+      initial="hidden"
+      whileInView="show"
+      viewport={{ once, amount: 0.15, margin: "0px 0px -40px 0px" }}
+      variants={variants[type]}
+      transition={{
+        duration: duration / 1000,
+        delay: delay / 1000,
+        ease: [0.16, 1, 0.3, 1],
       }}
     >
       {children}
-    </div>
+    </motion.div>
   );
 }
 
-/**
- * Animated counter that counts up when scrolled into view.
- */
 export function AnimatedCounter({
   end,
   duration = 2000,
@@ -133,9 +112,6 @@ export function AnimatedCounter({
   );
 }
 
-/**
- * 3D tilt effect on hover — follows the cursor.
- */
 export function Tilt({
   children,
   max = 8,
@@ -146,6 +122,11 @@ export function Tilt({
   className?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const reduce = useReducedMotion();
+
+  if (reduce) {
+    return <div className={className}>{children}</div>;
+  }
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const el = ref.current;

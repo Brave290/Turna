@@ -2,9 +2,11 @@
 
 import { useFormState, useFormStatus } from "react-dom";
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 import { resetPassword } from "@/lib/auth-actions";
 import { Logo } from "@/components/logo";
 import { Spinner } from "@/components/spinner";
+import { useToast } from "@/components/toast";
 
 type AuthState = {
   error?: Record<string, string[] | undefined> & { form?: string[] };
@@ -32,6 +34,23 @@ export default function ForgotPasswordPage() {
     (_: AuthState, formData: FormData) => resetPassword(formData),
     null as AuthState
   );
+  const toast = useToast();
+  const lastKeyRef = useRef("");
+
+  useEffect(() => {
+    if (!state) return;
+    const key = JSON.stringify({
+      s: state.success ?? null,
+      e: state.error?.form?.[0] ?? null,
+    });
+    if (key === lastKeyRef.current) return;
+    lastKeyRef.current = key;
+    if (state.success && !state.error) {
+      toast.success(state.success);
+    } else if (state.error?.form?.[0]) {
+      toast.error(state.error.form[0]);
+    }
+  }, [state, toast]);
 
   const formError = state?.error?.form?.[0];
   const emailError = state?.error?.email?.[0];

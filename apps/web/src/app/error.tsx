@@ -1,5 +1,7 @@
 "use client";
 
+import { motion } from "framer-motion";
+
 export default function Error({
   reset,
 }: {
@@ -8,7 +10,12 @@ export default function Error({
 }) {
   return (
     <div className="min-h-screen bg-cream flex items-center justify-center px-6">
-      <div className="text-center max-w-md">
+      <motion.div
+        initial={{ opacity: 0, y: 16, filter: "blur(8px)" }}
+        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+        transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+        className="text-center max-w-md"
+      >
         <div className="w-12 h-12 rounded-full bg-error/10 text-error flex items-center justify-center text-xl font-bold mx-auto mb-4">
           !
         </div>
@@ -21,7 +28,7 @@ export default function Error({
         <button onClick={reset} className="btn-primary">
           Try again
         </button>
-      </div>
+      </motion.div>
     </div>
   );
 }

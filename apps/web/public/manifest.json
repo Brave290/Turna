@@ -4,8 +4,8 @@
   "description": "Save Together. Grow Together. Digital Ajo, Esusu & Susu savings circles.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#03251B",
-  "theme_color": "#03251B",
+  "background_color": "#0A1628",
+  "theme_color": "#0A1628",
   "orientation": "portrait-primary",
   "icons": [
     {

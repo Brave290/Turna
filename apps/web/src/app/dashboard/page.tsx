@@ -11,6 +11,7 @@ import {
 import { getDashboardData } from '@/lib/dashboard-data';
 import { formatCurrency, formatDate, formatRelativeTime } from '@/lib/utils';
 import { StatusBadge } from '@/components/dashboard/status-badge';
+import { Stagger, StaggerItem } from '@/components/motion';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +22,7 @@ export default async function DashboardHomePage() {
   const recent = circles.slice(0, 5);
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
           <p className="text-sm text-muted mb-1">Welcome back</p>
@@ -35,32 +36,40 @@ export default async function DashboardHomePage() {
         </Link>
       </div>
 
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          label="Circles"
-          value={String(stats.circleCount)}
-          icon={Users}
-          hint={`${stats.activeCount} active`}
-        />
-        <StatCard
-          label="Contributions due"
-          value={String(stats.pendingContributions)}
-          icon={PiggyBank}
-          hint="Needs your action"
-        />
-        <StatCard
-          label="Payouts pending"
-          value={String(stats.pendingPayouts)}
-          icon={ArrowLeftRight}
-          hint="In the pipeline"
-        />
-        <StatCard
-          label="You've contributed"
-          value={formatCurrency(stats.totalContributed)}
-          icon={TrendingUp}
-          hint="Confirmed total"
-        />
-      </section>
+      <Stagger className="grid grid-cols-2 lg:grid-cols-4 gap-4" stagger={0.06}>
+        <StaggerItem>
+          <StatCard
+            label="Circles"
+            value={String(stats.circleCount)}
+            icon={Users}
+            hint={`${stats.activeCount} active`}
+          />
+        </StaggerItem>
+        <StaggerItem>
+          <StatCard
+            label="Contributions due"
+            value={String(stats.pendingContributions)}
+            icon={PiggyBank}
+            hint="Needs your action"
+          />
+        </StaggerItem>
+        <StaggerItem>
+          <StatCard
+            label="Payouts pending"
+            value={String(stats.pendingPayouts)}
+            icon={ArrowLeftRight}
+            hint="In the pipeline"
+          />
+        </StaggerItem>
+        <StaggerItem>
+          <StatCard
+            label="You've contributed"
+            value={formatCurrency(stats.totalContributed)}
+            icon={TrendingUp}
+            hint="Confirmed total"
+          />
+        </StaggerItem>
+      </Stagger>
 
       <section className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 card">

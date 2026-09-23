@@ -39,7 +39,7 @@ function Nav() {
   return (
     <header className="fixed top-0 inset-x-0 z-50">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 mt-4">
-        <nav className="flex items-center justify-between h-14 px-5 rounded-2xl bg-white/70 backdrop-blur-xl border border-white/40 shadow-[0_4px_30px_rgba(3,37,27,0.06)]">
+        <nav className="flex items-center justify-between h-14 px-5 rounded-2xl bg-white/70 backdrop-blur-xl border border-white/40 shadow-glass">
           <Link href="/" className="flex items-center">
             <LogoWordmark variant="default" size={28} />
           </Link>
@@ -54,7 +54,7 @@ function Nav() {
             <Link href="/auth/login" className="hidden sm:inline-flex text-[13px] font-medium text-forest/70 hover:text-forest px-3 py-2 rounded-lg hover:bg-forest/5 transition-colors">
               Sign in
             </Link>
-            <Link href="/auth/signup" className="bg-primary hover:bg-primary-hover text-white text-[13px] font-semibold px-4 py-2 rounded-xl transition-colors">
+            <Link href="/auth/signup" className="bg-primary hover:bg-primary-hover text-white text-[13px] font-semibold px-4 py-2 rounded-xl transition-all hover:shadow-glow">
               Get started
             </Link>
           </div>
@@ -64,21 +64,16 @@ function Nav() {
   );
 }
 
-/* ─── Phone mockup ─── */
+/* ─── Phone mockup (illustrative UI chrome — not user metrics) ─── */
 function PhoneMockup() {
   return (
     <div className="relative w-[260px] sm:w-[290px] mx-auto" aria-hidden>
-      {/* Glow behind phone */}
       <div className="absolute -inset-8 bg-primary/20 blur-[60px] rounded-full" />
 
-      {/* Phone frame */}
-      <div className="relative rounded-[42px] bg-forest p-[10px] shadow-[0_25px_60px_rgba(3,37,27,0.4)] border border-white/10">
-        {/* Notch */}
+      <div className="relative rounded-[42px] bg-forest p-[10px] shadow-[0_25px_60px_rgba(10,22,40,0.4)] border border-white/10">
         <div className="absolute top-[10px] left-1/2 -translate-x-1/2 w-24 h-5 bg-forest rounded-b-2xl z-10" />
 
-        {/* Screen */}
         <div className="rounded-[34px] overflow-hidden bg-cream aspect-[9/19] relative">
-          {/* Status bar */}
           <div className="flex justify-between items-center px-5 pt-3 pb-1 text-[10px] text-forest/50 font-medium">
             <span>9:41</span>
             <div className="flex gap-1">
@@ -87,50 +82,50 @@ function PhoneMockup() {
             </div>
           </div>
 
-          {/* App content */}
           <div className="px-4 pt-2 space-y-3">
-            {/* Greeting */}
             <div>
-              <p className="text-[10px] text-muted">Good morning</p>
-              <p className="font-display text-sm font-semibold text-forest">Mus&apos;ab</p>
+              <p className="text-[10px] text-muted">Your circles</p>
+              <p className="font-display text-sm font-semibold text-forest">Overview</p>
             </div>
 
-            {/* Balance card */}
             <div className="bg-forest rounded-2xl p-3.5 text-white">
-              <p className="text-[9px] text-white/50">Total Savings</p>
-              <p className="text-lg font-bold text-primary-light mt-0.5">₦1,200,000</p>
+              <p className="text-[9px] text-white/50">Circle activity</p>
+              <p className="text-lg font-bold text-primary-light mt-0.5">On track</p>
               <div className="flex items-center gap-1 mt-1.5">
                 <svg viewBox="0 0 12 12" className="w-2.5 h-2.5 text-primary-light"><path d="M6 2l4 5H2z" fill="currentColor"/></svg>
-                <span className="text-[9px] text-primary-light">12% this cycle</span>
+                <span className="text-[9px] text-primary-light">Members confirmed</span>
               </div>
             </div>
 
-            {/* Circle cards */}
             <div className="space-y-2">
-              <div className="bg-white rounded-xl p-2.5 border border-border flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-semibold text-forest">Family Ajo</p>
-                  <p className="text-[8px] text-muted">₦60,000 / week</p>
+              {[
+                ["Weekly circle", "Members confirmed"],
+                ["Monthly circle", "Awaiting reports"],
+                ["Family circle", "Payout scheduled"],
+              ].map(([name, meta], i) => (
+                <div
+                  key={name}
+                  className={`bg-white rounded-xl p-2.5 border border-border flex items-center justify-between ${i === 2 ? "opacity-60" : ""}`}
+                >
+                  <div>
+                    <p className="text-[10px] font-semibold text-forest">{name}</p>
+                    <p className="text-[8px] text-muted">{meta}</p>
+                  </div>
+                  <span
+                    className={`text-[7px] px-1.5 py-0.5 rounded-full font-medium ${
+                      i === 0
+                        ? "bg-primary/10 text-primary"
+                        : i === 1
+                          ? "bg-warning/10 text-warning"
+                          : "bg-forest/10 text-forest"
+                    }`}
+                  >
+                    {i === 0 ? "Active" : i === 1 ? "Pending" : "Ready"}
+                  </span>
                 </div>
-                <span className="text-[7px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">Active</span>
-              </div>
-              <div className="bg-white rounded-xl p-2.5 border border-border flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-semibold text-forest">Market Traders</p>
-                  <p className="text-[8px] text-muted">₦25,000 / month</p>
-                </div>
-                <span className="text-[7px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">Active</span>
-              </div>
-              <div className="bg-white rounded-xl p-2.5 border border-border flex items-center justify-between opacity-60">
-                <div>
-                  <p className="text-[10px] font-semibold text-forest">Office Susu</p>
-                  <p className="text-[8px] text-muted">₦15,000 / week</p>
-                </div>
-                <span className="text-[7px] bg-warning/10 text-warning px-1.5 py-0.5 rounded-full font-medium">Paused</span>
-              </div>
+              ))}
             </div>
 
-            {/* Bottom nav */}
             <div className="absolute bottom-0 inset-x-0 bg-white/80 backdrop-blur-md border-t border-border px-5 py-2 flex justify-around">
               {[
                 <path key="h" d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />,
@@ -147,25 +142,23 @@ function PhoneMockup() {
         </div>
       </div>
 
-      {/* Floating glass badge — contribution confirmed */}
       <div className="absolute -left-10 top-1/4 glass-card rounded-xl px-3 py-2 flex items-center gap-2 animate-float">
         <div className="w-6 h-6 rounded-full bg-primary/15 flex items-center justify-center">
           <svg viewBox="0 0 12 12" className="w-3 h-3 text-primary"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
         </div>
         <div>
           <p className="text-[10px] font-semibold text-forest">Confirmed</p>
-          <p className="text-[8px] text-muted">₦60,000</p>
+          <p className="text-[8px] text-muted">Member report</p>
         </div>
       </div>
 
-      {/* Floating glass badge — payout */}
       <div className="absolute -right-8 bottom-1/3 glass-card rounded-xl px-3 py-2 flex items-center gap-2 animate-float-delayed">
         <div className="w-6 h-6 rounded-full bg-forest/10 flex items-center justify-center">
           <svg viewBox="0 0 12 12" className="w-3 h-3 text-forest"><path d="M6 2v8M6 10l-3-3M6 10l3-3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
         </div>
         <div>
-          <p className="text-[10px] font-semibold text-forest">Payout sent</p>
-          <p className="text-[8px] text-muted">Cycle 4</p>
+          <p className="text-[10px] font-semibold text-forest">Payout logged</p>
+          <p className="text-[8px] text-muted">Ledger entry</p>
         </div>
       </div>
     </div>
@@ -176,9 +169,7 @@ function PhoneMockup() {
 function Hero() {
   return (
     <section className="relative overflow-hidden bg-forest text-white pt-32 pb-24 md:pt-40 md:pb-32">
-      {/* Radial glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-primary/10 blur-[120px] rounded-full pointer-events-none" />
-      {/* Grid pattern */}
       <div
         className="absolute inset-0 opacity-[0.04]"
         style={{
@@ -207,9 +198,9 @@ function Hero() {
 
             <Reveal type="fade-up" delay={200}>
               <p className="text-lg md:text-xl text-white/50 max-w-lg mb-10 leading-relaxed">
-                The modern way to manage your savings circle. Invite members,
-                track contributions, and know exactly what&apos;s happening — with
-                full transparency.
+                Manage your savings circle in one place. Invite members, track
+                every contribution, and always know whose turn it is — with a
+                shared ledger everyone can see.
               </p>
             </Reveal>
 
@@ -217,7 +208,7 @@ function Hero() {
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link
                   href="/auth/signup"
-                  className="group bg-primary hover:bg-primary-hover text-white rounded-xl px-8 py-4 text-base font-semibold transition-all inline-flex items-center justify-center gap-2 hover:shadow-[0_8px_30px_rgba(0,168,120,0.35)]"
+                  className="group bg-primary hover:bg-primary-hover text-white rounded-xl px-8 py-4 text-base font-semibold transition-all inline-flex items-center justify-center gap-2 hover:shadow-glow"
                 >
                   Start your circle
                   <svg viewBox="0 0 16 16" className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" strokeWidth="2">
@@ -233,14 +224,14 @@ function Hero() {
               </div>
             </Reveal>
 
-            {/* Stats */}
+            {/* Product facts — real, not fabricated user counts */}
             <Reveal type="fade-up" delay={400}>
               <div className="mt-14 grid grid-cols-2 sm:grid-cols-4 gap-6 border-t border-white/10 pt-8">
                 {[
-                  { value: 100, suffix: "%", label: "Transparent" },
-                  { value: 2, suffix: "-way", label: "Confirmation" },
-                  { value: 0, suffix: "", label: "Hidden data", display: "Zero" },
+                  { value: 0, suffix: "", label: "Fees we take", display: "0" },
+                  { value: 2, suffix: "-party", label: "Confirmation" },
                   { value: 6, suffix: "-digit", label: "Email OTP" },
+                  { value: 100, suffix: "%", label: "Shared ledger" },
                 ].map((s) => (
                   <div key={s.label}>
                     <div className="text-2xl md:text-3xl font-bold text-primary-light">
@@ -253,7 +244,6 @@ function Hero() {
             </Reveal>
           </div>
 
-          {/* Phone */}
           <Reveal type="scale-in" delay={200} className="flex justify-center lg:justify-end">
             <Tilt max={6}>
               <PhoneMockup />
@@ -268,12 +258,12 @@ function Hero() {
 /* ─── Features ─── */
 function Features() {
   const features = [
-    { title: "Two-party confirmation", body: "Every contribution is reported by the member and confirmed by the treasurer. No single person controls the truth.", icon: <IconShield /> },
-    { title: "Append-only ledger", body: "Every action is recorded permanently. Nothing is deleted, nothing is edited. Full history, always.", icon: <IconLedger /> },
-    { title: "Email-based invites", body: "Invite members by email. No phone numbers, no SMS. Simple, private, and secure.", icon: <IconMail /> },
-    { title: "Clear payout tracking", body: "Know whose turn it is, when it is due, and whether it was received. Disputes are handled fairly.", icon: <IconRefresh /> },
-    { title: "Savings insights", body: "See your contribution trends, streaks, and circle health at a glance. Data that helps, not overwhelms.", icon: <IconChart /> },
-    { title: "Smart reminders", body: "Gentle nudges before contributions are due. Stay on track without the stress.", icon: <IconBell /> },
+    { title: "Two-party confirmation", body: "A member reports a payment. The treasurer confirms it. Two people, one truth — no single person can change the record alone.", icon: <IconShield /> },
+    { title: "Append-only ledger", body: "Every action is written once and kept. Nothing is deleted or edited. You can always see what happened.", icon: <IconLedger /> },
+    { title: "Email invites", body: "Invite people with their email. No phone numbers. Members join with a link.", icon: <IconMail /> },
+    { title: "Clear payout tracking", body: "See whose turn it is, when it is due, and whether it was received. Disputes are recorded, not swept under the rug.", icon: <IconRefresh /> },
+    { title: "Savings insights", body: "Contribution trends and circle health in plain numbers. Useful data, not noise.", icon: <IconChart /> },
+    { title: "Reminders", body: "A quiet nudge before contributions are due, so nobody has to chase the group chat.", icon: <IconBell /> },
   ];
 
   return (
@@ -288,7 +278,7 @@ function Features() {
               Everything your circle needs
             </h2>
             <p className="text-muted text-lg">
-              Built around the way savings circles actually work — not a generic
+              Built around how savings circles actually work — not a generic
               finance app.
             </p>
           </div>
@@ -298,7 +288,7 @@ function Features() {
           {features.map((f, i) => (
             <Reveal key={f.title} type="fade-up" delay={i * 80}>
               <Tilt max={5}>
-                <div className="glass-card h-full group hover:shadow-[0_8px_40px_rgba(3,37,27,0.08)] transition-shadow">
+                <div className="glass-card h-full group hover:shadow-card-hover transition-shadow">
                   <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-4 group-hover:bg-primary group-hover:text-white transition-colors">
                     {f.icon}
                   </div>
@@ -319,10 +309,10 @@ function Features() {
 /* ─── How it works ─── */
 function HowItWorks() {
   const steps = [
-    ["Create your circle", "Set the contribution amount, frequency, and payout order."],
-    ["Invite members", "Send email invites. Members join with a single click."],
-    ["Report contributions", "Each member reports their payment. The treasurer confirms."],
-    ["Track everything", "The ledger records every action. Payouts go to the right person."],
+    ["Create your circle", "Set the amount, how often you pay, and the payout order."],
+    ["Invite members", "Send an email invite. They join with one click."],
+    ["Report contributions", "Each person reports their payment. The treasurer confirms."],
+    ["Track everything", "The ledger records every step. Payouts go to the right person."],
   ];
 
   return (
@@ -336,13 +326,12 @@ function HowItWorks() {
               How it works
             </span>
             <h2 className="font-display text-3xl md:text-5xl font-bold text-forest mt-3 mb-4">
-              Four steps to a better circle
+              Four steps to a clearer circle
             </h2>
           </div>
         </Reveal>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 relative">
-          {/* Connecting line (desktop) */}
           <div className="hidden lg:block absolute top-5 left-[12%] right-[12%] h-px bg-gradient-to-r from-primary/40 via-primary/20 to-transparent" />
 
           {steps.map(([title, body], i) => (
@@ -368,7 +357,7 @@ function HowItWorks() {
 function Savings() {
   return (
     <section id="savings" className="py-24 bg-forest text-white relative overflow-hidden">
-      <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-primary/8 blur-[100px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-violet/10 blur-[100px] rounded-full pointer-events-none" />
 
       <div className="relative mx-auto max-w-6xl px-6">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
@@ -380,16 +369,15 @@ function Savings() {
               Your circle, your rules
             </h2>
             <p className="text-white/50 text-lg leading-relaxed mb-8">
-              Turna does not hold your money. It helps your circle
-              coordinate — who paid, who confirms, whose turn it is. The
-              transparency of a shared ledger with the simplicity of a modern
-              app.
+              Turna does not hold your money. It helps your circle coordinate —
+              who paid, who confirmed, whose turn it is. A shared ledger with
+              the simplicity of a modern app.
             </p>
             <ul className="space-y-4">
               {[
-                "Set your own contribution amounts and frequency",
-                "Choose the payout order that works for your group",
-                "Every member sees the same ledger — no hidden numbers",
+                "You set the amounts and the schedule",
+                "You choose the payout order that fits your group",
+                "Everyone sees the same ledger — no hidden numbers",
                 "Disputes are recorded and resolved, never deleted",
               ].map((item) => (
                 <li key={item} className="flex items-start gap-3">
@@ -405,16 +393,16 @@ function Savings() {
           <Reveal type="fade-right" delay={150}>
             <Tilt max={6}>
               <div className="glass-dark rounded-2xl p-8">
-                <div className="text-sm text-white/40 mb-1">Total Savings</div>
-                <div className="text-5xl font-display font-bold text-primary-light mb-8">
-                  ₦<AnimatedCounter end={1200000} />
+                <div className="text-sm text-white/40 mb-1">How confirmation works</div>
+                <div className="text-2xl font-display font-bold text-primary-light mb-6">
+                  Report → Confirm → Record
                 </div>
                 <div className="space-y-1">
                   {[
-                    ["Family Ajo", "₦60,000 / week", "Active", "10 members"],
-                    ["Market Traders", "₦25,000 / month", "Active", "8 members"],
-                    ["Office Susu", "₦15,000 / week", "Paused", "12 members"],
-                  ].map(([name, amount, status, members]) => (
+                    ["Member reports", "Payment details", "Step 1"],
+                    ["Treasurer confirms", "Independent check", "Step 2"],
+                    ["Ledger entry", "Written once", "Step 3"],
+                  ].map(([name, amount, status]) => (
                     <div
                       key={name}
                       className="flex items-center justify-between py-4 border-b border-white/5 last:border-0"
@@ -424,18 +412,9 @@ function Savings() {
                         <div className="text-sm text-white/40">{amount}</div>
                       </div>
                       <div className="text-right">
-                        <span
-                          className={`inline-flex text-[11px] font-medium px-2 py-0.5 rounded-full ${
-                            status === "Active"
-                              ? "bg-primary/20 text-primary-light"
-                              : "bg-white/10 text-white/50"
-                          }`}
-                        >
+                        <span className="inline-flex text-[11px] font-medium px-2 py-0.5 rounded-full bg-primary/20 text-primary-light">
                           {status}
                         </span>
-                        <div className="text-xs text-white/30 mt-1">
-                          {members}
-                        </div>
                       </div>
                     </div>
                   ))}
@@ -459,13 +438,14 @@ function CTA() {
             Ready to start your circle?
           </h2>
           <p className="text-muted text-lg mb-10 max-w-md mx-auto">
-            Join thousands managing their savings the modern way.
+            Create an account, invite your people, and run your circle with a
+            clear record from day one.
           </p>
           <Link
             href="/auth/signup"
-            className="group inline-flex items-center gap-2 bg-primary hover:bg-primary-hover text-white rounded-xl px-8 py-4 text-base font-semibold transition-all hover:shadow-[0_8px_30px_rgba(0,168,120,0.35)]"
+            className="group inline-flex items-center gap-2 bg-primary hover:bg-primary-hover text-white rounded-xl px-8 py-4 text-base font-semibold transition-all hover:shadow-glow"
           >
-            Get started — it&apos;s free
+            Get started — free to use
             <svg viewBox="0 0 16 16" className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M3 8h10M9 4l4 4-4 4" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
@@ -476,49 +456,82 @@ function CTA() {
   );
 }
 
-/* ─── Footer ─── */
+/* ─── Footer — big-company style ─── */
 function Footer() {
   const currentYear = new Date().getFullYear();
 
-  return (
-    <footer className="bg-forest text-white/40 py-12">
-      <div className="mx-auto max-w-6xl px-6">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-          <Link href="/" className="flex items-center gap-2 text-white">
-            <Logo variant="on-dark" size={24} />
-            <span className="font-bold">Turna</span>
-            <span className="text-white/30 text-sm font-normal ml-2">
-              Save Together. Grow Together.
-            </span>
-          </Link>
+  const columns: Array<{
+    title: string;
+    links: Array<{ label: string; href: string; external?: boolean }>;
+  }> = [
+    {
+      title: "Product",
+      links: [
+        { label: "Features", href: "#features" },
+        { label: "How it works", href: "#how" },
+        { label: "Sign in", href: "/auth/login" },
+        { label: "Get started", href: "/auth/signup" },
+      ],
+    },
+    {
+      title: "Company",
+      links: [
+        { label: "Brave hx Technology", href: "https://www.bravehx.online", external: true },
+        { label: "Founda Technologies", href: "https://foundatech.vercel.app", external: true },
+      ],
+    },
+    {
+      title: "Legal",
+      links: [
+        { label: "Terms", href: "/terms" },
+        { label: "Privacy", href: "/privacy" },
+      ],
+    },
+  ];
 
-          <div className="flex gap-6 text-sm">
-            <a href="#" className="hover:text-white transition-colors">Terms</a>
-            <a href="#" className="hover:text-white transition-colors">Privacy</a>
-            <a href="#" className="hover:text-white transition-colors">Contact</a>
+  return (
+    <footer className="bg-forest text-white/50 pt-16 pb-10">
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-10 pb-12 border-b border-white/10">
+          <div className="col-span-2 md:col-span-1">
+            <Link href="/" className="flex items-center gap-2 text-white mb-4">
+              <Logo variant="on-dark" size={28} />
+              <span className="font-bold text-lg">Turna</span>
+            </Link>
+            <p className="text-sm leading-relaxed text-white/40 max-w-xs">
+              Savings circles, made clear. Built for Ajo, Esusu, and Susu
+              groups who want trust without the group-chat chaos.
+            </p>
           </div>
+
+          {columns.map((col) => (
+            <div key={col.title}>
+              <h3 className="text-white text-sm font-semibold mb-4">{col.title}</h3>
+              <ul className="space-y-3 text-sm">
+                {col.links.map((link) => (
+                  <li key={link.label}>
+                    <a
+                      href={link.href}
+                      className="hover:text-white transition-colors"
+                      {...(link.external
+                        ? { target: "_blank", rel: "noopener noreferrer" }
+                        : {})}
+                    >
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
 
-        <div className="border-t border-white/10 mt-8 pt-8 text-sm text-center md:text-left">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-8 text-sm">
           <p>
-            &copy; 2025&ndash;{currentYear} Turna. Built by Akanji Mus&apos;ab &middot;{" "}
-            <a
-              href="https://www.bravehx.online"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary-light hover:text-white transition-colors underline underline-offset-2 decoration-primary-light/30"
-            >
-              Brave hx Technology
-            </a>{" "}
-            &middot;{" "}
-            <a
-              href="https://foundatech.vercel.app"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary-light hover:text-white transition-colors underline underline-offset-2 decoration-primary-light/30"
-            >
-              Founda Technologies
-            </a>
+            &copy; {currentYear} Turna. All rights reserved.
+          </p>
+          <p className="text-white/35">
+            Built by Akanji Mus&apos;ab
           </p>
         </div>
       </div>

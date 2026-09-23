@@ -14,6 +14,11 @@ const PUBLIC_PATHS = [
   '/auth/callback',
   '/terms',
   '/privacy',
+  '/legal',
+  '/legal/cookies',
+  '/legal/acceptable-use',
+  '/legal/refund',
+  '/legal/contact',
 ];
 
 export async function middleware(request: NextRequest) {

@@ -1,7 +1,7 @@
 # Project State — Turna
 
-**Last Updated**: 2026-09-22
-**Current Phase**: Phase 28 — Dashboard Shell (Auth wired, live Supabase)
+**Last Updated**: 2026-09-23
+**Current Phase**: Phase 29 — Rebrand v2, Legal Pages, Notifications, Toast System
 **Overall Status**: 🟡 In Progress
 
 ## Production
@@ -91,17 +91,37 @@
 
 - Need to run `supabase start` and `pnpm db:seed` to verify data
 - Google OAuth credentials needed for production
-- Resend API key needed for production email
+- Resend API key needed for production email (or switch to Gmail SMTP)
 - Need to test mobile build on actual device/emulator
+- Vercel build may fail on Google Fonts fetch — fallback fonts configured
 
 ---
 
 ## Next Actions
 
-1. Complete Phase 17: Finalize documentation
-2. Begin Phase 15: Write security-focused tests
-3. Begin Phase 18: Integration verification
-4. Set up GitHub repo and push code
+1. Set RESEND_API_KEY (or SMTP) in Vercel env for real OTP emails
+2. Live-test signup → OTP → login → dashboard flow
+3. Admin dashboard for editing legal pages
+4. Begin Phase 15: Write security-focused tests
+5. Begin Phase 18: Integration verification
+
+---
+
+## Phase 29 (2026-09-23) — Rebrand v2 + Standard Features
+
+- **Toast notifications**: `toast.success/error/info/warning` API, framer-motion animated, mounted in root layout via `AppProviders`
+- **Legal pages**: `/legal` index + `/terms` `/privacy` `/legal/[slug]` (cookies, acceptable-use, refund, contact) — admin-editable later
+- **Notification bell**: Desktop sidebar + mobile top bar with unread badge, dropdown panel, links to `/dashboard/notifications`
+- **Cookie consent**: Bottom banner with Accept/Essential only, localStorage persistence, links to Cookie Policy
+- **Rebrand v2 palette**: Forest `#0A1628`, Primary `#00C2A8`, Violet `#7C5CFF`, Sky `#38BDF8`, Cream `#F4F7FB`
+- **Font scale**: 90% base + `zoom: 0.95` on html, Tailwind fontSize rewritten ~90%
+- **framer-motion**: Installed manually (pnpm add hangs), `motion.tsx` primitives, `page-enter.tsx`, `otp-input.tsx` animated OTP
+- **App background**: `/bg-app.svg` on dashboard/auth (not landing), `.app-bg` utility
+- **Bottom nav**: Locked `translate3d(0,0,0)`, no sway, badge on notifications item
+- **Fonts**: Removed `next/font/google` (build fails offline) — CSS system font stacks with Playfair Display + Plus Jakarta Sans preferred
+- **Landing footer**: Big-company style columns (Product, Company, Legal)
+- **Sitemap**: Added legal pages URLs
+- **Middleware**: `/legal` paths public
 
 ---
 

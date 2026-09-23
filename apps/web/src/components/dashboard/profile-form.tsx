@@ -1,8 +1,10 @@
 'use client';
 
 import { useFormState, useFormStatus } from 'react-dom';
+import { useEffect, useRef } from 'react';
 import { Spinner } from '@/components/spinner';
 import { updateProfile, type ProfileActionState } from '@/lib/auth-actions';
+import { useToast } from '@/components/toast';
 
 function SaveButton() {
   const { pending } = useFormStatus();
@@ -31,6 +33,23 @@ export function ProfileForm({
     updateProfile,
     null as ProfileActionState
   );
+  const toast = useToast();
+  const lastKeyRef = useRef('');
+
+  useEffect(() => {
+    if (!state) return;
+    const key = JSON.stringify({
+      s: state.success ?? null,
+      e: state.error?.form?.[0] ?? null,
+    });
+    if (key === lastKeyRef.current) return;
+    lastKeyRef.current = key;
+    if (state.success) {
+      toast.success(state.success);
+    } else if (state.error?.form?.[0]) {
+      toast.error(state.error.form[0]);
+    }
+  }, [state, toast]);
 
   const nameError = state?.error?.display_name?.[0];
   const formError = state?.error?.form?.[0];
