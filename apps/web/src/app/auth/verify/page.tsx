@@ -62,8 +62,6 @@ export default function VerifyEmailPage() {
     formData.set("email", email);
     formData.set("token", token);
     formData.set("purpose", "signup");
-    const pw = sessionStorage.getItem("turna_pending_password");
-    if (pw) formData.set("password", pw);
     setPending(true);
     try {
       const res = await verifyEmailOtp(null, formData);
@@ -76,9 +74,6 @@ export default function VerifyEmailPage() {
         setSuccess(res.success);
         toast.success(res.success);
         const target = res?.redirectTo || "/dashboard";
-        if (target === "/dashboard") {
-          sessionStorage.removeItem("turna_pending_password");
-        }
         setTimeout(() => router.push(target), 800);
       } else {
         setError("Verification failed. Try again.");
@@ -267,7 +262,6 @@ export default function VerifyEmailPage() {
               setCode("");
               setError(null);
               sessionStorage.removeItem("turna_pending_email");
-              sessionStorage.removeItem("turna_pending_password");
             }}
             className="text-primary hover:text-primary-light font-medium transition-colors"
           >

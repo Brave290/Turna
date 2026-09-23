@@ -133,7 +133,6 @@ export async function verifyEmailOtp(
 ): Promise<AuthError> {
   const email = String(formData.get('email') ?? '').trim().toLowerCase();
   const token = String(formData.get('token') ?? '').trim().replace(/\D/g, '');
-  const password = String(formData.get('password') ?? '');
   const purpose = (String(formData.get('purpose') ?? 'signup') || 'signup') as 'signup' | 'login';
 
   if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
@@ -190,25 +189,6 @@ export async function verifyEmailOtp(
     }
   } catch (e) {
     console.error('[OTP] confirm email failed:', e);
-  }
-
-  // Create session with password (stashed from signup/login)
-  if (password) {
-    const supabase = createServerSupabaseClient();
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (!signInError) {
-      revalidatePath('/dashboard');
-      redirect('/dashboard');
-    }
-    console.error('[OTP] post-verify sign-in failed:', signInError?.message);
-    return {
-      error: {
-        form: ['Email verified, but sign-in failed. Try logging in with your password.'],
-      },
-    };
   }
 
   return {

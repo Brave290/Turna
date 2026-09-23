@@ -36,9 +36,7 @@ export default function SignUpPage() {
   const [state, formAction] = useFormState(
     (_: AuthState, formData: FormData) => {
       const email = String(formData.get("email") ?? "").trim().toLowerCase();
-      const password = String(formData.get("password") ?? "");
       if (email) sessionStorage.setItem("turna_pending_email", email);
-      if (password) sessionStorage.setItem("turna_pending_password", password);
       return signUp(formData);
     },
     null as AuthState
