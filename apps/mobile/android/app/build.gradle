@@ -2,14 +2,27 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
-def rnPackageDir = file("../../node_modules/react-native")
-def rnCanonicalParent = rnPackageDir.exists() ? rnPackageDir.canonicalFile.parentFile : file("../../node_modules")
+// Hoisted pnpm layout: react-native lives at workspace root, not apps/mobile
+def rnCandidates = [
+    file("../../node_modules/react-native"),
+    file("../../../node_modules/react-native"),
+    file("../../../../node_modules/react-native"),
+]
+def rnPackageDir = rnCandidates.find { it.exists() } ?: rnCandidates[0]
+def nmParent = rnPackageDir.exists() ? rnPackageDir.canonicalFile.parentFile : file("../../node_modules")
+def codegenCandidates = [
+    new File(nmParent, "@react-native/codegen"),
+    file("../../node_modules/@react-native/codegen"),
+    file("../../../node_modules/@react-native/codegen"),
+    file("../../../../node_modules/@react-native/codegen"),
+]
+def codegenDir = codegenCandidates.find { it.exists() } ?: codegenCandidates[0]
 
 react {
     // package.json lives at apps/mobile (two levels up from android/app)
     root = file("../..")
     reactNativeDir = rnPackageDir
-    codegenDir = new File(rnCanonicalParent, "@react-native/codegen")
+    codegenDir = codegenDir
     cliFile = new File(rnPackageDir, "cli.js")
     hermesFlags = ["-O"]
     // Bundle JS into every APK so installs work without Metro
