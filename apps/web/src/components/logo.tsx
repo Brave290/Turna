@@ -13,20 +13,19 @@ interface WordmarkProps extends HTMLAttributes<HTMLSpanElement> {
 }
 
 /**
- * Turna logo — single source of truth.
- * Static exports live in /public: logo.svg, logo-dark.svg,
- * logo-primary.svg, logo-white.svg, logo-on-dark.svg, favicon.svg
- * Raster versions: logo.png, logo.webp, logo.jpg (in /public)
+ * Turna logo — single source of truth for in-app surfaces.
+ * Landing-page and browser branding assets are generated from the supplied
+ * brand mark in /public/turna-favicon.png and /public/turna-wordmark.png.
  */
 export function Logo({ variant = "default", size = 32, ...props }: LogoProps) {
   const palettes: Record<
     LogoVariant,
     { bg?: string; arc1: string; arc2: string; t: string; node: string }
   > = {
-    default: { arc1: "#00C2A8", arc2: "#7C5CFF", t: "#0A1628", node: "#00C2A8" },
-    dark: { bg: "#0A1628", arc1: "#00C2A8", arc2: "#7C5CFF", t: "#FFFFFF", node: "#00C2A8" },
-    primary: { bg: "#00C2A8", arc1: "#FFFFFF", arc2: "#D6FFF7", t: "#0A1628", node: "#0A1628" },
-    "on-dark": { arc1: "#FFFFFF", arc2: "#5EEAD4", t: "#FFFFFF", node: "#00C2A8" },
+    default: { arc1: "#22C55E", arc2: "#0F6B4F", t: "#063B2C", node: "#22C55E" },
+    dark: { bg: "#063B2C", arc1: "#22C55E", arc2: "#E8F7EE", t: "#FFFFFF", node: "#22C55E" },
+    primary: { bg: "#22C55E", arc1: "#FFFFFF", arc2: "#E8F7EE", t: "#063B2C", node: "#063B2C" },
+    "on-dark": { arc1: "#E8F7EE", arc2: "#22C55E", t: "#FFFFFF", node: "#22C55E" },
   };
 
   const c = palettes[variant];
