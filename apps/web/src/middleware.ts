@@ -39,7 +39,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  let supabaseResponse = NextResponse.next({
+  const supabaseResponse = NextResponse.next({
     request,
   });
 
@@ -56,7 +56,7 @@ export async function middleware(request: NextRequest) {
           request.cookies.set(name, value);
           supabaseResponse.cookies.set(name, value, options);
         },
-        remove(name: string, options: CookieOptions) {
+        remove(name: string) {
           request.cookies.delete(name);
           supabaseResponse.cookies.delete(name);
         },
