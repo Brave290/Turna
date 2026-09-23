@@ -1,5 +1,6 @@
 'use server';
 
+
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { createAdminSupabaseClient } from '@/lib/supabase-admin';
 import { sendEmail, emailTemplates } from '@/lib/email';
@@ -14,10 +15,12 @@ import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 
-type AuthError = {
+export type AuthError = {
   error?: Record<string, string[] | undefined> & { form?: string[] };
   success?: string;
   circleId?: string;
+  needsVerify?: boolean;
+  redirectTo?: string;
 };
 
 function safeNext(raw: FormDataEntryValue | null): string {
@@ -31,7 +34,7 @@ function generateOtp(): string {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
-/** Store non-expiring OTP + send via Gmail SMTP. */
+/** Store 5-minute OTP + send via Gmail SMTP. Rate limit is a no-op (OTP always works). */
 async function issueCustomOtp(
   email: string,
   purpose: 'signup' | 'login',
@@ -40,20 +43,6 @@ async function issueCustomOtp(
 ): Promise<{ ok: boolean; error?: string }> {
   const code = generateOtp();
   const admin = createAdminSupabaseClient();
-
-  // Rate limit first (soft — 8 / 10 min)
-  try {
-    const { data: rateLimit } = await admin.rpc('consume_email_otp_rate_limit', {
-      p_email: email,
-    });
-    const result = Array.isArray(rateLimit) ? rateLimit[0] : rateLimit;
-    if (result && result.allowed === false) {
-      const mins = Math.ceil(Number(result.retry_after_seconds ?? 600) / 60);
-      return { ok: false, error: `Too many code requests. Try again in ${mins} minutes.` };
-    }
-  } catch {
-    // rate limit is best-effort
-  }
 
   const { error: rpcError } = await admin.rpc('create_custom_otp', {
     p_email: email,
@@ -92,59 +81,52 @@ export async function signUp(formData: FormData): Promise<AuthError> {
     return { error: parsed.error.flatten().fieldErrors };
   }
 
-  const supabase = createServerSupabaseClient();
+  const admin = createAdminSupabaseClient();
+  const email = parsed.data.email.trim().toLowerCase();
 
-  const { data, error } = await supabase.auth.signUp({
-    email: parsed.data.email,
+  // Always create unconfirmed user via admin so we fully control OTP flow
+  let userId: string | null = null;
+  const { data: created, error: createError } = await admin.auth.admin.createUser({
+    email,
     password: parsed.data.password,
-    options: {
-      data: {
-        display_name: parsed.data.display_name,
-      },
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
-    },
+    email_confirm: false,
+    user_metadata: { display_name: parsed.data.display_name },
   });
 
-  if (error) {
-    // User may already exist — still allow OTP re-send for confirm flow
-    if (error.message?.includes('already registered')) {
-      const otp = await issueCustomOtp(
-        parsed.data.email,
-        'signup',
-        parsed.data.display_name
-      );
-      if (otp.ok) {
-        return {
-          success: `We sent a 6-digit code to ${parsed.data.email}. Enter it to finish signing up.`,
-        };
+  if (createError) {
+    const msg = createError.message ?? '';
+    if (msg.toLowerCase().includes('already registered') || msg.toLowerCase().includes('already been registered')) {
+      // Find existing unconfirmed user
+      const { data: users } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      const existing = users?.users?.find((u) => (u.email ?? '').toLowerCase() === email);
+      if (existing) {
+        userId = existing.id;
+        if (existing.email_confirmed_at) {
+          return { error: { form: ['An account with this email already exists. Sign in instead.'] } };
+        }
+      } else {
+        return { error: { form: [msg] } };
       }
-      return { error: { form: [otp.error ?? 'Could not send code'] } };
+    } else {
+      return { error: { form: [msg] } };
     }
-    return { error: { form: [error.message] } };
+  } else {
+    userId = created?.user?.id ?? null;
   }
 
-  // Autoconfirm on — session exists, go straight in
-  if (data.session) {
-    redirect('/dashboard');
-  }
-
-  // Custom non-expiring OTP via SMTP (link user_id for reliable confirm)
-  const otp = await issueCustomOtp(
-    parsed.data.email,
-    'signup',
-    parsed.data.display_name,
-    data.user?.id ?? null
-  );
+  const otp = await issueCustomOtp(email, 'signup', parsed.data.display_name, userId);
   if (!otp.ok) {
     return { error: { form: [otp.error ?? 'Could not send verification code'] } };
   }
 
   return {
-    success: `We sent a 6-digit code to ${parsed.data.email}. It does not expire — enter it anytime to finish signing up.`,
+    success: `We sent a 6-digit code to ${email}. It expires in 5 minutes — enter it soon to finish signing up.`,
+    needsVerify: true,
+    redirectTo: `/auth/verify?email=${encodeURIComponent(email)}`,
   };
 }
 
-// Custom non-expiring OTP verification
+// Custom OTP verification (5-minute expiry)
 export async function verifyEmailOtp(
   _prev: AuthError | null,
   formData: FormData
@@ -152,6 +134,7 @@ export async function verifyEmailOtp(
   const email = String(formData.get('email') ?? '').trim().toLowerCase();
   const token = String(formData.get('token') ?? '').trim().replace(/\D/g, '');
   const password = String(formData.get('password') ?? '');
+  const purpose = (String(formData.get('purpose') ?? 'signup') || 'signup') as 'signup' | 'login';
 
   if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
     return { error: { form: ['Enter a valid email address'] } };
@@ -162,26 +145,26 @@ export async function verifyEmailOtp(
 
   const admin = createAdminSupabaseClient();
 
-  // Fetch active OTP row first to get linked user_id (before verify consumes it)
   const { data: otpRow } = await admin
     .from('custom_otps')
-    .select('id, user_id')
+    .select('id, user_id, expires_at')
     .eq('email', email)
-    .eq('purpose', 'signup')
+    .eq('purpose', purpose)
     .is('used_at', null)
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  const { data: verified, error: verifyError } = await admin.rpc(
-    'verify_custom_otp',
-    {
-      p_email: email,
-      p_code: token,
-      p_purpose: 'signup',
-      p_max_attempts: 5,
-    }
-  );
+  if (otpRow?.expires_at && new Date(otpRow.expires_at).getTime() < Date.now()) {
+    return { error: { form: ['That code has expired. Request a new one.'] } };
+  }
+
+  const { data: verified, error: verifyError } = await admin.rpc('verify_custom_otp', {
+    p_email: email,
+    p_code: token,
+    p_purpose: purpose,
+    p_max_attempts: 5,
+  });
 
   if (verifyError) {
     console.error('[OTP] verify rpc error:', verifyError.message);
@@ -192,13 +175,12 @@ export async function verifyEmailOtp(
     return { error: { form: ['That code is incorrect or has been used.'] } };
   }
 
-  // Confirm email in Supabase Auth so password login works
+  // Confirm email so password login works
   try {
     let uid: string | null = (otpRow?.user_id as string | null) ?? null;
     if (!uid) {
       const { data: users } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-      const user = users?.users?.find((u) => (u.email ?? '').toLowerCase() === email);
-      uid = user?.id ?? null;
+      uid = users?.users?.find((u) => (u.email ?? '').toLowerCase() === email)?.id ?? null;
     }
     if (uid) {
       const { data: current } = await admin.auth.admin.getUserById(uid);
@@ -210,7 +192,7 @@ export async function verifyEmailOtp(
     console.error('[OTP] confirm email failed:', e);
   }
 
-  // Sign in with password if provided (from signup sessionStorage)
+  // Create session with password (stashed from signup/login)
   if (password) {
     const supabase = createServerSupabaseClient();
     const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -221,11 +203,17 @@ export async function verifyEmailOtp(
       revalidatePath('/dashboard');
       redirect('/dashboard');
     }
-    // fall through — user can sign in manually
+    console.error('[OTP] post-verify sign-in failed:', signInError?.message);
+    return {
+      error: {
+        form: ['Email verified, but sign-in failed. Try logging in with your password.'],
+      },
+    };
   }
 
   return {
     success: 'Email verified. Sign in with your password to continue.',
+    redirectTo: '/auth/login',
   };
 }
 
@@ -235,12 +223,21 @@ export async function resendEmailOtp(email: string): Promise<AuthError> {
     return { error: { form: ['Enter a valid email address'] } };
   }
 
-  const otp = await issueCustomOtp(clean, 'signup');
+  const admin = createAdminSupabaseClient();
+  const { data: users } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  const user = users?.users?.find((u) => (u.email ?? '').toLowerCase() === clean);
+
+  const otp = await issueCustomOtp(
+    clean,
+    'signup',
+    (user?.user_metadata?.display_name as string) || undefined,
+    user?.id ?? null
+  );
   if (!otp.ok) {
     return { error: { form: [otp.error ?? 'Could not send code'] } };
   }
 
-  return { success: `New code sent to ${clean}. It does not expire.` };
+  return { success: `New code sent to ${clean}. It expires in 5 minutes.` };
 }
 
 export async function signIn(formData: FormData): Promise<AuthError> {
@@ -255,24 +252,47 @@ export async function signIn(formData: FormData): Promise<AuthError> {
   }
 
   const supabase = createServerSupabaseClient();
+  const email = parsed.data.email.trim().toLowerCase();
 
   const { error } = await supabase.auth.signInWithPassword({
-    email: parsed.data.email,
+    email,
     password: parsed.data.password,
   });
 
   if (error) {
-    // Friendly HBL messages for common Supabase errors
-    const msg =
-      error.message === 'Invalid login credentials'
+    const msg = error.message ?? '';
+
+    // Unverified account → force OTP before allowing access
+    if (msg.includes('Email not confirmed') || msg.toLowerCase().includes('email not confirmed')) {
+      const admin = createAdminSupabaseClient();
+      const { data: users } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      const user = users?.users?.find((u) => (u.email ?? '').toLowerCase() === email);
+      if (user && !user.email_confirmed_at) {
+        const otp = await issueCustomOtp(
+          email,
+          'signup',
+          (user.user_metadata?.display_name as string) || undefined,
+          user.id
+        );
+        if (otp.ok) {
+          return {
+            success: `Please verify your email first. We sent a 6-digit code to ${email} (expires in 5 minutes).`,
+            needsVerify: true,
+            redirectTo: `/auth/verify?email=${encodeURIComponent(email)}`,
+          };
+        }
+        return { error: { form: [otp.error ?? 'Could not send verification code'] } };
+      }
+      return { error: { form: ['Confirm your email first — check your inbox for the code.'] } };
+    }
+
+    const friendly =
+      msg === 'Invalid login credentials'
         ? 'That email and password don’t match. Try again.'
-        : error.message.includes('Email not confirmed')
-          ? 'Confirm your email first — check your inbox for the code.'
-          : error.message;
-    return { error: { form: [msg] } };
+        : msg;
+    return { error: { form: [friendly] } };
   }
 
-  // revalidate dashboard so middleware + layout see the new session
   revalidatePath('/dashboard');
   redirect(safeNext(formData.get('redirect')));
 }
@@ -308,6 +328,7 @@ export async function signOut() {
   redirect('/auth/login');
 }
 
+// Custom password reset via Gmail SMTP (no Supabase emails)
 export async function resetPassword(formData: FormData): Promise<AuthError> {
   const rawData = {
     email: formData.get('email') as string,
@@ -318,17 +339,82 @@ export async function resetPassword(formData: FormData): Promise<AuthError> {
     return { error: parsed.error.flatten().fieldErrors };
   }
 
-  const supabase = createServerSupabaseClient();
+  const email = parsed.data.email.trim().toLowerCase();
+  const admin = createAdminSupabaseClient();
 
-  const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/update-password`,
-  });
+  try {
+    const { data: users } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    const user = users?.users?.find((u) => (u.email ?? '').toLowerCase() === email);
 
-  if (error) {
-    return { error: { form: [error.message] } };
+    if (user) {
+      const { data: token, error: tokenError } = await admin.rpc(
+        'create_password_reset_token',
+        { p_email: email, p_user_id: user.id }
+      );
+
+      if (!tokenError && token) {
+        const tmpl = emailTemplates.passwordReset(email, String(token));
+        await sendEmail({
+          to: email,
+          subject: tmpl.subject,
+          html: tmpl.html,
+          text: tmpl.text,
+        });
+      }
+    }
+  } catch (e) {
+    console.error('[Reset] failed:', e);
   }
 
-  return { success: 'Check your email for password reset instructions.' };
+  // Always generic success to avoid account enumeration
+  return {
+    success: `If an account exists for ${email}, we sent a password reset link. Check your inbox (expires in 1 hour).`,
+  };
+}
+
+export async function resetPasswordWithToken(
+  _prev: AuthError | null,
+  formData: FormData
+): Promise<AuthError> {
+  const token = String(formData.get('token') ?? '').trim();
+  const password = String(formData.get('password') ?? '');
+  const confirmPassword = String(formData.get('confirmPassword') ?? '');
+
+  if (!token) {
+    return { error: { form: ['Invalid or missing reset link.'] } };
+  }
+  if (password.length < 8) {
+    return { error: { form: ['Password must be at least 8 characters'] } };
+  }
+  if (password !== confirmPassword) {
+    return { error: { form: ['Passwords do not match'] } };
+  }
+
+  const admin = createAdminSupabaseClient();
+  const { data: rows, error: consumeError } = await admin.rpc('consume_password_reset_token', {
+    p_token: token,
+  });
+
+  if (consumeError) {
+    console.error('[Reset] consume error:', consumeError.message);
+    return { error: { form: ['Invalid or expired reset link.'] } };
+  }
+
+  const row = Array.isArray(rows) ? rows[0] : rows;
+  if (!row?.user_id) {
+    return { error: { form: ['Invalid or expired reset link.'] } };
+  }
+
+  const { error: updateError } = await admin.auth.admin.updateUserById(row.user_id, {
+    password,
+    email_confirm: true,
+  });
+
+  if (updateError) {
+    return { error: { form: [updateError.message] } };
+  }
+
+  return { success: 'Password updated. You can sign in now.', redirectTo: '/auth/login' };
 }
 
 export async function updatePassword(formData: FormData): Promise<AuthError> {

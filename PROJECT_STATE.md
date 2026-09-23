@@ -1,7 +1,7 @@
 # Project State — Turna
 
 **Last Updated**: 2026-09-23
-**Current Phase**: Phase 30 — Custom Non-Expiring OTP + Gmail SMTP Emails
+**Current Phase**: Phase 31 — 5-min OTP, Mandatory Verify, Custom Password Reset, Logo Emails
 **Overall Status**: 🟡 In Progress
 
 ## Production
@@ -48,7 +48,7 @@
 | 18. Integration Verification | ⏳ Pending | — | — | End-to-end smoke tests |
 | 19. Android Build Config | ✅ Complete | 2025-01-19 | 2025-01-19 | Gradle, signing, release workflow |
 | 20. GitHub Actions CI/CD | ✅ Complete | 2025-01-19 | 2026-09-22 | CI + release; lint/typecheck/test fixed with --if-present |
-| 21. Email Service (Gmail SMTP) | ✅ Complete | 2025-01-19 | 2026-09-23 | nodemailer Gmail SMTP; support.turna@gmail.com; Rebrand v2 templates; custom non-expiring OTP |
+| 21. Email Service (Gmail SMTP) | ✅ Complete | 2025-01-19 | 2026-09-23 | nodemailer; support.turna@gmail.com; 5-min OTP; real logo; custom password reset; no Supabase emails |
 | 22. SEO Optimization | ✅ Complete | 2025-01-19 | 2025-01-19 | Sitemap, robots.txt, metadata, structured data |
 | 23. UI Teardown | ✅ Complete | 2026-09-22 | 2026-09-22 | Old UI stripped per Master Prompt |
 | 24. Design System Foundation | ✅ Complete | 2026-09-22 | 2026-09-22 | Palette, fonts, glassmorphism, animation hooks |

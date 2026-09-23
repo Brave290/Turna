@@ -351,3 +351,30 @@ Each session should append:
 1. Live test: signup → OTP email → verify → dashboard on production
 2. Optional: password-reset via custom SMTP (avoid Supabase SMTP dependency)
 3. Admin dashboard (editable legal pages) + remaining roadmap phases
+
+### Session 2026-09-23 (OTP hardening + custom reset)
+
+**Goal**: 5-min OTP expiry, always-working OTP (no rate-limit blocks), mandatory email verify before dashboard, custom forgot-password, real logo in emails, clear all users
+
+**Completed**:
+- OTP `expires_at` = now + 5 min; verify checks expiry; email/UI copy updated
+- Rate limit function is a no-op (always allowed) — OTP system never blocked
+- `signUp` creates unconfirmed user via admin API (full OTP control), always sends 5-min code
+- `signIn`: "Email not confirmed" → issues OTP, returns `needsVerify` + `redirectTo` → login redirects to verify
+- Verify: purpose field, expiry check, clear errors; session via stashed password → dashboard
+- Custom password reset: `password_reset_tokens` table + create/consume RPCs; SMTP email with real reset link; `/auth/reset-password?token=` page; API routes updated; no Supabase `resetPasswordForEmail`
+- Email shell uses real `/logo.png` (absolute URL)
+- All Supabase users cleared (0); test flows verified via RPC
+- Migrations: 5-min expiry, password_reset_tokens, rate-limit no-op
+
+**Blockers**: None.
+
+**Decisions**:
+- OTP always works (no rate limiting) per user request
+- Mandatory verify: unconfirmed login forces OTP before dashboard
+- Password reset fully custom (our SMTP + token table)
+
+**Next Session**:
+1. Live test signup → 5-min OTP → dashboard; unverified login → forced verify
+2. Live test forgot-password → reset link → new password → login
+3. Commit + push + monitor Vercel

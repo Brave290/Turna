@@ -12,6 +12,8 @@ import { useToast } from "@/components/toast";
 type AuthState = {
   error?: Record<string, string[] | undefined> & { form?: string[] };
   success?: string;
+  needsVerify?: boolean;
+  redirectTo?: string;
 } | null;
 
 function SubmitButton() {
@@ -76,7 +78,7 @@ export default function SignUpPage() {
         </h1>
         <p className="text-white/55 mb-8">{state.success}</p>
         <Link
-          href="/auth/verify"
+          href={state.redirectTo || "/auth/verify"}
           className="btn-primary w-full inline-flex"
         >
           Enter 6-digit code

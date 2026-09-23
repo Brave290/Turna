@@ -61,6 +61,7 @@ export default function VerifyEmailPage() {
     const formData = new FormData();
     formData.set("email", email);
     formData.set("token", token);
+    formData.set("purpose", "signup");
     const pw = sessionStorage.getItem("turna_pending_password");
     if (pw) formData.set("password", pw);
     setPending(true);
@@ -74,8 +75,10 @@ export default function VerifyEmailPage() {
       } else if (res?.success) {
         setSuccess(res.success);
         toast.success(res.success);
-        sessionStorage.removeItem("turna_pending_password");
-        const target = res.success.includes("Sign in") ? "/auth/login" : "/dashboard";
+        const target = res?.redirectTo || "/dashboard";
+        if (target === "/dashboard") {
+          sessionStorage.removeItem("turna_pending_password");
+        }
         setTimeout(() => router.push(target), 800);
       } else {
         setError("Verification failed. Try again.");
@@ -273,7 +276,7 @@ export default function VerifyEmailPage() {
         </p>
         <p className="text-xs text-white/35 flex items-center justify-center gap-1">
           <Mail className="w-3 h-3" />
-          This code does not expire.
+          This code expires in 5 minutes.
         </p>
       </div>
     </div>

@@ -80,7 +80,7 @@ Track contributions, know your payout date, and build **real trust**.
 - Contribution reminders
 - Payout alerts
 - Cycle updates
-- Email notifications (Resend)
+- Email notifications (Gmail SMTP via nodemailer)
 
 </td>
 <td>
@@ -155,7 +155,7 @@ Track contributions, know your payout date, and build **real trust**.
 | 📱 **Mobile** | React Native CLI | Native Android/iOS |
 | 🗄️ **Database** | PostgreSQL (Supabase) | Data storage, Auth, Realtime |
 | 🔐 **Auth** | Supabase Auth | Email/Password + Google OAuth |
-| 📧 **Email** | Resend | Transactional emails |
+| 📧 **Email** | Gmail SMTP (nodemailer) | Transactional emails from support.turna@gmail.com |
 | 🎨 **Styling** | Tailwind CSS | Utility-first styling |
 | 📝 **Validation** | Zod | Schema validation |
 | 🔷 **Language** | TypeScript | Type safety |
@@ -194,7 +194,10 @@ NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 NEXT_PUBLIC_APP_URL=http://localhost:3000
-RESEND_API_KEY=re_your-resend-api-key
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=support.turna@gmail.com
+SMTP_PASS=your-gmail-app-password
 ```
 
 ### 3️⃣ Start Supabase
@@ -293,7 +296,7 @@ Turna/
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ | Supabase anonymous key |
 | `SUPABASE_SERVICE_ROLE_KEY` | ✅ | Supabase service role key |
 | `NEXT_PUBLIC_APP_URL` | ✅ | App base URL |
-| `RESEND_API_KEY` | ✅ | Resend email API key |
+| `SMTP_*` | ✅ | Gmail SMTP (host/port/user/pass/from) for all site emails |
 | `GOOGLE_CLIENT_ID` | ⚠️ | Google OAuth (optional) |
 | `GOOGLE_CLIENT_SECRET` | ⚠️ | Google OAuth (optional) |
 
@@ -305,7 +308,7 @@ Turna/
    - `http://localhost:3000/auth/callback` (development)
    - `https://turna.name.ng/auth/callback` (production)
 
-### Resend Setup
+### Gmail SMTP Setup
 
 1. Sign up at [resend.com](https://resend.com/)
 2. Get your API key
@@ -333,7 +336,11 @@ Add these in Vercel Dashboard → Settings → Environment Variables:
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `NEXT_PUBLIC_APP_URL` = `https://turna.name.ng`
-- `RESEND_API_KEY`
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_USER`
+- `SMTP_PASS`
+- `SMTP_FROM_EMAIL`
 
 ### Android (APK/AAB)
 

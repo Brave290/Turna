@@ -2,6 +2,7 @@
 
 import { useFormState, useFormStatus } from "react-dom";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { signIn } from "@/lib/auth-actions";
@@ -12,6 +13,8 @@ import { useToast } from "@/components/toast";
 type AuthState = {
   error?: Record<string, string[] | undefined> & { form?: string[] };
   success?: string;
+  needsVerify?: boolean;
+  redirectTo?: string;
 } | null;
 
 function SubmitButton() {
@@ -32,22 +35,39 @@ function SubmitButton() {
 
 export default function LoginPage() {
   const [state, formAction] = useFormState(
-    (_: AuthState, formData: FormData) => signIn(formData),
+    (_: AuthState, formData: FormData) => {
+      const email = String(formData.get("email") ?? "").trim().toLowerCase();
+      const password = String(formData.get("password") ?? "");
+      if (email) sessionStorage.setItem("turna_pending_email", email);
+      if (password) sessionStorage.setItem("turna_pending_password", password);
+      return signIn(formData);
+    },
     null as AuthState
   );
   const [showPassword, setShowPassword] = useState(false);
   const toast = useToast();
+  const router = useRouter();
   const lastKeyRef = useRef("");
 
   useEffect(() => {
     if (!state) return;
-    const key = JSON.stringify({ e: state.error?.form?.[0] ?? null });
+    const key = JSON.stringify({
+      e: state.error?.form?.[0] ?? null,
+      s: state.success ?? null,
+      v: state.needsVerify ?? false,
+    });
     if (key === lastKeyRef.current) return;
     lastKeyRef.current = key;
-    if (state.error?.form?.[0]) {
+    if (state.needsVerify && state.success) {
+      toast.warning(state.success);
+      const target = state.redirectTo || "/auth/verify";
+      setTimeout(() => router.push(target), 600);
+    } else if (state.error?.form?.[0]) {
       toast.error(state.error.form[0]);
+    } else if (state.success) {
+      toast.info(state.success);
     }
-  }, [state, toast]);
+  }, [state, toast, router]);
 
   const formError = state?.error?.form?.[0];
   const emailError = state?.error?.email?.[0];

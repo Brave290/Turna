@@ -2,6 +2,8 @@ import nodemailer from 'nodemailer';
 
 const APP_NAME = 'Turna';
 const SUPPORT_EMAIL = process.env.SMTP_FROM_EMAIL ?? 'support.turna@gmail.com';
+const BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || 'https://turnaapp.vercel.app').replace(/\/$/, '');
+const LOGO_URL = `${BASE_URL}/logo.png`;
 
 // Gmail SMTP via app password
 const transporter = nodemailer.createTransport({
@@ -38,7 +40,7 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
   }
 }
 
-// ─── Rebrand v2 email shell ───
+// ─── Rebrand v2 email shell with real logo ───
 function shell(title: string, bodyHtml: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
@@ -56,10 +58,10 @@ function shell(title: string, bodyHtml: string): string {
           <!-- Logo -->
           <tr>
             <td align="center" style="padding-bottom:28px;">
-              <div style="display:inline-flex;align-items:center;gap:8px;">
-                <span style="display:inline-block;width:32px;height:32px;border-radius:8px;background:#00C2A8;color:#fff;font-weight:800;font-size:18px;line-height:32px;text-align:center;">T</span>
-                <span style="font-size:22px;font-weight:700;color:#0A1628;letter-spacing:-0.5px;">Turna</span>
-              </div>
+              <a href="${BASE_URL}" style="text-decoration:none;display:inline-flex;align-items:center;gap:10px;">
+                <img src="${LOGO_URL}" alt="${APP_NAME}" width="40" height="40" style="display:block;width:40px;height:40px;border-radius:10px;" />
+                <span style="font-size:22px;font-weight:700;color:#0A1628;letter-spacing:-0.5px;">${APP_NAME}</span>
+              </a>
             </td>
           </tr>
           <!-- Card -->
@@ -71,7 +73,7 @@ function shell(title: string, bodyHtml: string): string {
               <div style="background:#0A1628;padding:20px 32px;text-align:center;">
                 <p style="margin:0;font-size:12px;color:rgba(255,255,255,0.55);line-height:1.6;">
                   Questions? Contact <a href="mailto:support.turna@gmail.com" style="color:#5EEAD4;text-decoration:none;">support.turna@gmail.com</a><br>
-                  &copy; ${new Date().getFullYear()} Turna by Brave hx Technology. All rights reserved.
+                  &copy; ${new Date().getFullYear()} ${APP_NAME} by Brave hx Technology. All rights reserved.
                 </p>
               </div>
             </td>
@@ -104,19 +106,6 @@ function codeBlock(code: string): string {
 }
 
 export const emailTemplates = {
-  emailConfirmation(email: string, displayName: string, token: string) {
-    const confirmUrl = `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?token=${token}`;
-    return {
-      subject: `Confirm your ${APP_NAME} account`,
-      html: shell('Confirm your account', `
-        <h1 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#0A1628;">Welcome to ${APP_NAME}!</h1>
-        <p style="margin:0 0 24px;font-size:15px;color:#6B7C93;line-height:1.6;">Hi ${displayName}, confirm your email to start using ${APP_NAME}.</p>
-        ${button(confirmUrl, 'Confirm Email')}
-        <p style="margin:24px 0 0;font-size:13px;color:#6B7C93;line-height:1.5;">This link expires in 24 hours. If you didn't create this account, you can safely ignore this email.</p>
-      `),
-    };
-  },
-
   otpCode(email: string, code: string, displayName?: string) {
     return {
       subject: `${code} is your ${APP_NAME} verification code`,
@@ -124,14 +113,14 @@ export const emailTemplates = {
         <h1 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#0A1628;">Verify your email</h1>
         <p style="margin:0 0 4px;font-size:15px;color:#6B7C93;line-height:1.6;">Hi ${displayName ?? 'there'}, use this code to finish signing up:</p>
         ${codeBlock(code)}
-        <p style="margin:8px 0 0;font-size:13px;color:#6B7C93;line-height:1.5;">This code does not expire. If you didn't request this, ignore this email — your account is safe.</p>
+        <p style="margin:8px 0 0;font-size:13px;color:#6B7C93;line-height:1.5;">This code expires in 5 minutes. If you didn't request this, ignore this email — your account is safe.</p>
       `),
-      text: `Your ${APP_NAME} verification code is: ${code}\n\nThis code does not expire. If you didn't request this, ignore this email.`,
+      text: `Your ${APP_NAME} verification code is: ${code}\n\nExpires in 5 minutes. If you didn't request this, ignore this email.`,
     };
   },
 
   passwordReset(email: string, token: string) {
-    const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL}/auth/update-password?token=${token}`;
+    const resetUrl = `${BASE_URL}/auth/reset-password?token=${token}`;
     return {
       subject: `Reset your ${APP_NAME} password`,
       html: shell('Reset your password', `
@@ -140,11 +129,12 @@ export const emailTemplates = {
         ${button(resetUrl, 'Reset Password')}
         <p style="margin:24px 0 0;font-size:13px;color:#6B7C93;line-height:1.5;">This link expires in 1 hour. If you didn't request this, ignore this email.</p>
       `),
+      text: `Reset your ${APP_NAME} password:\n\n${resetUrl}\n\nThis link expires in 1 hour.`,
     };
   },
 
   circleInvitation(email: string, circleName: string, inviterName: string, token: string) {
-    const acceptUrl = `${process.env.NEXT_PUBLIC_APP_URL}/circles/join?token=${token}`;
+    const acceptUrl = `${BASE_URL}/circles/join?token=${token}`;
     return {
       subject: `You've been invited to "${circleName}" on ${APP_NAME}`,
       html: shell('Circle invitation', `
@@ -156,6 +146,7 @@ export const emailTemplates = {
         ${button(acceptUrl, 'Accept Invitation')}
         <p style="margin:24px 0 0;font-size:13px;color:#6B7C93;line-height:1.5;">This invitation expires in 7 days.</p>
       `),
+      text: `${inviterName} invited you to join "${circleName}" on ${APP_NAME}.\n\nAccept: ${acceptUrl}`,
     };
   },
 
@@ -169,8 +160,9 @@ export const emailTemplates = {
           <strong style="color:#0A1628;">"${circleName}"</strong> is due on
           <strong style="color:#0A1628;">${dueDate}</strong>.
         </p>
-        ${button(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard`, 'View Circle')}
+        ${button(`${BASE_URL}/dashboard`, 'View Circle')}
       `),
+      text: `Your contribution of ${amount} for "${circleName}" is due on ${dueDate}.`,
     };
   },
 
@@ -184,8 +176,9 @@ export const emailTemplates = {
           <strong style="color:#0A1628;">${recipientName}</strong> has been initiated for
           <strong style="color:#0A1628;">"${circleName}"</strong>.
         </p>
-        ${button(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard`, 'View Details')}
+        ${button(`${BASE_URL}/dashboard`, 'View Details')}
       `),
+      text: `Payout of ${amount} to ${recipientName} initiated for "${circleName}".`,
     };
   },
 
@@ -197,11 +190,12 @@ export const emailTemplates = {
         <p style="margin:0 0 24px;font-size:15px;color:#6B7C93;line-height:1.6;">
           Your ${APP_NAME} account is ready. Create your first savings circle or join one with an invite.
         </p>
-        ${button(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard`, 'Go to Dashboard')}
+        ${button(`${BASE_URL}/dashboard`, 'Go to Dashboard')}
         <p style="margin:24px 0 0;font-size:13px;color:#6B7C93;line-height:1.5;">
           Need help? Reply to this email or contact support.turna@gmail.com.
         </p>
       `),
+      text: `Welcome to ${APP_NAME}, ${displayName}! Your account is ready.`,
     };
   },
 };
