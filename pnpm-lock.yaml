@@ -99,9 +99,6 @@ importers:
       react-dom:
         specifier: ^18.2.0
         version: 18.3.1(react@18.2.0)
-      resend:
-        specifier: ^3.2.0
-        version: 3.5.0(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
       zod:
         specifier: ^3.22.0
         version: 3.25.76
@@ -4163,10 +4160,6 @@ packages:
 
   require-main-filename@2.0.0:
     resolution: {integrity: sha512-NKN5kMDylKuldxYLSUfrbo5Tuzh4hd+2E8NPPX02mZtn1VuREQToYe/ZdlJy+J3uCpfaiGF05e7B8W0iXbQHmg==}
-
-  resend@3.5.0:
-    resolution: {integrity: sha512-bKu4LhXSecP6krvhfDzyDESApYdNfjirD5kykkT1xO0Cj9TKSiGh5Void4pGTs3Am+inSnp4dg0B5XzdwHBJOQ==}
-    engines: {node: '>=18'}
 
   resolve-from@3.0.0:
     resolution: {integrity: sha512-GnlH6vxLymXJNMBo7XP1fJIzBFbdYt49CuTwmB/6N53t+kMPRMFKz783LlQ4tv28XoQfMWinAJX6WCGf2IlaIw==}
@@ -9493,13 +9486,6 @@ snapshots:
   require-directory@2.1.1: {}
 
   require-main-filename@2.0.0: {}
-
-  resend@3.5.0(react-dom@18.3.1(react@18.2.0))(react@18.2.0):
-    dependencies:
-      '@react-email/render': 0.0.16(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
-    transitivePeerDependencies:
-      - react
-      - react-dom
 
   resolve-from@3.0.0: {}
 

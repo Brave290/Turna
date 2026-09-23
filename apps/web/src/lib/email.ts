@@ -25,12 +25,20 @@ export interface EmailOptions {
 
 export async function sendEmail(options: EmailOptions): Promise<{ success: boolean; error?: string }> {
   try {
+    const messageId = `<turna-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}@turnaapp.vercel.app>`;
     await transporter.sendMail({
       from: `"${APP_NAME}" <${SUPPORT_EMAIL}>`,
       to: Array.isArray(options.to) ? options.to.join(', ') : options.to,
       subject: options.subject,
       html: options.html,
       text: options.text,
+      // Help inbox placement: stable Message-ID, reply path, no bulk headers.
+      messageId,
+      replyTo: SUPPORT_EMAIL,
+      headers: {
+        'X-Entity-Ref-ID': messageId,
+        'X-Priority': '3',
+      },
     });
     return { success: true };
   } catch (error) {
@@ -108,7 +116,7 @@ function codeBlock(code: string): string {
 export const emailTemplates = {
   otpCode(email: string, code: string, displayName?: string) {
     return {
-      subject: `${code} is your ${APP_NAME} verification code`,
+      subject: `Your ${APP_NAME} verification code`,
       html: shell('Verification code', `
         <h1 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#0A1628;">Verify your email</h1>
         <p style="margin:0 0 4px;font-size:15px;color:#6B7C93;line-height:1.6;">Hi ${displayName ?? 'there'}, use this code to finish signing up:</p>

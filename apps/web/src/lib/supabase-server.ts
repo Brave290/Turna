@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 export function createServerSupabaseClient() {
   const cookieStore = cookies();
 
+  // @supabase/ssr@0.3 uses get/set/remove (not getAll/setAll).
   // Untyped on purpose: generated Database shape must match supabase-js exactly;
   // domain types live in @turna/types and are applied at call sites.
   return createServerClient(
@@ -11,16 +12,21 @@ export function createServerSupabaseClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() {
-          return cookieStore.getAll();
+        get(name: string) {
+          return cookieStore.get(name)?.value;
         },
-        setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
+        set(name: string, value: string, options: CookieOptions) {
           try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
+            cookieStore.set(name, value, options);
           } catch {
             // Server Component cookie writes are ignored; middleware refreshes session.
+          }
+        },
+        remove(name: string, options: CookieOptions) {
+          try {
+            cookieStore.set(name, '', { ...options, maxAge: 0 });
+          } catch {
+            // ignored in Server Components
           }
         },
       },

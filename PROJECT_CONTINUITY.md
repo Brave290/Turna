@@ -378,3 +378,31 @@ Each session should append:
 1. Live test signup → 5-min OTP → dashboard; unverified login → forced verify
 2. Live test forgot-password → reset link → new password → login
 3. Commit + push + monitor Vercel
+
+### Session 2026-09-23 (Session cookies + middleware + logo + Resend removal)
+
+**Goal**: Pull remote logo/auth commits; fix login bouncing back to login; real logo everywhere; remove Resend; reduce Gmail OTP spam
+
+**Completed**:
+- `git pull --rebase` — 6 commits: no password in sessionStorage, OTP race fixes, enhanced logo assets, theme toggle
+- Moved middleware to `apps/web/src/middleware.ts` (Next looks in `src/` when app is `src/app`; root middleware was never registered → no edge redirect)
+- Fixed `@supabase/ssr@0.3` cookie adapter: `get`/`set`/`remove` instead of `getAll`/`setAll` — sessions were silently never persisted → login success then bounced to `/auth/login`
+- Login page now forwards `?redirect=` into the server action form
+- Logo component uses real brand PNGs (`logo.png`/`logo-dark.png`/`logo-on-dark.png`) via `next/image`; landing already uses enhanced lockup; emails use absolute `/logo.png`
+- Removed `resend` from package.json + lockfile; removed `RESEND_API_KEY` from `.env.local` — Gmail SMTP only
+- OTP email subject no longer contains the code; added stable Message-ID / replyTo / X-Entity-Ref-ID for deliverability
+- Typecheck pass; `pnpm install --lockfile-only` pass
+
+**Blockers**: None.
+
+**Decisions**:
+- Keep Resend out entirely — single path is Gmail SMTP
+- Transactional OTP emails stay non-bulk (no Precedence:bulk) to protect inbox placement
+- Middleware lives under `src/` matching app directory layout
+
+**Next Session**:
+1. Push + wait Vercel Ready → curl `GET /dashboard` expect **307** to `/auth/login?redirect=/dashboard`
+2. Live E2E: signup → OTP email → verify → login → dashboard (cookies must stick)
+3. Live: unverified login → forced OTP; forgot-password → reset → new password → login
+4. Optionally send test OTP and check Gmail Spam for a recipient
+

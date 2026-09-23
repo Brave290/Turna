@@ -310,9 +310,9 @@ Turna/
 
 ### Gmail SMTP Setup
 
-1. Sign up at [resend.com](https://resend.com/)
-2. Get your API key
-3. Verify your domain for production
+1. Enable 2-Step Verification on the Gmail account
+2. Create an [App Password](https://myaccount.google.com/apppasswords)
+3. Set `SMTP_USER` + `SMTP_PASS` (app password, no spaces) in Vercel Production env
 
 ---
 

@@ -2,7 +2,7 @@
 
 import { useFormState, useFormStatus } from "react-dom";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { signIn } from "@/lib/auth-actions";
@@ -34,10 +34,15 @@ function SubmitButton() {
 }
 
 export default function LoginPage() {
+  const searchParams = useSearchParams();
+  const redirectTarget = searchParams.get("redirect") || "";
   const [state, formAction] = useFormState(
     (_: AuthState, formData: FormData) => {
       const email = String(formData.get("email") ?? "").trim().toLowerCase();
       if (email) sessionStorage.setItem("turna_pending_email", email);
+      if (redirectTarget && !formData.get("redirect")) {
+        formData.set("redirect", redirectTarget);
+      }
       return signIn(formData);
     },
     null as AuthState
@@ -84,6 +89,9 @@ export default function LoginPage() {
       </div>
 
       <form action={formAction} className="space-y-5" noValidate>
+        {redirectTarget && (
+          <input type="hidden" name="redirect" value={redirectTarget} />
+        )}
         <div>
           <label htmlFor="email" className="label text-white/80">
             Email

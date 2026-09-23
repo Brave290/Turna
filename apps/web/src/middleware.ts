@@ -48,14 +48,17 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() {
-          return request.cookies.getAll();
+        // @supabase/ssr@0.3 uses get/set/remove (not getAll/setAll).
+        get(name: string) {
+          return request.cookies.get(name)?.value;
         },
-        setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            request.cookies.set(name, value);
-            supabaseResponse.cookies.set(name, value, options);
-          });
+        set(name: string, value: string, options: CookieOptions) {
+          request.cookies.set(name, value);
+          supabaseResponse.cookies.set(name, value, options);
+        },
+        remove(name: string, options: CookieOptions) {
+          request.cookies.delete(name);
+          supabaseResponse.cookies.delete(name);
         },
       },
     }
@@ -65,7 +68,7 @@ export async function middleware(request: NextRequest) {
   // locally decoded session cookie. This prevents false login redirects when
   // the access token has expired but the refresh token is still valid.
   const { data: { user } } = await supabase.auth.getUser();
-  
+
   if (!user) {
     const redirectUrl = new URL('/auth/login', request.url);
     redirectUrl.searchParams.set('redirect', pathname);

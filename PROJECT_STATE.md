@@ -1,7 +1,7 @@
 # Project State — Turna
 
 **Last Updated**: 2026-09-23
-**Current Phase**: Phase 31 — 5-min OTP, Mandatory Verify, Custom Password Reset, Logo Emails
+**Current Phase**: Phase 32 — Session Cookies Fixed, Middleware Relocated, Logo Assets, Resend Removed
 **Overall Status**: 🟡 In Progress
 
 ## Production
@@ -82,7 +82,7 @@
 | ADR-006 | Append-only ledger with hash chaining | Accepted | 2025-01-19 |
 | ADR-007 | Zod for validation, shared in packages | Accepted | 2025-01-19 |
 | ADR-008 | Server Actions for mutations, RLS for authz | Accepted | 2025-01-19 |
-| ADR-009 | Resend for transactional email | Accepted | 2025-01-19 |
+| ADR-009 | Gmail SMTP (nodemailer) for transactional email — Resend removed | Accepted | 2025-01-19 |
 | ADR-010 | turna.name.ng as production domain | Accepted | 2025-01-19 |
 
 ---
@@ -91,7 +91,6 @@
 
 - Need to run `supabase start` and `pnpm db:seed` to verify data
 - Google OAuth credentials needed for production
-- Resend API key needed for production email (or switch to Gmail SMTP)
 - Need to test mobile build on actual device/emulator
 - Vercel build may fail on Google Fonts fetch — fallback fonts configured
 
@@ -99,8 +98,8 @@
 
 ## Next Actions
 
-1. Set RESEND_API_KEY (or SMTP) in Vercel env for real OTP emails
-2. Live-test signup → OTP → login → dashboard flow
+1. Live-test signup → OTP → login → dashboard flow (after Phase 32 deploy)
+2. Live-test forgot-password → reset → new password → login
 3. Admin dashboard for editing legal pages
 4. Begin Phase 15: Write security-focused tests
 5. Begin Phase 18: Integration verification
@@ -122,6 +121,19 @@
 - **Landing footer**: Big-company style columns (Product, Company, Legal)
 - **Sitemap**: Added legal pages URLs
 - **Middleware**: `/legal` paths public
+
+---
+
+## Phase 32 (2026-09-23) — Auth Session Fix + Brand Assets + Resend Removal
+
+- **Middleware relocated**: `apps/web/middleware.ts` → `apps/web/src/middleware.ts` (Next resolves middleware relative to `src/app`; root file was never bundled → unauthenticated `/dashboard` streamed Loading instead of 307)
+- **Cookie API fix**: `@supabase/ssr@0.3` expects `get`/`set`/`remove`, not `getAll`/`setAll` — sessions were never read/written → login redirected back to login. Fixed in `supabase-server.ts` + middleware.
+- **Login redirect param**: login page reads `?redirect=` and posts it through `signIn`
+- **Logo component**: switched from hand-drawn SVG to real brand PNGs (`logo.png` / `logo-dark.png` / `logo-on-dark.png`) via `next/image` — used on landing, auth, legal, dashboard nav
+- **Email logo**: already absolute `/logo.png` in templates (updated asset from remote commits)
+- **Resend removed**: package + lockfile entries gone; only Gmail SMTP/nodemailer remains; `RESEND_API_KEY` removed from `.env.local`
+- **Spam reduction**: OTP subject no longer embeds the code (`Your Turna verification code`); stable `Message-ID`, `replyTo`, `X-Entity-Ref-ID`; transactional (no bulk headers)
+- **Remote sync**: pulled 6 commits (`2608595`…`c0ee9fb`) — no password sessionStorage, OTP race fixes, enhanced logo assets, theme toggle
 
 ---
 
