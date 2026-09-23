@@ -192,3 +192,71 @@
     color: var(--primary);
   }
 }
+
+/* Landing-page theme toggle */
+.landing-page {
+  transition: background-color 220ms ease, color 220ms ease;
+}
+
+.theme-toggle {
+  @apply inline-flex h-9 w-9 items-center justify-center rounded-xl border text-forest transition-all duration-200;
+  border-color: rgba(10, 22, 40, 0.12);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.theme-toggle:hover {
+  @apply bg-primary/10 text-primary;
+}
+
+.theme-toggle svg {
+  width: 1.05rem;
+  height: 1.05rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+[data-theme="dark"] .landing-page .bg-cream {
+  background-color: #08111e;
+}
+
+[data-theme="dark"] .landing-page .bg-white {
+  background-color: #101d2d;
+}
+
+[data-theme="dark"] .landing-page .text-forest {
+  color: #e8f7ee;
+}
+
+[data-theme="dark"] .landing-page .text-muted {
+  color: #9bb0bf;
+}
+
+[data-theme="dark"] .landing-page .glass-card {
+  background-color: rgba(18, 38, 48, 0.78);
+  border-color: rgba(232, 247, 238, 0.1);
+}
+
+[data-theme="dark"] .landing-page nav {
+  background-color: rgba(8, 17, 30, 0.8);
+  border-color: rgba(232, 247, 238, 0.12);
+}
+
+[data-theme="dark"] .landing-page .theme-toggle {
+  color: #e8f7ee;
+  border-color: rgba(232, 247, 238, 0.16);
+  background: rgba(232, 247, 238, 0.08);
+}
+
+[data-theme="dark"] .landing-page .ring-white {
+  --tw-ring-color: #101d2d;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-page,
+  .theme-toggle {
+    transition: none;
+  }
+}

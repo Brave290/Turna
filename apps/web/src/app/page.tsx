@@ -1,6 +1,8 @@
 import Link from "next/link";
-import { Logo, LogoWordmark } from "@/components/logo";
+import Image from "next/image";
+import { Logo } from "@/components/logo";
 import { Reveal, AnimatedCounter, Tilt } from "@/components/animated";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 /* ─── Icons (SVG only, no emojis) ─── */
 const IconShield = () => (
@@ -41,7 +43,15 @@ function Nav() {
       <div className="mx-auto max-w-6xl px-4 sm:px-6 mt-4">
         <nav className="flex items-center justify-between h-14 px-5 rounded-2xl bg-white/70 backdrop-blur-xl border border-white/40 shadow-glass">
           <Link href="/" className="flex items-center">
-            <LogoWordmark variant="default" size={28} />
+            <Image
+              src="/turna-favicon.png"
+              alt="Turna"
+              width={36}
+              height={36}
+              priority
+              className="h-9 w-9 rounded-lg object-cover"
+            />
+            <span className="ml-2 font-display text-xl font-bold tracking-tight text-forest">Turna</span>
           </Link>
 
           <div className="hidden md:flex items-center gap-7 text-[13px] font-medium text-forest/60">
@@ -51,6 +61,7 @@ function Nav() {
           </div>
 
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             <Link href="/auth/login" className="hidden sm:inline-flex text-[13px] font-medium text-forest/70 hover:text-forest px-3 py-2 rounded-lg hover:bg-forest/5 transition-colors">
               Sign in
             </Link>
@@ -541,7 +552,7 @@ function Footer() {
 
 export default function LandingPage() {
   return (
-    <>
+    <div className="landing-page">
       <Nav />
       <main>
         <Hero />
@@ -551,6 +562,6 @@ export default function LandingPage() {
         <CTA />
       </main>
       <Footer />
-    </>
+    </div>
   );
 }
