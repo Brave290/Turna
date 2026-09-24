@@ -82,7 +82,11 @@ export function SwipeRouter({ children }: { children: React.ReactNode }) {
     if (e.pointerType === "mouse") return;
     // Don't steal swipes from horizontal scrollers (tables)
     const target = e.target as HTMLElement;
-    if (target.closest("[data-no-swipe], table, .overflow-x-auto")) {
+    if (
+      target.closest(
+        "[data-no-swipe], table, .overflow-x-auto, a, button, input, textarea, select, [role='button']"
+      )
+    ) {
       tracking.current = false;
       return;
     }
@@ -207,6 +211,7 @@ export function DashboardNav({
   notifications = [],
   unreadCount = 0,
 }: DashboardNavProps) {
+  const router = useRouter();
   const pathname = usePathname();
   const initials = (user.displayName || user.email || 'TU')
     .split(/\s+/)
@@ -215,6 +220,10 @@ export function DashboardNav({
     .map((p) => p[0]?.toUpperCase() ?? '')
     .join('')
     .slice(0, 2) || 'TU';
+
+  useEffect(() => {
+    navItems.forEach((item) => router.prefetch(item.href));
+  }, [router]);
 
   const avatar = (
     <Link
@@ -363,29 +372,24 @@ export function DashboardNav({
                 key={item.href}
                 href={item.href}
                 prefetch={true}
-                className={`relative flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors ${
+                className={`relative flex touch-manipulation select-none flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors duration-100 active:scale-95 ${
                   active
-                    ? "text-[#00C2A8] font-semibold"
-                    : "text-[#4A5D73] hover:text-[#0A1628]"
+                    ? "text-primary font-semibold"
+                    : "text-muted hover:text-forest"
                 }`}
                 aria-current={active ? "page" : undefined}
-                style={active ? { color: "#00C2A8" } : undefined}
               >
                 <AnimatePresence>
                   {active && (
                     <motion.span
                       layoutId="bottom-active"
-                      className="absolute top-1 left-1/2 -translate-x-1/2 w-8 h-1 rounded-full"
-                      style={{ background: "#00C2A8" }}
+                      className="absolute top-1 left-1/2 h-1 w-8 -translate-x-1/2 rounded-full bg-primary"
                       transition={{ type: "spring", bounce: 0.12, duration: 0.3 }}
                     />
                   )}
                 </AnimatePresence>
-                <span className="relative" style={active ? { color: "#00C2A8" } : undefined}>
-                  <item.icon
-                    className="w-5 h-5"
-                    style={active ? { color: "#00C2A8", stroke: "#00C2A8" } : undefined}
-                  />
+                <span className="relative">
+                  <item.icon className="h-5 w-5" />
                   {item.href === "/dashboard/notifications" && unreadCount > 0 && (
                     <span className="absolute -top-1 -right-1.5 min-w-[16px] h-4 rounded-full bg-error text-white text-[9px] font-bold flex items-center justify-center px-1">
                       {unreadCount > 9 ? "9+" : unreadCount}
@@ -399,25 +403,13 @@ export function DashboardNav({
           <Link
             href="/dashboard/settings"
             prefetch={true}
-            className={`relative flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors ${
+            className={`relative flex touch-manipulation select-none flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors duration-100 active:scale-95 ${
               isActive(pathname, "/dashboard/settings")
-                ? "text-[#00C2A8] font-semibold"
-                : "text-[#4A5D73] hover:text-[#0A1628]"
+                ? "text-primary font-semibold"
+                : "text-muted hover:text-forest"
             }`}
-            style={
-              isActive(pathname, "/dashboard/settings")
-                ? { color: "#00C2A8" }
-                : undefined
-            }
           >
-            <Settings
-              className="w-5 h-5"
-              style={
-                isActive(pathname, "/dashboard/settings")
-                  ? { color: "#00C2A8", stroke: "#00C2A8" }
-                  : undefined
-              }
-            />
+            <Settings className="h-5 w-5" />
             Settings
           </Link>
         </div>
