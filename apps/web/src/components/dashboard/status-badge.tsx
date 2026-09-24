@@ -10,6 +10,7 @@ const statusStyles: Record<string, string> = {
   confirmed: 'badge-active',
   rejected: 'badge-error',
   disputed: 'badge-error',
+  refunded: 'badge-pending',
   initiated: 'badge-pending',
   sent: 'badge-pending',
   received: 'badge-active',

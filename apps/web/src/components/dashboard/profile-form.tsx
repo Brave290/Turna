@@ -109,9 +109,13 @@ export function ProfileForm({ initial }: { initial: ProfileFormValues }) {
             name="date_of_birth"
             type="date"
             defaultValue={initial.date_of_birth ?? ''}
-            className="input"
+            className="input [color-scheme:light]"
             max={new Date().toISOString().slice(0, 10)}
+            aria-describedby="dob-hint"
           />
+          <p id="dob-hint" className="text-xs text-muted mt-1.5">
+            Tap the calendar icon to pick a date.
+          </p>
         </div>
 
         <div>

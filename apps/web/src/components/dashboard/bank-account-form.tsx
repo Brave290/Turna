@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from 'react';
 import { Landmark, CheckCircle2, Loader2, Search } from 'lucide-react';
 import { useToast } from '@/components/toast';
 import { Spinner } from '@/components/spinner';
+import { BrandSelect } from '@/components/ui';
 
 type Bank = { code: string; name: string };
 
@@ -135,27 +136,28 @@ export function BankAccountForm({
           <label htmlFor="bank_code" className="label">
             Bank
           </label>
-          <select
+          <BrandSelect
             id="bank_code"
             name="bank_code"
             value={bankCode}
-            onChange={(e) => {
-              setBankCode(e.target.value);
+            onChange={(v) => {
+              setBankCode(v);
               setResolvedName('');
               setSaved(false);
             }}
-            className="input"
-            required
-          >
-            <option value="">
-              {banks.length === 0 ? 'Loading banks…' : 'Select bank'}
-            </option>
-            {banks.map((b) => (
-              <option key={b.code} value={b.code}>
-                {b.name}
-              </option>
-            ))}
-          </select>
+            options={[
+              {
+                value: '',
+                label:
+                  banks.length === 0 ? 'Loading banks…' : 'Select bank',
+              },
+              ...banks.map((b) => ({ value: b.code, label: b.name })),
+            ]}
+            aria-label="Select bank"
+          />
+          {!bankCode && banks.length > 0 && (
+            <input type="hidden" name="bank_code" value="" required />
+          )}
         </div>
         <div>
           <label htmlFor="account_number" className="label">

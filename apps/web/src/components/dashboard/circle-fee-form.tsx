@@ -9,6 +9,7 @@ import {
 } from '@/lib/auth-actions';
 import { useToast } from '@/components/toast';
 import { formatCurrency } from '@/lib/utils';
+import { BrandSelect } from '@/components/ui';
 
 /**
  * Owner-only: platform fee + network charge (VAT) settings.
@@ -124,16 +125,17 @@ export function CircleFeeForm({
         <label htmlFor="fee_payer_ui" className="label">
           Who pays the fee?
         </label>
-        <select
+        <BrandSelect
           id="fee_payer_ui"
           value={feePayer}
-          onChange={(e) => setFeePayer(e.target.value)}
-          className="input"
-        >
-          <option value="member">Member (added to contribution)</option>
-          <option value="owner">Owner / platform absorbs fee</option>
-          <option value="shared">Shared (50/50)</option>
-        </select>
+          onChange={setFeePayer}
+          options={[
+            { value: 'member', label: 'Member (added to contribution)' },
+            { value: 'owner', label: 'Owner / platform absorbs fee' },
+            { value: 'shared', label: 'Shared (50/50)' },
+          ]}
+          aria-label="Who pays the fee"
+        />
       </div>
 
       <div className="rounded-xl border border-border bg-cream px-4 py-3 text-sm">

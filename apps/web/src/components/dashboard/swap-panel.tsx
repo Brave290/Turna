@@ -10,6 +10,7 @@ import {
 import { useFormState } from 'react-dom';
 import { useToast } from '@/components/toast';
 import { Spinner } from '@/components/spinner';
+import { BrandSelect } from '@/components/ui';
 import { maskNameFor } from '@/lib/mask';
 
 type MemberOpt = {
@@ -114,21 +115,23 @@ export function SwapPanel({
             <label className="label" htmlFor="swap-target">
               Swap payout month with
             </label>
-            <select
+            <BrandSelect
               id="swap-target"
               name="target_member_id"
-              className="input"
               value={targetId}
-              onChange={(e) => setTargetId(e.target.value)}
-              required
-            >
-              <option value="">Choose a member…</option>
-              {options.map((m) => (
-                <option key={m.id} value={m.id}>
-                  #{m.payout_position} · {maskNameFor(m.display_name)}
-                </option>
-              ))}
-            </select>
+              onChange={setTargetId}
+              options={[
+                { value: '', label: 'Choose a member…' },
+                ...options.map((m) => ({
+                  value: m.id,
+                  label: `#${m.payout_position} · ${maskNameFor(m.display_name)}`,
+                })),
+              ]}
+              aria-label="Swap with member"
+            />
+            {!targetId && (
+              <input type="hidden" name="target_member_id" value="" required />
+            )}
           </div>
           <div>
             <label className="label" htmlFor="swap-reason">

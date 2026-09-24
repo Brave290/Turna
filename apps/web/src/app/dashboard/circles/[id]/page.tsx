@@ -10,6 +10,7 @@ import {
   Percent,
   EyeOff,
   Send,
+  UserCog,
 } from 'lucide-react';
 import { getCircleDetail } from '@/lib/dashboard-data';
 import { formatCurrency, formatDate, getInitials } from '@/lib/utils';
@@ -192,6 +193,13 @@ export default async function CircleDetailPage({
               </div>
               {isOwner && (
                 <div className="flex flex-wrap gap-2 justify-start sm:justify-end mt-2">
+                  <Link
+                    href={`/dashboard/circles/${circle.id}/members`}
+                    className="btn-outline btn-sm"
+                  >
+                    <UserCog className="w-4 h-4" />
+                    Member control
+                  </Link>
                   <InviteShareButton
                     circleId={circle.id}
                     circleName={circle.name}

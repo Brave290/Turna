@@ -39,7 +39,7 @@
   }
 
   ::selection {
-    background: rgba(0, 168, 120, 0.22);
+    background: rgba(0, 122, 101, 0.22);
     color: var(--forest);
   }
 
@@ -56,10 +56,10 @@
 
   .btn-primary {
     @apply btn bg-primary text-white hover:bg-primary-hover rounded-xl px-6 py-3;
-    box-shadow: 0 1px 2px rgba(3, 37, 27, 0.12);
+    box-shadow: 0 1px 2px rgba(10, 22, 40, 0.12);
   }
   .btn-primary:hover {
-    box-shadow: 0 4px 14px rgba(0, 168, 120, 0.28);
+    box-shadow: 0 4px 14px rgba(0, 122, 101, 0.28);
   }
 
   .btn-secondary {
@@ -93,6 +93,52 @@
     background: #fff;
   }
 
+  /* Native date / datetime pickers — branded calendar icon + focus */
+  input[type='date'],
+  input[type='datetime-local'],
+  input[type='month'],
+  input[type='time'] {
+    color-scheme: light;
+    min-height: 2.85rem;
+  }
+
+  input[type='date']::-webkit-calendar-picker-indicator,
+  input[type='datetime-local']::-webkit-calendar-picker-indicator,
+  input[type='month']::-webkit-calendar-picker-indicator,
+  input[type='time']::-webkit-calendar-picker-indicator {
+    opacity: 0.55;
+    cursor: pointer;
+    filter: invert(28%) sepia(48%) saturate(700%) hue-rotate(125deg);
+    transition: opacity 0.15s ease;
+  }
+
+  input[type='date']:hover::-webkit-calendar-picker-indicator,
+  input[type='datetime-local']:hover::-webkit-calendar-picker-indicator,
+  input[type='month']:hover::-webkit-calendar-picker-indicator,
+  input[type='time']:hover::-webkit-calendar-picker-indicator {
+    opacity: 0.9;
+  }
+
+  /* Native selects — match BrandSelect */
+  select.input,
+  select.input:not([multiple]) {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%234A5D73' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.9rem center;
+    padding-right: 2.5rem;
+    cursor: pointer;
+  }
+
+  select.input:disabled {
+    @apply opacity-60 cursor-not-allowed;
+  }
+
+  select.input option {
+    background: #fff;
+    color: var(--forest);
+  }
+
   .input-error {
     @apply border-error focus:border-error focus:ring-error/20;
   }
@@ -104,7 +150,7 @@
   /* Cards — restrained fintech (thin border, small radius, light shadow) */
   .card {
     @apply rounded-[18px] border border-border bg-white p-5 sm:p-6;
-    box-shadow: 0 1px 2px rgba(3, 37, 27, 0.03);
+    box-shadow: 0 1px 2px rgba(10, 22, 40, 0.03);
   }
 
   .card-hover {
@@ -114,7 +160,7 @@
   /* Flat stat card for dashboard grid */
   .stat-card {
     @apply rounded-[18px] border border-border bg-white p-4 sm:p-5;
-    box-shadow: 0 1px 2px rgba(3, 37, 27, 0.03);
+    box-shadow: 0 1px 2px rgba(10, 22, 40, 0.03);
   }
 
   /* Badges */
@@ -199,7 +245,7 @@
 
 .theme-toggle {
   @apply inline-flex h-9 w-9 items-center justify-center rounded-xl border text-forest transition-all duration-200;
-  border-color: rgba(3, 37, 27, 0.12);
+  border-color: rgba(10, 22, 40, 0.12);
   background: rgba(255, 255, 255, 0.85);
 }
 
@@ -227,7 +273,7 @@
 
 .theme-toggle-on-dark:hover,
 [data-theme="dark"] .theme-toggle:hover {
-  background: rgba(0, 168, 120, 0.12);
+  background: rgba(0, 122, 101, 0.12);
   color: var(--primary);
 }
 

@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'react';
 import { ShieldCheck } from 'lucide-react';
 import { Spinner } from '@/components/spinner';
 import { useToast } from '@/components/toast';
+import { BrandSelect } from '@/components/ui';
 import { submitKyc, type ActionState } from '@/lib/circle-actions';
 
 function SubmitButton({ disabled }: { disabled?: boolean }) {
@@ -81,18 +82,18 @@ export function KycForm({ initial }: { initial: KycInitial | null }) {
           <label htmlFor="document_type" className="label">
             Document type
           </label>
-          <select
+          <BrandSelect
             id="document_type"
             name="document_type"
             defaultValue={initial?.document_type ?? 'nin'}
-            className="input"
-            disabled={approved}
-            required
-          >
-            <option value="nin">NIN</option>
-            <option value="bvn">BVN</option>
-            <option value="id_card">ID card number</option>
-          </select>
+            options={[
+              { value: 'nin', label: 'NIN' },
+              { value: 'bvn', label: 'BVN' },
+              { value: 'id_card', label: 'ID card number' },
+            ]}
+            aria-label="Document type"
+          />
+          {approved && <input type="hidden" name="document_type" value={initial?.document_type ?? 'nin'} />}
         </div>
 
         <div>

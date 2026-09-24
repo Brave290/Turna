@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { ScrollText, CheckCircle2 } from 'lucide-react';
 import { useToast } from '@/components/toast';
 import { Spinner } from '@/components/spinner';
+import { BrandSelect } from '@/components/ui';
 import { formatCurrency } from '@/lib/utils';
 import {
   saveCircleRules,
@@ -102,26 +103,33 @@ export function CircleRulesCard({
         <div className="space-y-3 border border-border rounded-xl p-4 mb-4">
           <div>
             <label className="label" htmlFor="late-policy">Late contribution</label>
-            <select id="late-policy" className="input" value={late} onChange={(e) => setLate(e.target.value)}>
-              <option value="admin_review">Admin review</option>
-              <option value="grace_24h">24 hour grace</option>
-              <option value="strict">Strict — miss removes turn</option>
-            </select>
+            <BrandSelect
+              id="late-policy"
+              value={late}
+              onChange={setLate}
+              options={[
+                { value: 'admin_review', label: 'Admin review' },
+                { value: 'grace_24h', label: '24 hour grace' },
+                { value: 'strict', label: 'Strict — miss removes turn' },
+              ]}
+              aria-label="Late contribution policy"
+            />
           </div>
           <div>
             <label className="label" htmlFor="pay-method">Preferred method</label>
-            <select
+            <BrandSelect
               id="pay-method"
-              className="input"
               value={method}
-              onChange={(e) => setMethod(e.target.value)}
-            >
-              <option value="bank_transfer">Bank transfer</option>
-              <option value="cash">Cash</option>
-              <option value="mobile_money">Mobile money</option>
-              <option value="payment_link">Payment link</option>
-              <option value="other">Other</option>
-            </select>
+              onChange={setMethod}
+              options={[
+                { value: 'bank_transfer', label: 'Bank transfer' },
+                { value: 'cash', label: 'Cash' },
+                { value: 'mobile_money', label: 'Mobile money' },
+                { value: 'payment_link', label: 'Payment link' },
+                { value: 'other', label: 'Other' },
+              ]}
+              aria-label="Preferred payment method"
+            />
           </div>
           <label className="flex items-center gap-2 text-sm text-forest">
             <input

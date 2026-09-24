@@ -703,9 +703,9 @@ export async function decideContribution(
 ): Promise<ActionState> {
   const { supabase, user } = await requireUser();
   const contributionId = String(formData.get('contribution_id') ?? '');
-  const decision = String(formData.get('decision') ?? ''); // confirmed | disputed | rejected
+  const decision = String(formData.get('decision') ?? ''); // confirmed | disputed | rejected | refunded
 
-  if (!['confirmed', 'disputed', 'rejected'].includes(decision)) {
+  if (!['confirmed', 'disputed', 'rejected', 'refunded'].includes(decision)) {
     return { error: { form: ['Invalid decision'] } };
   }
 
@@ -764,7 +764,9 @@ export async function decideContribution(
       ? 'CONTRIBUTION_CONFIRMED'
       : decision === 'disputed'
         ? 'CONTRIBUTION_DISPUTED'
-        : 'CONTRIBUTION_REJECTED';
+        : decision === 'refunded'
+          ? 'CONTRIBUTION_REFUNDED'
+          : 'CONTRIBUTION_REJECTED';
 
   if (circleId) {
     await ledger(circleId, user.id, eventType, 'contribution', contributionId, {
@@ -772,8 +774,8 @@ export async function decideContribution(
     });
   }
 
-  // Wallet update on confirm
-  if (decision === 'confirmed') {
+  // Wallet update on confirm / reverse on refund
+  if (decision === 'confirmed' || decision === 'refunded') {
     try {
       const admin = createAdminSupabaseClient();
       const { data: member } = await admin
@@ -783,11 +785,25 @@ export async function decideContribution(
         .maybeSingle();
       if (member) {
         const amount = contribution.reported_amount ?? contribution.expected_amount;
+        const { data: wallet } = await admin
+          .from('wallet_balances')
+          .select('paid_amount')
+          .eq('user_id', member.user_id)
+          .eq('circle_id', member.circle_id)
+          .maybeSingle();
+        const current = Number(wallet?.paid_amount || 0);
+        const wasConfirmed = contribution.status === 'confirmed';
+        let nextPaid = current;
+        if (decision === 'confirmed' && !wasConfirmed) {
+          nextPaid = current + amount;
+        } else if (decision === 'refunded' && wasConfirmed) {
+          nextPaid = Math.max(0, current - amount);
+        }
         await admin.from('wallet_balances').upsert(
           {
             user_id: member.user_id,
             circle_id: member.circle_id,
-            paid_amount: amount,
+            paid_amount: nextPaid,
             updated_at: new Date().toISOString(),
           },
           { onConflict: 'user_id,circle_id', ignoreDuplicates: false }
@@ -797,13 +813,23 @@ export async function decideContribution(
       console.error('[wallet]', e);
     }
 
-    if (isSelf && circle?.owner_id) {
+    const memberUserId = (
+      await supabase
+        .from('circle_members')
+        .select('user_id')
+        .eq('id', contribution.member_id)
+        .maybeSingle()
+    ).data?.user_id;
+    if (memberUserId && circle?.owner_id) {
       await notify(supabase, {
-        userId: circle.owner_id,
+        userId: memberUserId,
         circleId,
-        title: 'Contribution confirmed',
-        body: `Your contribution was confirmed${circle.name ? ` for "${circle.name}"` : ''}.`,
-        data: { circle_id: circleId, event: 'CONTRIBUTION_CONFIRMED' },
+        title: decision === 'confirmed' ? 'Contribution confirmed' : 'Contribution refunded',
+        body:
+          decision === 'confirmed'
+            ? `Your contribution was confirmed${circle.name ? ` for "${circle.name}"` : ''}.`
+            : `Your contribution was refunded${circle.name ? ` for "${circle.name}"` : ''}.`,
+        data: { circle_id: circleId, event: eventType },
       });
     }
   }

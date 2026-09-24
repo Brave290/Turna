@@ -108,7 +108,7 @@ export type Contribution = {
   proof_note?: string | null;
   proof_storage_path?: string | null;
   receipt_code?: string | null;
-  status: 'pending' | 'reported' | 'confirmed' | 'rejected' | 'disputed';
+  status: 'pending' | 'reported' | 'confirmed' | 'rejected' | 'disputed' | 'refunded';
   reported_at: string | null;
   confirmed_at: string | null;
   created_at: string;

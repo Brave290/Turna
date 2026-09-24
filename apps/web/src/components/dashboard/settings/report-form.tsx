@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Loader2, Send } from 'lucide-react';
 import { useToast } from '@/components/toast';
+import { BrandSelect } from '@/components/ui';
 
 const CATEGORIES = [
   'Account',
@@ -72,18 +73,13 @@ export function ReportProblemForm() {
         <label htmlFor="category" className="label">
           Category
         </label>
-        <select
+        <BrandSelect
           id="category"
-          className="input"
           value={category}
-          onChange={(e) => setCategory(e.target.value)}
-        >
-          {CATEGORIES.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
+          onChange={setCategory}
+          options={CATEGORIES.map((c) => ({ value: c, label: c }))}
+          aria-label="Report category"
+        />
       </div>
       <button
         type="submit"

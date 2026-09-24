@@ -92,7 +92,7 @@ export default async function DashboardHomePage() {
           aria-hidden
           style={{
             backgroundImage:
-              'radial-gradient(circle at 20% 30%, #35D6A0 0, transparent 45%), radial-gradient(circle at 80% 70%, #00A878 0, transparent 40%)',
+              'radial-gradient(circle at 20% 30%, #7CE8D7 0, transparent 45%), radial-gradient(circle at 80% 70%, #007A65 0, transparent 40%)',
           }}
         />
         <div className="relative">

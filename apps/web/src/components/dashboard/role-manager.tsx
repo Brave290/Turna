@@ -4,6 +4,7 @@ import { useTransition } from 'react';
 import { Shield, UserCog, Eye, Landmark, Crown } from 'lucide-react';
 import { useToast } from '@/components/toast';
 import { Spinner } from '@/components/spinner';
+import { BrandSelect } from '@/components/ui';
 import { setMemberRole, type FeatureActionState } from '@/lib/circle-features-actions';
 
 const ROLES = [
@@ -94,20 +95,17 @@ export function RoleManager({
               </span>
             </div>
             {isOwner && m.role !== 'owner' && (
-              <select
-                className="input w-auto text-sm py-1.5"
+              <BrandSelect
+                className="w-auto"
                 value={m.role}
-                disabled={pending}
-                onChange={(e) => change(m.id, e.target.value)}
+                onChange={(v) => change(m.id, v)}
+                options={[
+                  { value: 'treasurer', label: 'Treasurer' },
+                  { value: 'member', label: 'Member' },
+                  { value: 'observer', label: 'Observer' },
+                ]}
                 aria-label={`Role for ${m.display_name ?? 'member'}`}
-              >
-                {m.role === 'owner' && (
-                  <option value="owner">Owner</option>
-                )}
-                <option value="treasurer">Treasurer</option>
-                <option value="member">Member</option>
-                <option value="observer">Observer</option>
-              </select>
+              />
             )}
             {m.role === 'owner' && (
               <Crown className="w-4 h-4 text-warning shrink-0" aria-label="Owner" />

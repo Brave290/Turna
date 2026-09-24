@@ -11,6 +11,7 @@ import {
 import { useToast } from '@/components/toast';
 import { Spinner } from '@/components/spinner';
 import { StatusBadge } from '@/components/dashboard/status-badge';
+import { BrandSelect } from '@/components/ui';
 import { formatCurrency } from '@/lib/utils';
 
 /**
@@ -141,19 +142,20 @@ export function ContributionActions({
               <label className="label" htmlFor="report-method">
                 Payment method
               </label>
-              <select
+              <BrandSelect
                 id="report-method"
                 name="payment_method"
-                className="input"
                 defaultValue="bank_transfer"
-              >
-                <option value="bank_transfer">Bank transfer</option>
-                <option value="cash">Cash</option>
-                <option value="mobile_money">Mobile money</option>
-                <option value="payment_link">Payment link</option>
-                <option value="card">Card</option>
-                <option value="other">Other</option>
-              </select>
+                options={[
+                  { value: 'bank_transfer', label: 'Bank transfer' },
+                  { value: 'cash', label: 'Cash' },
+                  { value: 'mobile_money', label: 'Mobile money' },
+                  { value: 'payment_link', label: 'Payment link' },
+                  { value: 'card', label: 'Card' },
+                  { value: 'other', label: 'Other' },
+                ]}
+                aria-label="Payment method"
+              />
             </div>
             <div>
               <label className="label" htmlFor="report-ref">

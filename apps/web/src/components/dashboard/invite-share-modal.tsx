@@ -124,7 +124,7 @@ export function InviteShareModal({
                 value={url}
                 size={176}
                 bgColor="#ffffff"
-                fgColor="#03251B"
+                fgColor="#0A1628"
                 level="M"
                 includeMargin={false}
                 title={`QR invite for ${circleName}`}

@@ -68,11 +68,11 @@ const config: Config = {
         ],
       },
       boxShadow: {
-        glow: "0 0 32px rgba(0, 168, 120, 0.16)",
-        "glow-violet": "0 8px 24px rgba(6, 56, 42, 0.12)",
-        card: "0 1px 2px rgba(3, 37, 27, 0.04), 0 4px 16px rgba(3, 37, 27, 0.04)",
-        "card-hover": "0 4px 20px rgba(3, 37, 27, 0.08)",
-        glass: "0 4px 24px rgba(3, 37, 27, 0.06)",
+        glow: "0 0 32px rgba(0, 122, 101, 0.16)",
+        "glow-violet": "0 8px 24px rgba(109, 77, 224, 0.12)",
+        card: "0 1px 2px rgba(10, 22, 40, 0.04), 0 4px 16px rgba(10, 22, 40, 0.04)",
+        "card-hover": "0 4px 20px rgba(10, 22, 40, 0.08)",
+        glass: "0 4px 24px rgba(10, 22, 40, 0.06)",
       },
       borderRadius: {
         xl: "0.75rem",

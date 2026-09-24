@@ -392,6 +392,105 @@ export async function getCircleDetail(circleId: string) {
   };
 }
 
+export async function getMemberLedger(circleId: string) {
+  const { supabase, user } = await requireUser();
+
+  const circleRes = await supabase
+    .from('circles')
+    .select('*')
+    .eq('id', circleId)
+    .maybeSingle();
+  const circle = circleRes.data as Circle | null;
+  if (!circle) redirect('/dashboard/circles');
+  if (circle.owner_id !== user.id) redirect(`/dashboard/circles/${circleId}`);
+
+  const [membersRes, cyclesRes, walletsRes] = await Promise.all([
+    supabase
+      .from('circle_members')
+      .select('*, profiles(id, display_name, email, avatar_url)')
+      .eq('circle_id', circleId)
+      .order('payout_position', { ascending: true }),
+    supabase
+      .from('contribution_cycles')
+      .select('*')
+      .eq('circle_id', circleId)
+      .order('cycle_number', { ascending: false })
+      .limit(20),
+    supabase.from('wallet_balances').select('*').eq('circle_id', circleId),
+  ]);
+
+  const members = (membersRes.data ?? []) as unknown as (CircleMember & {
+    profiles: Pick<Profile, 'id' | 'display_name' | 'email' | 'avatar_url'> | null;
+  })[];
+  const cycles = (cyclesRes.data ?? []) as ContributionCycle[];
+  const collecting =
+    cycles.find((c) => c.status === 'collecting') ??
+    cycles.find((c) => c.status === 'pending') ??
+    null;
+
+  let currentContribs: Contribution[] = [];
+  if (collecting) {
+    const { data } = await supabase
+      .from('contributions')
+      .select('*')
+      .eq('cycle_id', collecting.id);
+    currentContribs = (data ?? []) as Contribution[];
+  }
+
+  const wallets = (walletsRes.data ?? []) as {
+    user_id: string;
+    circle_id: string;
+    paid_amount: number;
+    expected_amount: number;
+  }[];
+
+  const rows = members.map((m) => {
+    const contrib =
+      currentContribs.find((c) => c.member_id === m.id) ?? null;
+    const wallet = wallets.find((w) => w.user_id === m.user_id) ?? null;
+    return {
+      member: m,
+      contribution: contrib,
+      paidAmount: Number(wallet?.paid_amount || 0),
+      expectedAmount: Number(wallet?.expected_amount || 0),
+    };
+  });
+
+  const collected = rows.reduce(
+    (s, r) =>
+      s +
+      (r.contribution?.status === 'confirmed'
+        ? Number(r.contribution.reported_amount ?? r.contribution.expected_amount)
+        : 0),
+    0
+  );
+  const pending = rows.filter(
+    (r) =>
+      r.member.status === 'active' &&
+      r.member.role !== 'owner' &&
+      (!r.contribution ||
+        r.contribution.status === 'pending' ||
+        r.contribution.status === 'reported')
+  ).length;
+  const refunded = rows.filter((r) => r.contribution?.status === 'refunded').length;
+
+  return {
+    user,
+    circle,
+    rows,
+    collectingCycle: collecting,
+    cycles,
+    summary: {
+      total: rows.filter((r) => r.member.status === 'active').length,
+      collected,
+      pending,
+      refunded,
+      currency: circle.currency,
+      contributionAmount: Number(circle.contribution_amount || 0),
+    },
+  };
+}
+
 export async function getNotifications() {
   const { supabase, user } = await requireUser();
   const { data } = await supabase
