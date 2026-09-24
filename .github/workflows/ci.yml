@@ -242,82 +242,67 @@ jobs:
 
   build-mobile-ios:
     name: Build Mobile (iOS)
-    runs-on: macos-latest
+    runs-on: macos-14
     needs: [lint-and-typecheck, test]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Python (for xcodebuild plugins)
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+      - name: Select Xcode
+        run: |
+          set -euo pipefail
+          ls /Applications | grep -E '^Xcode' || true
+          if [ -d /Applications/Xcode_15.4.app ]; then
+            sudo xcode-select -s /Applications/Xcode_15.4.app
+          else
+            sudo xcode-select -s /Applications/Xcode.app
+          fi
+          xcodebuild -version
 
-      - name: Install Xcode
-        uses: maximilianharrer/install-xcode-action@v3
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
         with:
-          xcode-version: '15.0'
+          run_install: false
 
-      - name: Install CocoaPods
-        run: gem install cocoapods
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Install CocoaPods
+        run: |
+          pod --version || sudo gem install cocoapods --no-document
+
+      - name: Install Pods
+        working-directory: apps/mobile/ios
+        env:
+          NO_FLIPPER: '1'
+        run: pod install
+
+      - name: Build iOS Release (no signing)
         working-directory: apps/mobile
-
-      - name: Install CocoaPods (iOS)
-        run: |
-          cd apps/mobile
-          pod install --fresh-start
-
-      - name: Code Signing
         env:
-          DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
-          PROVISIONING_PROFILE: ${{ secrets.PROVISIONING_PROFILE }}
-          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-          SIGNING_IDENTITY: ${{ secrets.SIGNING_IDENTITY }}
+          NO_FLIPPER: '1'
         run: |
-          # Setup code signing - requires Apple Developer credentials
-          # See: https://github.com/getixdx/react-native-xcode-credentials
-          echo "Code signing setup needed - configure Apple Developer secrets"
-
-      - name: Build iOS Release
-        env:
-          DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
-        run: |
-          cd apps/mobile
-          xcodebuild -workspace apps/mobile/ios/Turna.xcworkspace \
+          set -euo pipefail
+          xcodebuild \
+            -workspace ios/Turna.xcworkspace \
             -scheme Turna \
             -configuration Release \
-            -archivePath ios/build/Turna.xcarchive \
-            archive \
-            CODE_SIGN_IDENTITY="iPhone Distribution" \
-            PROVISIONING_PROFILE="${{ secrets.PROVISIONING_PROFILE }}" \
+            -sdk iphoneos \
+            -derivedDataPath ios/build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
             -quiet
 
-      - name: Export IPA
-        env:
-          DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
-        run: |
-          cd apps/mobile
-          xcodebuild -exportArchive \
-            -archivePath ios/build/Turna.xcarchive \
-            -exportOptionsPlist ios/ExportOptions.plist \
-            -quiet
-
-      - name: Upload IPA
+      - name: Upload iOS build output
         uses: actions/upload-artifact@v4
         with:
-          name: ios-release-ipa
-          path: apps/mobile/ios/build/Release-iphoneos/Turna.app
-          retention-days: 14
-
-      - name: Publish iOS TestFlight
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        env:
-          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
-          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
-        run: |
-          # Publish to TestFlight via App Store API
-          # Requires APPLE_API_KEY and APPLE_API_ISSUER secrets
-          echo "TestFlight publishing - configure Apple API credentials"
+          name: ios-release-build
+          path: apps/mobile/ios/build/Build/Products/Release-iphoneos/
+          retention-days: 7
+        if: success()

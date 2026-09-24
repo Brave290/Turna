@@ -12,7 +12,6 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Button } from '../components/Button';
 import { Card, Badge } from '../components/Card';
-import { Button } from '../components/Button';
 import { Screen } from '../components/Screen';
 import { colors, spacing, typography } from '../theme';
 
