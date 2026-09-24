@@ -188,7 +188,7 @@ export function CirclesScreen({ onPush, onNewCircle }: { onPush?: (screen: any) 
                 </Text>
                 <Text style={styles.open}>Open →</Text>
               </View>
-            </Card>
+            </Pressable>
           )}
         />
       )}

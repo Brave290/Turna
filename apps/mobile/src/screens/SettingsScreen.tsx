@@ -9,7 +9,7 @@ import { colors, spacing, typography } from '../theme';
 type Tile = { label: string; description: string; onPress?: () => void };
 type Section = { title: string; tiles: Tile[] };
 
-export function SettingsScreen({ onNavigate }: { onNavigate?: (route: string) => void } = {}) {
+export function SettingsScreen({ onNavigate, onBack }: { onNavigate?: (route: string) => void; onBack?: () => void } = {}) {
   const { signOut, email } = useAuth();
   const [profile, setProfile] = useState<{ display_name?: string | null } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -86,6 +86,7 @@ export function SettingsScreen({ onNavigate }: { onNavigate?: (route: string) =>
         }
         ListHeaderComponent={
           <View style={styles.header}>
+            {onBack && <Button label="← Back" variant="ghost" onPress={onBack} style={{ alignSelf: 'flex-start', marginBottom: spacing.xs }} />}
             <Text style={styles.title}>Settings</Text>
             <Text style={styles.sub}>
               Signed in as {email ?? 'member'}

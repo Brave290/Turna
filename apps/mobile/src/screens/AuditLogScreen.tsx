@@ -106,10 +106,13 @@ export function AuditLogScreen({ onBack }: { onBack?: () => void } = {}) {
       <View style={styles.header}>
         <View style={styles.headRow}>
           {onBack && <Button label="← Back" variant="ghost" onPress={onBack} style={{ alignSelf: 'flex-start' }} />}
-          <Text style={styles.title}>Audit log</Text>
-          <Text style={styles.sub}>
-            Chronological financial and admin events across your circles.
-        </Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.title}>Audit log</Text>
+            <Text style={styles.sub}>
+              Chronological financial and admin events across your circles.
+            </Text>
+          </View>
+        </View>
         <View style={{ marginTop: spacing.sm, flexDirection: 'row' }}>
           <Badge label={isAdmin ? 'Admin view' : 'Privacy mode'} tone={isAdmin ? 'active' : 'muted'} />
         </View>

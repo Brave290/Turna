@@ -57,6 +57,7 @@ export function SoloLedgerDetailScreen({
   const [showAdd, setShowAdd] = useState(false);
   const [sheet, setSheet] = useState<{ id: string; name: string } | null>(null);
   const [amount, setAmount] = useState('');
+  const [newAmount, setNewAmount] = useState('');
 
   const load = useCallback(async () => {
     const L = await getSoloLedger(ledgerId);
@@ -138,46 +139,21 @@ export function SoloLedgerDetailScreen({
     if (!ledger) return;
     const c = ledger.contributors.find((x) => x.id === contributorId);
     const expected = c?.expected_amount || ledger.default_amount;
-    const entry = {
-      contributor_id: contributorId,
-      ledger_id: ledger.id,
-      period,
-      status: 'paid',
-      amount_paid: expected,
-      paid_on: new Date().toISOString().slice(0, 10),
-      note: null,
-      local_updated_at: new Date().toISOString(),
-    };
-    await queueEntry(ledger.id, entry);
-    setLedger(await getSoloLedger(ledger.id));
-    try {
-      const uid = (await supabase.auth.getUser()).data.user?.id;
-      const { error } = await supabase.from('solo_entries').upsert(
-        {
-          ...entry,
-          user_id: uid,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'contributor_id,period' }
-      );
-      if (!error) {
-        await clearPending(ledger.id, [`${contributorId}|${period}`], []);
-        setLedger(await getSoloLedger(ledger.id));
-      }
-    } catch {
-      /* queued offline */
-    }
+    setSheet({ id: contributorId, name: c?.name ?? 'Contributor' });
+    setAmount(String(expected / 100));
   }
 
   async function addPerson() {
     if (!ledger || !newName.trim()) return;
+    const custom = Number(newAmount.replace(/[^\d.]/g, '') || '0');
+    const expected = custom > 0 ? Math.round(custom * 100) : ledger.default_amount;
     const c = {
       id: offlineUuid(),
       ledger_id: ledger.id,
       name: newName.trim(),
       phone: null,
       note: null,
-      expected_amount: ledger.default_amount,
+      expected_amount: expected,
       sort_order: ledger.contributors.length + 1,
       archived: false,
       local_updated_at: new Date().toISOString(),
@@ -185,6 +161,7 @@ export function SoloLedgerDetailScreen({
     await queueContributor(ledger.id, c);
     setLedger(await getSoloLedger(ledger.id));
     setNewName('');
+    setNewAmount('');
     setShowAdd(false);
     try {
       const uid = (await supabase.auth.getUser()).data.user?.id;
@@ -296,6 +273,14 @@ export function SoloLedgerDetailScreen({
             placeholder="Contributor name"
             placeholderTextColor={colors.muted}
           />
+          <TextInput
+            style={[styles.input, { marginTop: spacing.sm }]}
+            value={newAmount}
+            onChangeText={setNewAmount}
+            keyboardType="numeric"
+            placeholder={`Amount (₦) — default ${money(ledger.default_amount)}`}
+            placeholderTextColor={colors.muted}
+          />
           <Button label="Add" onPress={addPerson} disabled={!newName.trim()} style={{ marginTop: spacing.sm }} />
         </Card>
       )}
@@ -365,12 +350,15 @@ export function SoloLedgerDetailScreen({
           <Card style={styles.sheet}>
             <Text style={styles.sheetTitle}>{sheet.name}</Text>
             <Text style={styles.meta}>{formatPeriodLabel(period)}</Text>
+            <Text style={styles.meta}>
+              Due: {money(rows.find((r) => r.c.id === sheet.id)?.c.expected_amount || ledger.default_amount)}
+            </Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { marginTop: spacing.sm }]}
               value={amount}
               onChangeText={setAmount}
               keyboardType="numeric"
-              placeholder="Amount paid"
+              placeholder="Amount paid (₦)"
               placeholderTextColor={colors.muted}
             />
             <View style={{ gap: spacing.sm, marginTop: spacing.md }}>

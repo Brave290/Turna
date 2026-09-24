@@ -91,6 +91,8 @@ export function ContributionsScreen({ onBack }: { onBack?: () => void } = {}) {
           <View style={{ flex: 1 }}>
             <Text style={styles.title}>Contributions</Text>
             <Text style={styles.sub}>Track what you owe and what you've paid this cycle.</Text>
+          </View>
+        </View>
       </View>
       {loading ? (
         <Text style={styles.loading}>Loading…</Text>
@@ -192,6 +194,8 @@ export function PayoutsScreen({ onBack }: { onBack?: () => void } = {}) {
           <View style={{ flex: 1 }}>
             <Text style={styles.title}>Payouts</Text>
             <Text style={styles.sub}>Pot payouts and receipt status.</Text>
+          </View>
+        </View>
       </View>
       {loading ? (
         <Text style={styles.loading}>Loading…</Text>
@@ -275,6 +279,8 @@ export function AdminScreen({ onBack }: { onBack?: () => void } = {}) {
           <View style={{ flex: 1 }}>
             <Text style={styles.title}>Admin</Text>
             <Text style={styles.sub}>Ops overview for ADMIN_EMAILS accounts.</Text>
+          </View>
+        </View>
       </View>
       <View style={styles.list}>
         <Card>

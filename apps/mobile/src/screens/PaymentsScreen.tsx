@@ -88,6 +88,7 @@ export function PaymentsScreen({ onBack }: { onBack?: () => void } = {}) {
             <Text style={styles.sub}>Your contribution payment history and receipts.</Text>
           </View>
         </View>
+      </View>
       {loading ? (
         <Text style={styles.loading}>Loading…</Text>
       ) : (

@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
-import { getSoloLedgerDetail, formatPeriodLabel, periodKey } from '@/lib/solo-data';
+import { getSoloLedgerDetail } from '@/lib/solo-data';
+import { formatPeriodLabel, periodKey } from '@/lib/solo-period';
 import { SoloLedgerBoard } from '@/components/dashboard/solo/solo-ledger-board';
 
 export const dynamic = 'force-dynamic';
