@@ -60,11 +60,24 @@ android {
             keyPassword 'android'
         }
         release {
-            // Prefer CI/env, then local keystore/turna-release.keystore (Play Protect requires release cert)
-            def ksPath = System.getenv("SIGNING_STORE_FILE") ?: (project.hasProperty('SIGNING_STORE_FILE') ? SIGNING_STORE_FILE : 'keystore/turna-release.keystore')
-            def ksFile = file(ksPath)
-            if (!ksFile.exists()) {
-                ksFile = file("${rootProject.projectDir}/keystore/turna-release.keystore")
+            // CI: keystore decoded from GitHub secret ANDROID_KEYSTORE_BASE64 into
+            // apps/mobile/android/keystore/turna-release.keystore (gitignored).
+            // Local: same path if you place the keystore there manually.
+            def envPath = System.getenv("SIGNING_STORE_FILE") ?: (project.hasProperty('SIGNING_STORE_FILE') ? SIGNING_STORE_FILE : null)
+            def candidates = []
+            if (envPath) {
+                candidates << file(envPath)
+                candidates << new File(rootProject.projectDir, envPath)
+                def ws = System.getenv("GITHUB_WORKSPACE")
+                if (ws) candidates << new File(ws, envPath)
+            }
+            candidates << file("${rootProject.projectDir}/keystore/turna-release.keystore")
+            def ksFile = candidates.find { it != null && it.exists() }
+            if (ksFile == null) {
+                throw new GradleException(
+                    "Release keystore missing (tried: ${candidates.collect { it.absolutePath }}). " +
+                    "CI must set ANDROID_KEYSTORE_BASE64; locally place turna-release.keystore under android/keystore/."
+                )
             }
             storeFile ksFile
             storePassword System.getenv("SIGNING_STORE_PASSWORD") ?: (project.hasProperty('SIGNING_STORE_PASSWORD') ? SIGNING_STORE_PASSWORD : 'Turna2026')
