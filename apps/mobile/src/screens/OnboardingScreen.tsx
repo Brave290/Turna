@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/Button';
 import { Card, Badge } from '../components/Card';
 import { Screen } from '../components/Screen';
+import { Logo } from '../components/Logo';
 import { colors, radius, spacing, typography } from '../theme';
 
 const SLIDES = [
@@ -44,6 +45,9 @@ export function OnboardingScreen() {
 
   return (
     <Screen tone="forest">
+      <View style={styles.logoWrap}>
+        <Logo variant="on-dark" size={56} />
+      </View>
       <View style={styles.dots}>
         {SLIDES.map((_, idx) => (
           <View
@@ -66,6 +70,11 @@ export function OnboardingScreen() {
 }
 
 const styles = StyleSheet.create({
+  logoWrap: {
+    alignItems: 'center',
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
+  },
   dots: {
     flexDirection: 'row',
     justifyContent: 'center',

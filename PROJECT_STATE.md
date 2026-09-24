@@ -1,7 +1,7 @@
 # Project State — Turna
 
 **Last Updated**: 2026-09-24
-**Current Phase**: Phase 46 — Solo Ledger audit fixes, UX OTP locks, email spam tip, store roadmap
+**Current Phase**: Phase 47 — Mobile=web parity, release signing, build fix
 **Overall Status**: 🟡 In Progress — **not store-release ready** (see PROJECT_CONTINUITY.md roadmap)
 
 ## Production
@@ -22,8 +22,8 @@
 ## Design System (Master Prompt v1.0)
 
 - **Fonts**: Playfair Display (display) + Plus Jakarta Sans (body), max 97px
-- **Palette**: Forest #03251B · Primary #00A878 · Mint #35D6A0 · Cream #F7F7F0
-- **Logo**: Single source `src/components/logo.tsx` + static exports in `public/` (SVG, PNG, WEBP, JPG — logo, logo-dark, logo-primary, logo-white, logo-on-dark, favicon)
+- **Palette (Rebrand v2)**: Forest `#0A1628` · Primary `#007A65` · Primary light `#7CE8D7` · Cream `#F4F7FB` · Muted `#4A5D73` · Border `#D0DBE8`
+- **Logo**: Single source `src/components/logo.tsx` + static exports in `public/` (SVG, PNG, WEBP, JPG — logo, logo-dark, logo-primary, logo-white, logo-on-dark, favicon). Mobile mirrors via `apps/mobile/src/components/Logo.tsx` + `apps/mobile/assets/`
 - **Rules**: No emojis anywhere (SVG icons only). No phone/SMS/OTP. Email-only auth. Glassmorphism + scroll animations + 3D tilt. No Expo.
 
 ---
@@ -79,6 +79,7 @@
 | 44. UX polish: nav loading, OTP locks, settings tiles, compact circles, email spam tip | ✅ Complete | 2026-09-24 | 2026-09-24 | dashboard loading.tsx skeletons; bank+profile lock with email OTP unlock; settings multi-choice tile grid; compact circle cards; email templates Rebrand v2 + Spam/Junk tip; color tokens only (no hardcoded nav hex) |
 | 45. Branded selects, owner member control, Android packaging, store roadmap, email palette | ✅ Complete | 2026-09-24 | 2026-09-24 | From prior commits (16f6fe2/a0f45ff); continuity store-release 14-section roadmap; all emails use `#007A65`/`#0A1628` + spam hint |
 | 46. Solo Ledger audit fixes + UX locks complete + docs | ✅ Complete | 2026-09-24 | 2026-09-24 | typecheck-oriented fixes (Set-Cookie, imports, offline UUID); bank/profile OTP gates live; settings/circles/loading done; Phase 46 in continuity |
+| 47. Mobile=web parity + Android release signing + solo-period build fix | ✅ Complete | 2026-09-24 | 2026-09-24 | Real logo on all auth/onboarding/loading screens; TabBar matches web (Home/Circles/Ledger/Solo/Profile + primary indicator); screens copy-synced to web (greeting, Total savings hero, Circles/Ledger/Solo/Profile copy); Rebrand v2 theme; release keystore `turna-release.keystore` (password Turna2026) wired in build.gradle (no debug fallback); CI publishes signed release APK; `solo-period.ts` breaks client→next/headers edge (Vercel build fix); favicon.svg Rebrand v2 |
 
 ---
 

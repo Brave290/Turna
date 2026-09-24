@@ -180,6 +180,35 @@ Get local keys from `supabase status` after `supabase start`.
 
 ## Current Work Context
 
+### Phase 47: Mobile=web parity + release signing + Vercel build fix — Complete (2026-09-24)
+
+**Completed this session**:
+- **Mobile must match web 1:1** (user directive — web will later gate account creation behind "download the app"):
+  - Real logo component (`Logo.tsx`) replaces letter "T" mark on Auth, Verify, Onboarding, App loading
+  - TabBar: Home / Circles / Ledger / Solo / Profile (was "Me"), primary indicator bar like web bottom nav
+  - Auth: Terms + Privacy checkbox (required), Remember my email (AsyncStorage), Forgot password hint, "Sign In" / "Create one" copy
+  - Home: greeting + "Here's what's happening with your savings circles.", Total savings forest hero, Create/Join buttons, 2×2 stats, My Circles / Recent Activity / Open ledger strip
+  - Circles / Ledger / Solo / Profile headers and empty states copy-matched to web pages
+  - Theme Rebrand v2 only (`#007A65` / `#0A1628` / `#4A5D73` / `#F4F7FB`); old `#00A878`/`rgba(0,168,…)` removed from mobile
+  - Android `colors.xml` + adaptive icon foreground → Rebrand v2; mipmaps regenerated from `app-icon-512.png`
+- **Android release signing (Play Trust)**: keystore `apps/mobile/android/keystore/turna-release.keystore` (alias `turna`, store/key password `Turna2026`, validity to 2054); `build.gradle` release `signingConfigs.release` with env/property override then local file — **no debug fallback**; CI rolling APK prefers **release** APK over debug
+- **Vercel build fix**: new `apps/web/src/lib/solo-period.ts` (pure period helpers); client boards import from it — no more `next/headers` from client graph
+- **favicon.svg** last old-palette colors → Rebrand v2
+
+**Known / deferred**:
+- Mobile `tsc --noEmit` still reports React/RN JSX ElementClass noise (`@types/react` 18.2.0 vs RN 0.73) — **root `pnpm typecheck` excludes `@turna/mobile`** (CI green path). Upgrade `@types/react` or adopt `@react-native/typescript-config` later
+- iOS CI artifacts still need macOS runner + Apple signing
+- Await user approval before tagging **v1.0.0**
+- Store-release blockers per 14-section roadmap below (enrichment graphics, Play Console, secrets, compliance)
+
+**Next**:
+1. Push → confirm CI green (typecheck/lint/android release APK artifact) + Vercel Ready (build fix)
+2. Live: install release APK — Play Protect should no longer flag debug cert
+3. User approval → tag **v1.0.0**
+4. Store-release blockers per roadmap
+
+---
+
 ### Phase 46: Solo Ledger + UX locks + email polish + store roadmap — Complete (2026-09-24)
 
 **Completed this session (on top of Phase 43–45)**:

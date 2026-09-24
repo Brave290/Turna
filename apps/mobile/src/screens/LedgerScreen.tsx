@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Card } from '../components/Card';
+import { Card, Badge } from '../components/Card';
 import { Screen } from '../components/Screen';
 import { colors, spacing, typography } from '../theme';
 
@@ -26,10 +26,15 @@ const MEMBER_HIDDEN = new Set([
   'CONTRIBUTION_CONFIRMED',
   'CONTRIBUTION_REJECTED',
   'CONTRIBUTION_DISPUTED',
+  'CONTRIBUTION_CORRECTION_REQUESTED',
+  'CONTRIBUTION_CORRECTION_APPROVED',
+  'CONTRIBUTION_CORRECTION_REJECTED',
   'PAYOUT_INITIATED',
   'PAYOUT_MARKED_SENT',
   'PAYOUT_RECEIPT_CONFIRMED',
   'PAYOUT_DISPUTED',
+  'PAYOUT_ORDER_SET',
+  'PAYOUT_ORDER_CHANGED',
 ]);
 
 function when(iso: string) {
@@ -46,7 +51,7 @@ function when(iso: string) {
   }
 }
 
-export function LedgerScreen() {
+export function LedgerScreen({ onPush }: { onPush?: (screen: any) => void } = {}) {
   const { user } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,19 +91,17 @@ export function LedgerScreen() {
     void load();
   }, [load]);
 
+  const sub = isAdmin
+    ? 'Append-only history for circles you own (admin view).'
+    : "General activity only. Contribution and payout events for other members are hidden to protect privacy.";
+
   return (
     <Screen tone="cream">
       <View style={styles.header}>
         <Text style={styles.title}>Ledger</Text>
-        <Text style={styles.sub}>
-          {isAdmin
-            ? 'Append-only history for circles you own.'
-            : 'Activity visible to you. Other members\' payments are hidden.'}
-        </Text>
-        <View style={[styles.badge, isAdmin ? styles.badgeAdmin : styles.badgePrivacy]}>
-          <Text style={isAdmin ? styles.badgeAdminText : styles.badgePrivacyText}>
-            {isAdmin ? 'Admin view' : 'Privacy mode'}
-          </Text>
+        <Text style={styles.sub}>{sub}</Text>
+        <View style={styles.badgeWrap}>
+          <Badge label={isAdmin ? 'Admin view' : 'Privacy mode'} tone={isAdmin ? 'active' : 'muted'} />
         </View>
       </View>
 
@@ -119,23 +122,43 @@ export function LedgerScreen() {
               tintColor={colors.primary}
             />
           }
+          ListHeaderComponent={
+            <View style={styles.tableHead}>
+              <Text style={[styles.th, { flex: 1.2 }]}>When</Text>
+              <Text style={[styles.th, { flex: 1 }]}>Circle</Text>
+              <Text style={[styles.th, { flex: 1.2 }]}>Event</Text>
+              <Text style={[styles.th, { flex: 0.9 }]}>Entity</Text>
+            </View>
+          }
           ListEmptyComponent={
             <Card>
               <Text style={styles.emptyBody}>{error ?? 'No ledger events yet.'}</Text>
             </Card>
           }
           renderItem={({ item }) => (
-            <Card style={styles.card}>
-              <Text style={styles.event}>
+            <View style={styles.tr}>
+              <Text style={[styles.td, styles.tdMuted, { flex: 1.2 }]} numberOfLines={2}>
+                {when(item.created_at)}
+              </Text>
+              <Text style={[styles.td, { flex: 1 }]} numberOfLines={1}>
+                {item.circles?.name ?? '—'}
+              </Text>
+              <Text style={[styles.td, styles.tdMedium, { flex: 1.2 }]} numberOfLines={2}>
                 {item.event_type.replace(/_/g, ' ')}
               </Text>
-              <Text style={styles.meta}>
-                {item.circles?.name ?? '—'} · {item.entity_type}
+              <Text style={[styles.td, styles.tdMuted, { flex: 0.9 }]} numberOfLines={1}>
+                {item.entity_type}
               </Text>
-              <Text style={styles.when}>{when(item.created_at)}</Text>
-            </Card>
+            </View>
           )}
         />
+      )}
+
+      {!isAdmin && !loading && (
+        <Text style={styles.privacyNote}>
+          Payment and payout ledger entries only appear for the circle admin (owner). Your own
+          events still show on the circle page.
+        </Text>
       )}
     </Screen>
   );
@@ -151,63 +174,64 @@ const styles = StyleSheet.create({
     fontSize: typography.title,
     fontWeight: '700',
     color: colors.forest,
+    letterSpacing: -0.4,
   },
   sub: {
-    fontSize: typography.caption,
+    fontSize: typography.body,
     color: colors.muted,
-    marginTop: 4,
-    lineHeight: 18,
+    marginTop: 6,
+    lineHeight: 20,
   },
-  badge: {
-    alignSelf: 'flex-start',
+  badgeWrap: {
     marginTop: spacing.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: 999,
-  },
-  badgeAdmin: {
-    backgroundColor: 'rgba(0,168,120,0.14)',
-  },
-  badgePrivacy: {
-    backgroundColor: colors.border,
-  },
-  badgeAdminText: {
-    color: colors.primary,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  badgePrivacyText: {
-    color: colors.forest,
-    fontSize: 12,
-    fontWeight: '600',
+    flexDirection: 'row',
   },
   list: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xxl,
+    paddingBottom: spacing.sm,
+  },
+  tableHead: {
+    flexDirection: 'row',
     gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
-  card: {
-    marginBottom: 0,
-  },
-  event: {
-    fontSize: typography.body,
-    fontWeight: '600',
-    color: colors.forest,
-    textTransform: 'capitalize',
-  },
-  meta: {
+  th: {
     fontSize: typography.caption,
     color: colors.muted,
-    marginTop: 4,
+    fontWeight: '500',
   },
-  when: {
-    fontSize: 12,
+  tr: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+    alignItems: 'flex-start',
+  },
+  td: {
+    fontSize: typography.caption,
+    color: colors.forest,
+  },
+  tdMuted: {
     color: colors.muted,
-    marginTop: 6,
+  },
+  tdMedium: {
+    fontWeight: '600',
   },
   emptyBody: {
     fontSize: typography.caption,
     color: colors.muted,
     lineHeight: 20,
+    textAlign: 'center',
+  },
+  privacyNote: {
+    fontSize: 12,
+    color: colors.muted,
+    lineHeight: 18,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
+    marginTop: spacing.sm,
   },
 });

@@ -1,5 +1,7 @@
 import { requireUser } from '@/lib/dashboard-data';
 
+export { periodKey, shiftPeriod, formatPeriodLabel } from '@/lib/solo-period';
+
 export type SoloLedger = {
   id: string;
   user_id: string;
@@ -75,24 +77,4 @@ export async function getSoloLedgerDetail(ledgerId: string): Promise<{
     contributors: ((contributors ?? []) as SoloContributor[]).filter((c) => !c.archived),
     entries: (entries ?? []) as SoloEntry[],
   };
-}
-
-export function periodKey(d = new Date()): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  return `${y}-${m}`;
-}
-
-export function shiftPeriod(period: string, delta: number): string {
-  const [y, m] = period.split('-').map(Number);
-  const d = new Date(y, m - 1 + delta, 1);
-  return periodKey(d);
-}
-
-export function formatPeriodLabel(period: string): string {
-  const [y, m] = period.split('-').map(Number);
-  return new Date(y, m - 1, 1).toLocaleDateString('en-NG', {
-    month: 'long',
-    year: 'numeric',
-  });
 }

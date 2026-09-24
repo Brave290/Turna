@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/components/toast';
 import { formatCurrency } from '@/lib/utils';
-import { periodKey, shiftPeriod, formatPeriodLabel } from '@/lib/solo-data';
+import { periodKey, shiftPeriod, formatPeriodLabel } from '@/lib/solo-period';
 import { useSoloLedger } from './use-solo-ledger';
 import { ExportShareBar } from './export-share-bar';
 import { AddContributorForm } from './add-contributor-form';

@@ -1,17 +1,41 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
+  Linking,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/Button';
+import { Logo } from '../components/Logo';
 import { colors, radius, spacing, typography } from '../theme';
+
+const REMEMBER_KEY = 'turna_remember_email';
+
+async function readRemember(): Promise<string | null> {
+  try {
+    const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+    return await AsyncStorage.getItem(REMEMBER_KEY);
+  } catch {
+    return null;
+  }
+}
+
+async function writeRemember(email: string | null) {
+  try {
+    const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+    if (email) await AsyncStorage.setItem(REMEMBER_KEY, email);
+    else await AsyncStorage.removeItem(REMEMBER_KEY);
+  } catch {
+    /* ignore */
+  }
+}
 
 type Mode = 'login' | 'signup' | 'verify-pending';
 
@@ -21,19 +45,35 @@ export function AuthScreen({ onSwitch }: { onSwitch?: () => void }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [agreed, setAgreed] = useState(false);
+  const [remember, setRemember] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [info, setInfo] = useState<string | null>(null);
 
+  useEffect(() => {
+    void readRemember().then((saved) => {
+      if (saved) {
+        setEmail(saved);
+        setRemember(true);
+      }
+    });
+  }, []);
+
   async function submit() {
     setError(null);
     setInfo(null);
+    if (!agreed) {
+      setError('You must agree to the Terms and Privacy Policy to continue.');
+      return;
+    }
     if (!email.includes('@') || password.length < 8) {
       setError('Enter a valid email and a password of at least 8 characters.');
       return;
     }
     setBusy(true);
     try {
+      await writeRemember(remember ? email : null);
       (globalThis as { __turna_pending_password?: string }).__turna_pending_password =
         password;
       if (mode === 'login') {
@@ -72,8 +112,8 @@ export function AuthScreen({ onSwitch }: { onSwitch?: () => void }) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <View style={styles.mark}>
-          <Text style={styles.markLetter}>T</Text>
+        <View style={styles.logoWrap}>
+          <Logo variant="on-dark" size={48} />
         </View>
         <Text style={styles.title}>
           {mode === 'login' ? 'Welcome back' : 'Create your account'}
@@ -92,7 +132,7 @@ export function AuthScreen({ onSwitch }: { onSwitch?: () => void }) {
               value={name}
               onChangeText={setName}
               placeholder="Jane Okafor"
-              placeholderTextColor={colors.muted}
+              placeholderTextColor="rgba(255,255,255,0.4)"
               autoCapitalize="words"
             />
           </View>
@@ -105,7 +145,7 @@ export function AuthScreen({ onSwitch }: { onSwitch?: () => void }) {
             value={email}
             onChangeText={setEmail}
             placeholder="you@example.com"
-            placeholderTextColor={colors.muted}
+            placeholderTextColor="rgba(255,255,255,0.4)"
             autoCapitalize="none"
             autoComplete="email"
             keyboardType="email-address"
@@ -113,38 +153,79 @@ export function AuthScreen({ onSwitch }: { onSwitch?: () => void }) {
         </View>
 
         <View style={styles.field}>
-          <Text style={styles.label}>Password</Text>
+          <View style={styles.passwordHead}>
+            <Text style={styles.label}>Password</Text>
+            {mode === 'login' && (
+              <Text
+                style={styles.forgot}
+                onPress={() => setError('Password reset is available on the web at /auth/forgot-password.')}
+              >
+                Forgot password?
+              </Text>
+            )}
+          </View>
           <TextInput
             style={styles.input}
             value={password}
             onChangeText={setPassword}
-            placeholder="At least 8 characters"
-            placeholderTextColor={colors.muted}
+            placeholder={mode === 'login' ? 'Enter your password' : 'At least 8 characters'}
+            placeholderTextColor="rgba(255,255,255,0.4)"
             secureTextEntry
             autoComplete="password"
           />
         </View>
 
+        <View style={styles.checkRow}>
+          <Switch
+            value={remember}
+            onValueChange={setRemember}
+            trackColor={{ false: 'rgba(255,255,255,0.2)', true: colors.primary }}
+            thumbColor={colors.white}
+          />
+          <Text style={styles.checkLabel}>Remember my email</Text>
+        </View>
+
+        <Pressable style={styles.checkRow} onPress={() => setAgreed((v) => !v)}>
+          <View style={[styles.checkbox, agreed && styles.checkboxOn]}>
+            {agreed ? <Text style={styles.checkMark}>✓</Text> : null}
+          </View>
+          <Text style={styles.checkLabel}>
+            I agree to the{' '}
+            <Text style={styles.link} onPress={() => void Linking.openURL('https://turnaapp.vercel.app/terms')}>
+              Terms
+            </Text>{' '}
+            and{' '}
+            <Text style={styles.link} onPress={() => void Linking.openURL('https://turnaapp.vercel.app/privacy')}>
+              Privacy Policy
+            </Text>
+            .
+          </Text>
+        </Pressable>
+
         {error && <Text style={styles.error}>{error}</Text>}
         {info && <Text style={styles.info}>{info}</Text>}
 
         <Button
-          label={mode === 'login' ? 'Sign in' : 'Create account'}
+          label={mode === 'login' ? 'Sign In' : 'Create account'}
           onPress={submit}
           loading={busy}
+          disabled={!agreed}
           style={styles.cta}
         />
 
-        <Button
-          label={mode === 'login' ? 'Need an account? Sign up' : 'Have an account? Sign in'}
-          variant="ghost"
-          onPress={() => {
-            setMode(mode === 'login' ? 'signup' : 'login');
-            setError(null);
-            setInfo(null);
-          }}
-          style={styles.switch}
-        />
+        <Text style={styles.switchText}>
+          {mode === 'login' ? 'No account yet? ' : 'Have an account? '}
+          <Text
+            style={styles.link}
+            onPress={() => {
+              setMode(mode === 'login' ? 'signup' : 'login');
+              setError(null);
+              setInfo(null);
+            }}
+          >
+            {mode === 'login' ? 'Create one' : 'Sign in'}
+          </Text>
+        </Text>
         {onSwitch && (
           <Button label="Continue as guest view" variant="outline" onPress={onSwitch} style={styles.switch} />
         )}
@@ -177,8 +258,8 @@ function VerifyGate({ email, onBack }: { email: string; onBack: () => void }) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <View style={styles.mark}>
-          <Text style={styles.markLetter}>T</Text>
+        <View style={styles.logoWrap}>
+          <Logo variant="on-dark" size={48} />
         </View>
         <Text style={styles.title}>Verify your email</Text>
         <Text style={styles.sub}>Enter the 6-digit code sent to {email}</Text>
@@ -190,7 +271,7 @@ function VerifyGate({ email, onBack }: { email: string; onBack: () => void }) {
             value={code}
             onChangeText={(t) => setCode(t.replace(/\D/g, '').slice(0, 6))}
             placeholder="000000"
-            placeholderTextColor={colors.muted}
+            placeholderTextColor="rgba(255,255,255,0.4)"
             keyboardType="number-pad"
             maxLength={6}
           />
@@ -210,7 +291,6 @@ function VerifyGate({ email, onBack }: { email: string; onBack: () => void }) {
           }}
           style={styles.switch}
         />
-        <ActivityIndicator style={{ display: 'none' }} />
         <Button label="Back" variant="outline" onPress={onBack} style={styles.switch} />
       </ScrollView>
     </KeyboardAvoidingView>
@@ -225,17 +305,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.xl,
   },
-  mark: {
-    width: 64,
-    height: 64,
-    borderRadius: radius.lg,
-    backgroundColor: colors.primary,
+  logoWrap: {
     alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
     marginBottom: spacing.lg,
   },
-  markLetter: { color: colors.white, fontSize: 32, fontWeight: '700' },
   title: {
     color: colors.white,
     fontSize: typography.title,
@@ -243,13 +316,24 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   sub: {
-    color: colors.muted,
+    color: 'rgba(255,255,255,0.75)',
     fontSize: typography.body,
     textAlign: 'center',
     marginTop: spacing.sm,
     marginBottom: spacing.lg,
   },
   field: { marginBottom: spacing.md },
+  passwordHead: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  forgot: {
+    color: colors.primaryLight,
+    fontSize: typography.caption,
+    fontWeight: '600',
+    marginBottom: 6,
+  },
   label: {
     color: 'rgba(255,255,255,0.8)',
     fontSize: typography.caption,
@@ -272,6 +356,40 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
   },
+  checkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  checkLabel: {
+    flex: 1,
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: typography.caption,
+    lineHeight: 20,
+  },
+  checkbox: {
+    width: 18,
+    height: 18,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxOn: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  checkMark: {
+    color: colors.white,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  link: {
+    color: colors.primaryLight,
+    textDecorationLine: 'underline',
+  },
   error: {
     color: '#FF8A8A',
     fontSize: typography.caption,
@@ -279,11 +397,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   info: {
-    color: colors.mint,
+    color: colors.primaryLight,
     fontSize: typography.caption,
     marginBottom: spacing.sm,
     textAlign: 'center',
   },
   cta: { marginTop: spacing.sm },
+  switchText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: typography.body,
+    textAlign: 'center',
+    marginTop: spacing.lg,
+  },
   switch: { marginTop: spacing.sm },
 });

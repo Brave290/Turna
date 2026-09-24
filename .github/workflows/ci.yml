@@ -197,12 +197,18 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          APK=$(find apps/mobile/android/app/build/outputs/apk/debug -name '*.apk' | head -1)
+          # Prefer release-signed APK (Play Trust); fall back to debug only if release missing
+          APK=$(find apps/mobile/android/app/build/outputs/apk/release -name '*.apk' 2>/dev/null | head -1 || true)
+          KIND="release"
+          if [ -z "$APK" ]; then
+            APK=$(find apps/mobile/android/app/build/outputs/apk/debug -name '*.apk' | head -1)
+            KIND="debug"
+          fi
           test -n "$APK"
-          cp "$APK" turna-debug.apk
-          SHA=$(sha256sum turna-debug.apk | awk '{print $1}')
-          SIZE=$(stat -c%s turna-debug.apk)
-          NOTES="Latest debug APK from \`${GITHUB_SHA::7}\` — direct install, no zip.\\n\\nSHA256: \`${SHA}\`\\nSize: $((SIZE / 1024 / 1024)) MB"
+          cp "$APK" turna-latest.apk
+          SHA=$(sha256sum turna-latest.apk | awk '{print $1}')
+          SIZE=$(stat -c%s turna-latest.apk)
+          NOTES="Latest ${KIND} APK from \`${GITHUB_SHA::7}\` — direct install, no zip.\\n\\nSHA256: \`${SHA}\`\\nSize: $((SIZE / 1024 / 1024)) MB"
           gh release view android-latest --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || {
             gh release create android-latest \
               --repo "$GITHUB_REPOSITORY" \
@@ -210,5 +216,5 @@ jobs:
               --title "Turna Android (latest)" \
               --notes "$NOTES"
           }
-          gh release upload android-latest turna-debug.apk --repo "$GITHUB_REPOSITORY" --clobber
+          gh release upload android-latest turna-latest.apk --repo "$GITHUB_REPOSITORY" --clobber
           gh release edit android-latest --repo "$GITHUB_REPOSITORY" --prerelease --title "Turna Android (latest)" --notes "$NOTES"

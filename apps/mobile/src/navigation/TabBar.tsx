@@ -1,15 +1,16 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, radius, spacing, typography } from '../theme';
+import { colors, radius, spacing } from '../theme';
 
 type TabKey = 'home' | 'circles' | 'ledger' | 'solo' | 'profile';
 
+/** Same order/labels as web bottomNav in nav.tsx: Home, Circles, Ledger, Solo, Profile */
 const TABS: { key: TabKey; label: string; glyph: string }[] = [
   { key: 'home', label: 'Home', glyph: '⌂' },
   { key: 'circles', label: 'Circles', glyph: '◎' },
   { key: 'ledger', label: 'Ledger', glyph: '☰' },
-  { key: 'solo', label: 'Solo', glyph: '▦' },
-  { key: 'profile', label: 'Me', glyph: '●' },
+  { key: 'solo', label: 'Solo', glyph: '✎' },
+  { key: 'profile', label: 'Profile', glyph: '●' },
 ];
 
 export function TabBar({
@@ -29,8 +30,9 @@ export function TabBar({
             accessibilityRole="tab"
             accessibilityState={{ selected: on }}
             onPress={() => onChange(t.key)}
-            style={[styles.tab, on && styles.tabOn]}
+            style={styles.tab}
           >
+            {on && <View style={styles.indicator} accessibilityElementsHidden />}
             <Text style={[styles.glyph, on && styles.glyphOn]}>{t.glyph}</Text>
             <Text style={[styles.label, on && styles.labelOn]}>{t.label}</Text>
           </Pressable>
@@ -53,11 +55,14 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingVertical: spacing.sm,
-    borderRadius: radius.sm,
-    marginHorizontal: 4,
   },
-  tabOn: {
-    backgroundColor: 'rgba(0,168,120,0.1)',
+  indicator: {
+    position: 'absolute',
+    top: 4,
+    height: 4,
+    width: 32,
+    borderRadius: 2,
+    backgroundColor: colors.primary,
   },
   glyph: {
     fontSize: 16,
@@ -66,6 +71,7 @@ const styles = StyleSheet.create({
   },
   glyphOn: {
     color: colors.primary,
+    fontWeight: '700',
   },
   label: {
     fontSize: 11,
@@ -75,6 +81,6 @@ const styles = StyleSheet.create({
   },
   labelOn: {
     color: colors.primary,
-    fontWeight: '700',
+    fontWeight: '600',
   },
 });

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   FlatList,
   Pressable,
   RefreshControl,
@@ -16,6 +17,7 @@ import { colors, spacing, typography } from '../theme';
 import {
   getSoloLedgers,
   putSoloLedger,
+  deleteSoloLedger,
   pullSoloFromServer,
   pushSoloToServer,
   offlineUuid,
@@ -23,7 +25,19 @@ import {
 } from '../lib/solo-store';
 import { supabase } from '../lib/supabase';
 
-export function SoloLedgersScreen({ onOpen }: { onOpen: (id: string) => void }) {
+function money(n: number, currency = 'NGN') {
+  try {
+    return new Intl.NumberFormat('en-NG', {
+      style: 'currency',
+      currency,
+      maximumFractionDigits: 0,
+    }).format(n / 100);
+  } catch {
+    return `₦${Math.round(n / 100)}`;
+  }
+}
+
+export function SoloLedgersScreen({ onOpen, onPush }: { onOpen: (id: string) => void; onPush?: (screen: any) => void } = {}) {
   const { user } = useAuth();
   const [rows, setRows] = useState<SoloLedger[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,6 +45,7 @@ export function SoloLedgersScreen({ onOpen }: { onOpen: (id: string) => void }) 
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('5000');
+  const [description, setDescription] = useState('');
 
   const load = useCallback(async () => {
     const local = await getSoloLedgers();
@@ -54,11 +69,13 @@ export function SoloLedgersScreen({ onOpen }: { onOpen: (id: string) => void }) 
   async function create() {
     if (!name.trim() || !user) return;
     const id = offlineUuid();
+    const defaultAmount = Math.round(Number(amount.replace(/[^\d.]/g, '') || '0') * 100);
     await putSoloLedger({
       id,
       name: name.trim(),
       currency: 'NGN',
-      default_amount: Math.round(Number(amount.replace(/[^\d.]/g, '') || '0') * 100),
+      default_amount: defaultAmount,
+      description: description.trim() || null,
       contributors: [],
       entries: [],
       pendingEntries: [],
@@ -71,7 +88,8 @@ export function SoloLedgersScreen({ onOpen }: { onOpen: (id: string) => void }) 
         user_id: user.id,
         name: name.trim(),
         currency: 'NGN',
-        default_amount: Math.round(Number(amount.replace(/[^\d.]/g, '') || '0') * 100),
+        default_amount: defaultAmount,
+        description: description.trim() || null,
         local_updated_at: new Date().toISOString(),
       });
       if (error) throw error;
@@ -80,37 +98,49 @@ export function SoloLedgersScreen({ onOpen }: { onOpen: (id: string) => void }) 
     }
     setName('');
     setAmount('5000');
+    setDescription('');
     setCreating(false);
     await load();
     onOpen(id);
   }
 
+  async function remove(id: string, ledgerName: string) {
+    await deleteSoloLedger(id);
+    await load();
+    void ledgerName;
+  }
+
   return (
     <Screen tone="cream">
       <View style={styles.header}>
-        <Text style={styles.title}>Solo Ledger</Text>
-        <Text style={styles.sub}>
-          Personal ajo tracker — offline first, syncs when online.
-        </Text>
+        <View style={styles.headRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.title}>Solo Ledger</Text>
+            <Text style={styles.sub}>
+              Personal ajo tracker — no circle required. Works offline; syncs when you're back
+              online.
+            </Text>
+          </View>
+        </View>
         <Button
-          label={creating ? 'Close' : 'New ledger'}
+          label={creating ? 'Cancel' : 'New ledger'}
           variant={creating ? 'outline' : 'primary'}
           onPress={() => setCreating((v) => !v)}
-          style={{ marginTop: spacing.sm, alignSelf: 'flex-start' }}
+          style={{ marginTop: spacing.md, alignSelf: 'flex-start' }}
         />
       </View>
 
       {creating && (
-        <Card style={{ marginHorizontal: spacing.lg }}>
-          <Text style={styles.label}>Ledger name</Text>
+        <Card style={[styles.createCard, { borderColor: colors.primary }]}>
+          <Text style={styles.label}>Ledger name *</Text>
           <TextInput
             style={styles.input}
             value={name}
             onChangeText={setName}
-            placeholder="Shop ajo"
+            placeholder="Shop ajo / Family savings"
             placeholderTextColor={colors.muted}
           />
-          <Text style={styles.label}>Default monthly amount (₦)</Text>
+          <Text style={styles.label}>Default monthly amount</Text>
           <TextInput
             style={styles.input}
             value={amount}
@@ -119,12 +149,23 @@ export function SoloLedgersScreen({ onOpen }: { onOpen: (id: string) => void }) 
             placeholder="5000"
             placeholderTextColor={colors.muted}
           />
-          <Button label="Create" onPress={create} disabled={!name.trim()} style={{ marginTop: spacing.sm }} />
+          <Text style={styles.label}>Note (optional)</Text>
+          <TextInput
+            style={styles.input}
+            value={description}
+            onChangeText={setDescription}
+            placeholder="Collects every month on the 5th"
+            placeholderTextColor={colors.muted}
+          />
+          <View style={styles.createActions}>
+            <Button label="Create ledger" onPress={create} disabled={!name.trim()} style={{ flex: 1 }} />
+            <Button label="Cancel" variant="ghost" onPress={() => setCreating(false)} style={{ flex: 1 }} />
+          </View>
         </Card>
       )}
 
       {loading ? (
-        <Text style={{ color: colors.muted, paddingHorizontal: spacing.lg }}>Loading…</Text>
+        <ActivityIndicator color={colors.primary} size="large" style={{ marginTop: spacing.xl }} />
       ) : (
         <FlatList
           data={rows}
@@ -141,41 +182,63 @@ export function SoloLedgersScreen({ onOpen }: { onOpen: (id: string) => void }) 
               tintColor={colors.primary}
             />
           }
+          ListFooterComponent={
+            <Text style={styles.footNote}>
+              Different from circle Ledger — Solo Ledger is your private spreadsheet for people
+              who contribute to you directly.
+            </Text>
+          }
           ListEmptyComponent={
-            <Card>
-              <Text style={styles.emptyTitle}>No ledgers yet</Text>
+            <Card style={styles.emptyCard}>
+              <Text style={styles.emptyTitle}>No solo ledgers yet</Text>
               <Text style={styles.emptyBody}>
-                Create one to track contributors and monthly paid/unpaid status without a
-                circle.
+                Track contributors and monthly payments without creating a circle.
               </Text>
+              <Button
+                label="Create your first ledger"
+                onPress={() => setCreating(true)}
+                style={{ marginTop: spacing.md, alignSelf: 'stretch' }}
+              />
             </Card>
           }
           renderItem={({ item }) => (
-            <Pressable onPress={() => onOpen(item.id)}>
-              <Card style={styles.card}>
-                <View style={styles.row}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.name}>{item.name}</Text>
-                    <Text style={styles.meta}>
-                      {item.contributors.length} people · updated{' '}
-                      {new Date(item.updated_at).toLocaleDateString()}
-                    </Text>
-                  </View>
-                  <Badge
-                    label={
-                      item.pendingEntries.length + item.pendingContributors.length > 0
-                        ? 'pending'
-                        : 'synced'
-                    }
-                    tone={
-                      item.pendingEntries.length + item.pendingContributors.length > 0
-                        ? 'pending'
-                        : 'active'
-                    }
+            <Card style={styles.card}>
+              <Pressable onPress={() => onOpen(item.id)}>
+                <Text style={styles.name}>{item.name}</Text>
+                {item.description ? (
+                  <Text style={styles.desc} numberOfLines={2}>
+                    {item.description}
+                  </Text>
+                ) : null}
+                <Text style={styles.meta}>
+                  Default {money(item.default_amount, item.currency)} · updated{' '}
+                  {new Date(item.updated_at).toLocaleDateString('en-NG')}
+                </Text>
+              </Pressable>
+              <View style={styles.cardActions}>
+                <Badge
+                  label={
+                    item.pendingEntries.length + item.pendingContributors.length > 0
+                      ? 'pending'
+                      : 'synced'
+                  }
+                  tone={
+                    item.pendingEntries.length + item.pendingContributors.length > 0
+                      ? 'pending'
+                      : 'active'
+                  }
+                />
+                <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                  <Button label="Open" variant="outline" onPress={() => onOpen(item.id)} style={styles.smallBtn} />
+                  <Button
+                    label="Delete"
+                    variant="ghost"
+                    onPress={() => void remove(item.id, item.name)}
+                    style={styles.smallBtn}
                   />
                 </View>
-              </Card>
-            </Pressable>
+              </View>
+            </Card>
           )}
         />
       )}
@@ -189,20 +252,28 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     marginBottom: spacing.sm,
   },
+  headRow: {
+    flexDirection: 'row',
+  },
   title: {
     fontSize: typography.title,
     fontWeight: '700',
     color: colors.forest,
+    letterSpacing: -0.4,
   },
   sub: {
-    fontSize: typography.caption,
+    fontSize: typography.body,
     color: colors.muted,
-    marginTop: 4,
-    lineHeight: 18,
+    marginTop: 6,
+    lineHeight: 20,
+  },
+  createCard: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
   },
   label: {
     fontSize: typography.caption,
-    fontWeight: '600',
+    fontWeight: '500',
     color: colors.muted,
     marginBottom: 6,
     marginTop: spacing.sm,
@@ -217,36 +288,66 @@ const styles = StyleSheet.create({
     fontSize: typography.body,
     backgroundColor: colors.white,
   },
+  createActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
   list: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xxl,
     gap: spacing.sm,
   },
   card: { marginBottom: 0 },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
   name: {
     fontSize: typography.body,
     fontWeight: '600',
     color: colors.forest,
   },
+  desc: {
+    fontSize: typography.caption,
+    color: colors.muted,
+    marginTop: 4,
+    lineHeight: 18,
+  },
   meta: {
     fontSize: typography.caption,
     color: colors.muted,
-    marginTop: 2,
+    marginTop: 6,
+  },
+  cardActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacing.md,
+    gap: spacing.sm,
+  },
+  smallBtn: {
+    minHeight: 36,
+    paddingHorizontal: spacing.md,
+  },
+  emptyCard: {
+    alignItems: 'stretch',
+    paddingVertical: spacing.xl,
   },
   emptyTitle: {
-    fontSize: typography.body,
+    fontSize: typography.heading,
     fontWeight: '600',
     color: colors.forest,
+    textAlign: 'center',
   },
   emptyBody: {
-    fontSize: typography.caption,
+    fontSize: typography.body,
     color: colors.muted,
-    marginTop: 6,
-    lineHeight: 20,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+    lineHeight: 22,
+  },
+  footNote: {
+    fontSize: 12,
+    color: colors.muted,
+    lineHeight: 18,
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.xs,
   },
 });

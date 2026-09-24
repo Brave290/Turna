@@ -80,6 +80,19 @@ export async function putSoloLedger(ledger: SoloLedger) {
   await writeAll(map);
 }
 
+export async function deleteSoloLedger(id: string) {
+  const map = await readAll();
+  delete map[id];
+  await writeAll(map);
+  try {
+    await import('./supabase').then(({ supabase }) =>
+      supabase.from('solo_ledgers').delete().eq('id', id)
+    );
+  } catch {
+    /* offline — local delete is enough */
+  }
+}
+
 export async function queueEntry(ledgerId: string, entry: SoloEntry) {
   const map = await readAll();
   const L = map[ledgerId];

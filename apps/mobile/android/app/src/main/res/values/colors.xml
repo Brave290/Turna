@@ -1,17 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="primary">#00A878</color>
-    <color name="primary_dark">#06382A</color>
-    <color name="primary_light">#35D6A0</color>
-    <color name="background">#03251B</color>
-    <color name="surface">#06382A</color>
-    <color name="text_primary">#F7F7F0</color>
-    <color name="text_secondary">#8D9B95</color>
-    <color name="text_on_primary">#03251B</color>
-    <color name="error">#D94A4A</color>
-    <color name="success">#00A878</color>
-    <color name="warning">#D9A441</color>
-    <color name="divider">#DDE5E0</color>
-    <color name="cream">#F7F7F0</color>
-    <color name="forest">#03251B</color>
+    <!-- Match web Rebrand v2 (globals.css / tailwind.config.ts) -->
+    <color name="primary">#007A65</color>
+    <color name="primary_dark">#006B59</color>
+    <color name="primary_light">#7CE8D7</color>
+    <color name="background">#F4F7FB</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="text_primary">#0A1628</color>
+    <color name="text_secondary">#4A5D73</color>
+    <color name="text_on_primary">#FFFFFF</color>
+    <color name="error">#B4233B</color>
+    <color name="success">#007A65</color>
+    <color name="warning">#8A5A00</color>
+    <color name="divider">#D0DBE8</color>
+    <color name="cream">#F4F7FB</color>
+    <color name="forest">#0A1628</color>
 </resources>

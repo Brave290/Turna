@@ -257,7 +257,7 @@ export function SoloLedgerDetailScreen({
   return (
     <Screen tone="cream">
       <View style={styles.header}>
-        <Button label="← Ledgers" variant="ghost" onPress={onBack} style={{ alignSelf: 'flex-start' }} />
+        <Button label="← All solo ledgers" variant="ghost" onPress={onBack} style={{ alignSelf: 'flex-start' }} />
         <View style={styles.periodRow}>
           <Button label="‹" variant="outline" onPress={() => setPeriod(shiftPeriod(period, -1))} style={styles.periodBtn} />
           <View style={{ alignItems: 'center' }}>
@@ -269,6 +269,11 @@ export function SoloLedgerDetailScreen({
           <Button label="›" variant="outline" onPress={() => setPeriod(shiftPeriod(period, 1))} style={styles.periodBtn} />
         </View>
         <Text style={styles.ledgerName}>{ledger.name}</Text>
+        <Badge label="Solo" tone="active" style={{ marginTop: spacing.sm, alignSelf: 'flex-start' }} />
+        {ledger.description ? (
+          <Text style={styles.meta}>{ledger.description}</Text>
+        ) : null}
+        <Text style={styles.periodHint}>Current view: {formatPeriodLabel(period)}</Text>
         <View style={styles.stats}>
           <Stat label="Collected" value={money(stats.collected)} />
           <View style={{ width: spacing.sm }} />
@@ -420,6 +425,11 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: '600',
     marginTop: 2,
+  },
+  periodHint: {
+    fontSize: 12,
+    color: colors.muted,
+    marginTop: 6,
   },
   stats: {
     flexDirection: 'row',
