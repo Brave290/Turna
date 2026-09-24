@@ -1,7 +1,7 @@
 # Project State — Turna
 
 **Last Updated**: 2026-09-24
-**Current Phase**: Phase 41 — Auth Terms/Remember, Profile Avatar + OTP Password, Circle Duration Modes, Full Release ZIP
+**Current Phase**: Phase 42 — KYC UI, Reminders/Autopay/Digest Crons, Payments History, Admin Ops, Insights, Payout Receipt Notify
 **Overall Status**: 🟡 In Progress
 
 ## Production
@@ -70,7 +70,7 @@
 | 39. UI/UX Polish (Theme, Modal, Join, Settings) | ✅ Complete | 2026-09-23 | 2026-09-23 | App-wide theme, notification modal, join accept page, branded select, no Supabase UI branding |
 | 40. Invite Auto-Join + Circle Delete + Notifications | ✅ Complete | 2026-09-23 | 2026-09-23 | Token tracked through signup/verify/login; auto-join on return; owner delete circle; bell events; join RLS case fix |
 | 41. Auth terms + remember, avatar, OTP password, circle duration, release ZIP | ✅ Complete | 2026-09-24 | 2026-09-24 | Login/signup terms gate + remember email; profile avatar upload; OTP password change; month-range circle creation + payout/payment modes; full release ZIP on private + Turna-Downloads; 4 migrations applied |
-| 42. KYC UI, reminders cron, autopay charge, payments history, admin dashboard, digests, insights, payout receipt notify | ⏳ Pending | — | — | Server helpers exist (submitKyc, sendDueReminders); UI/routes not wired yet |
+| 42. KYC UI, reminders cron, autopay charge, payments history, admin dashboard, digests, insights, payout receipt notify | ✅ Complete | 2026-09-24 | 2026-09-24 | KYC form on settings; `/api/cron/{reminders,autopay,digest}` + vercel crons; payments history nav page; admin ops (`ADMIN_EMAILS`); on-time % + next payout insights; webhook saves Paystack auth + payout receipt notify/email |
 
 ---
 

@@ -468,3 +468,26 @@ Each session should append:
 3. Live: check Gmail inbox vs Spam for OTP + invite
 4. Mobile CI failure triage if needed
 
+### Session 2026-09-24 (Phase 42 — remaining features)
+
+**Goal**: Wire KYC UI, cron reminders/autopay/digest, payments history, admin ops dashboard, money emails, insights stats, payout receipt notify.
+
+**Completed**:
+- Migration `20260924140000_autopay_authorizations.sql` applied: `payment_authorizations` (saved Paystack reusable auth) + `autopay_charges` (idempotent cycle×user)
+- `chargeAuthorization` in `paystack.ts` (`/transaction/charge_authorization`)
+- Webhook: saves `authorization` on charge.success; on `transfer.success`/payout marks `payouts.received`, `cycle payout_confirmed`, ledger `PAYOUT_RECEIPT_CONFIRMED`, in-app + `payoutReceipt` email with `/receipt/[ref]` link; contribution success also emails `moneyEvent`
+- Crons (both vercel.json): `/api/cron/reminders` 09:00, `/api/cron/autopay` 06:00, `/api/cron/digest` 20:00 (optional `CRON_SECRET` Bearer)
+- `KycForm` + `KycStatusBadge` on settings; uses existing `submitKyc`
+- `/dashboard/payments` history (own + owned-circle rows, receipt links, fees) + nav item
+- `/dashboard/admin` gated by `ADMIN_EMAILS` env (comma list): KYC queue, volume, users, circles, members
+- Insights: on-time % (confirmed vs due_date for memberships) + next payout to you
+- Email templates: `moneyEvent`, `moneyDigest`, `payoutReceipt`
+- Digest cron groups last-24h success payments per user (no per-event spam)
+
+**Env needed (Vercel)**: `ADMIN_EMAILS` (your login email), optional `CRON_SECRET`. `PAYSTACK_SECRET_KEY` already required for autopay/webhook.
+
+**Next Session**:
+1. Commit + push Phase 42; verify Vercel deploy + crons listed in dashboard
+2. Set `ADMIN_EMAILS` on Vercel → open `/dashboard/admin`
+3. Next: mobile app fix (user-stated next step after Phase 42)
+

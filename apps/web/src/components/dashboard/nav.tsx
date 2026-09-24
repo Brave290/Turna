@@ -14,6 +14,7 @@ import {
   Bell,
   Settings,
   LogOut,
+  CreditCard,
 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { signOut } from "@/lib/auth-actions";
@@ -27,6 +28,7 @@ export const SWIPE_ROUTES = [
   "/dashboard/circles",
   "/dashboard/contributions",
   "/dashboard/payouts",
+  "/dashboard/payments",
   "/dashboard/ledger",
   "/dashboard/insights",
   "/dashboard/notifications",
@@ -38,6 +40,7 @@ const navItems = [
   { href: "/dashboard/circles", label: "Circles", icon: Users },
   { href: "/dashboard/contributions", label: "Contributions", icon: PiggyBank },
   { href: "/dashboard/payouts", label: "Payouts", icon: ArrowLeftRight },
+  { href: "/dashboard/payments", label: "Payments", icon: CreditCard },
   { href: "/dashboard/ledger", label: "Ledger", icon: BookOpen },
   { href: "/dashboard/insights", label: "Insights", icon: BarChart3 },
   { href: "/dashboard/notifications", label: "Notifications", icon: Bell },

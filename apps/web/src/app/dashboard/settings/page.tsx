@@ -3,10 +3,11 @@ import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { formatDate } from '@/lib/utils';
 import { ProfileForm } from '@/components/dashboard/profile-form';
 import { BankAccountForm } from '@/components/dashboard/bank-account-form';
+import { KycForm, KycStatusBadge } from '@/components/dashboard/kyc-form';
 import { DeleteAccountPanel } from '@/components/dashboard/delete-account';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { signOut } from '@/lib/auth-actions';
-import { User, Shield, Palette, Activity, Landmark } from 'lucide-react';
+import { User, Shield, Palette, Activity, Landmark, BadgeCheck } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,6 +20,12 @@ export default async function SettingsPage() {
     .select('id, bank_code, bank_name, account_number, account_name, is_default')
     .eq('user_id', user.id)
     .eq('is_default', true)
+    .maybeSingle();
+
+  const { data: kyc } = await supabase
+    .from('kyc_records')
+    .select('status, document_type, document_number, full_legal_name, rejection_reason')
+    .eq('user_id', user.id)
     .maybeSingle();
 
   return (
@@ -73,6 +80,32 @@ export default async function SettingsPage() {
                   account_number: bank.account_number,
                   account_name: bank.account_name,
                   is_default: bank.is_default,
+                }
+              : null
+          }
+        />
+      </section>
+
+      <section className="card">
+        <div className="flex items-center justify-between gap-3 mb-5">
+          <div className="flex items-center gap-2">
+            <BadgeCheck className="w-4 h-4 text-primary" />
+            <h2 className="font-semibold text-forest">Identity (KYC)</h2>
+          </div>
+          <KycStatusBadge status={kyc?.status ?? null} />
+        </div>
+        <p className="text-sm text-muted mb-5">
+          Verify your identity with NIN, BVN, or an ID card before large payouts.
+        </p>
+        <KycForm
+          initial={
+            kyc
+              ? {
+                  status: kyc.status,
+                  document_type: kyc.document_type,
+                  document_number: kyc.document_number,
+                  full_legal_name: kyc.full_legal_name,
+                  rejection_reason: kyc.rejection_reason,
                 }
               : null
           }

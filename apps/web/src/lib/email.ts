@@ -217,4 +217,84 @@ export const emailTemplates = {
       text: `Welcome to ${APP_NAME}, ${displayName}! Your account is ready.`,
     };
   },
+
+  moneyEvent(
+    email: string,
+    title: string,
+    amount: string,
+    circleName: string,
+    detail?: string
+  ) {
+    return {
+      subject: `${title} — ${amount} · ${circleName}`,
+      html: shell(title, `
+        <h1 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#0A1628;">${title}</h1>
+        <p style="margin:0 0 4px;font-size:15px;color:#6B7C93;line-height:1.6;">
+          Circle: <strong style="color:#0A1628;">${circleName}</strong>
+        </p>
+        <p style="margin:16px 0;font-size:28px;font-weight:700;color:#00C2A8;">${amount}</p>
+        ${detail ? `<p style="margin:0 0 20px;font-size:13px;color:#6B7C93;line-height:1.5;">${detail}</p>` : ''}
+        ${button(`${BASE_URL}/dashboard/payments`, 'View Payments')}
+      `),
+      text: `${title}: ${amount} for ${circleName}${detail ? `. ${detail}` : ''}`,
+    };
+  },
+
+  moneyDigest(email: string, events: string[], displayName?: string) {
+    const items = events
+      .map(
+        (e) =>
+          `<li style="padding:10px 0;border-bottom:1px solid #E8EEF5;font-size:14px;color:#0A1628;">${e}</li>`
+      )
+      .join('');
+    const day = new Date().toLocaleDateString('en-NG', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    return {
+      subject: `Your ${APP_NAME} activity digest — ${events.length} money event${events.length === 1 ? '' : 's'}`,
+      html: shell('Money activity digest', `
+        <h1 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#0A1628;">Activity digest</h1>
+        <p style="margin:0 0 4px;font-size:15px;color:#6B7C93;line-height:1.6;">
+          Hi ${displayName ?? 'there'}, here's what moved on ${day}:
+        </p>
+        <ul style="margin:20px 0;padding:0;list-style:none;">
+          ${items}
+        </ul>
+        ${button(`${BASE_URL}/dashboard/payments`, 'Open Payments')}
+        <p style="margin:24px 0 0;font-size:13px;color:#6B7C93;line-height:1.5;">
+          You get one digest per day when money moves — not one email per swipe.
+        </p>
+      `),
+      text: `Activity digest (${day}):\n\n${events.join('\n')}`,
+    };
+  },
+
+  payoutReceipt(
+    email: string,
+    circleName: string,
+    amount: string,
+    reference: string,
+    bankName?: string
+  ) {
+    const receiptUrl = `${BASE_URL}/receipt/${encodeURIComponent(reference)}`;
+    return {
+      subject: `Payout received — ${amount} · ${circleName}`,
+      html: shell('Payout received', `
+        <h1 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#0A1628;">Payout received</h1>
+        <p style="margin:0 0 4px;font-size:15px;color:#6B7C93;line-height:1.6;">
+          Your payout for <strong style="color:#0A1628;">${circleName}</strong>
+          has been delivered${bankName ? ` to ${bankName}` : ' to your bank account'}.
+        </p>
+        <p style="margin:16px 0;font-size:28px;font-weight:700;color:#00C2A8;">${amount}</p>
+        <p style="margin:0 0 20px;font-size:13px;color:#6B7C93;line-height:1.5;">
+          Reference: <code style="font-family:monospace;color:#0A1628;">${reference}</code>
+        </p>
+        ${button(receiptUrl, 'View Receipt')}
+      `),
+      text: `Payout of ${amount} received for ${circleName}.\n\nReceipt: ${receiptUrl}\nReference: ${reference}`,
+    };
+  },
 };

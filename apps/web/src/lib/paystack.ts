@@ -173,6 +173,41 @@ export async function initTransfer(opts: {
   });
 }
 
+/** Charge a saved authorization (autopay / recurring). */
+export type PaystackChargeData = {
+  reference: string;
+  status: string;
+  amount: number;
+  authorization?: {
+    authorization_code?: string;
+    channel?: string | null;
+    last4?: string | null;
+    bank?: string | null;
+    reusable?: boolean;
+  };
+  customer?: { email?: string };
+};
+
+export async function chargeAuthorization(opts: {
+  authorizationCode: string;
+  email: string;
+  amountKobo: number;
+  reference: string;
+  metadata?: Record<string, unknown>;
+}): Promise<PaystackChargeData> {
+  return paystackFetch<PaystackChargeData>('/transaction/charge_authorization', {
+    method: 'POST',
+    body: JSON.stringify({
+      authorization_code: opts.authorizationCode,
+      email: opts.email,
+      amount: opts.amountKobo,
+      currency: 'NGN',
+      reference: opts.reference,
+      metadata: opts.metadata ?? {},
+    }),
+  });
+}
+
 /** Verify webhook signature (x-paystack-signature = HMAC SHA512 of body). */
 export async function verifyWebhookSignature(
   body: string,
