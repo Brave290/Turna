@@ -102,6 +102,7 @@ android {
     packagingOptions {
         pickFirst "**/*.so"
         pickFirst "META-INF/MANIFEST.MF"
+        pickFirst "**/coroutines.pro"
         pickFirst "META-INF/com.android.tools/proguard/coroutines.pro"
         pickFirst "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
         pickFirst "META-INF/*.kotlin_module"
