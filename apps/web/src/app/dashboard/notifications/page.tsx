@@ -1,22 +1,36 @@
 import { getDashboardData } from '@/lib/dashboard-data';
 import { formatRelativeTime } from '@/lib/utils';
 import { StatusBadge } from '@/components/dashboard/status-badge';
+import { MarkAllReadButton } from '@/components/dashboard/mark-all-read';
 import { Bell } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
 export default async function NotificationsPage() {
   const { notifications } = await getDashboardData();
+  const unreadCount = notifications.filter((n) => n.status !== 'read').length;
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="font-display text-3xl font-bold tracking-tight text-forest">
-          Notifications
-        </h1>
-        <p className="text-muted mt-1">
-          Invites, contribution reminders, and payout updates.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div>
+          <h1 className="font-display text-3xl font-bold tracking-tight text-forest">
+            Notifications
+          </h1>
+          <p className="text-muted mt-1">
+            Invites, contribution reminders, and payout updates.
+          </p>
+        </div>
+        {unreadCount > 0 && (
+          <MarkAllReadButton
+            className="shrink-0"
+            onDone={() => {
+              if (typeof window !== 'undefined') {
+                window.location.reload();
+              }
+            }}
+          />
+        )}
       </div>
 
       {notifications.length === 0 ? (

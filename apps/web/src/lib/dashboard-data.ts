@@ -66,6 +66,11 @@ async function loadDashboardData() {
         (user.user_metadata?.display_name as string) ||
         (user.email ?? 'Member').split('@')[0],
       avatar_url: (user.user_metadata?.avatar_url as string | null) ?? null,
+      date_of_birth: null,
+      phone: null,
+      bio: null,
+      city: null,
+      country: 'NG',
       created_at: user.created_at,
       updated_at: user.updated_at ?? user.created_at,
     } satisfies Profile);
@@ -142,39 +147,69 @@ async function loadDashboardData() {
       pendingPayouts,
       totalContributed,
       unreadNotifications: notifications.filter((n) => n.status !== 'read').length,
+      wallets: await loadWallets(supabase, user.id),
     },
   };
+}
+
+async function loadWallets(
+  supabase: ReturnType<typeof createServerSupabaseClient>,
+  userId: string
+) {
+  try {
+    const { data } = await supabase
+      .from('wallet_balances')
+      .select('circle_id, paid_amount, expected_amount, circles(name, currency)')
+      .eq('user_id', userId)
+      .limit(50);
+    return (data ?? []) as unknown as {
+      circle_id: string;
+      paid_amount: number;
+      expected_amount: number;
+      circles: { name: string; currency: string } | null;
+    }[];
+  } catch {
+    return [];
+  }
 }
 
 export async function getCircleDetail(circleId: string) {
   const { supabase, user } = await requireUser();
 
-  const [circleRes, membersRes, cyclesRes, invitesRes, ledgerRes] = await Promise.all([
-    supabase.from('circles').select('*').eq('id', circleId).maybeSingle(),
-    supabase
-      .from('circle_members')
-      .select('*, profiles(id, display_name, email, avatar_url)')
-      .eq('circle_id', circleId)
-      .order('payout_position', { ascending: true }),
-    supabase
-      .from('contribution_cycles')
-      .select('*')
-      .eq('circle_id', circleId)
-      .order('cycle_number', { ascending: false })
-      .limit(50),
-    supabase
-      .from('invitations')
-      .select('*')
-      .eq('circle_id', circleId)
-      .order('created_at', { ascending: false })
-      .limit(50),
-    supabase
-      .from('ledger_events')
-      .select('*')
-      .eq('circle_id', circleId)
-      .order('created_at', { ascending: false })
-      .limit(50),
-  ]);
+  const [circleRes, membersRes, cyclesRes, invitesRes, ledgerRes, swapsRes, walletsRes] =
+    await Promise.all([
+      supabase.from('circles').select('*').eq('id', circleId).maybeSingle(),
+      supabase
+        .from('circle_members')
+        .select('*, profiles(id, display_name, email, avatar_url)')
+        .eq('circle_id', circleId)
+        .order('payout_position', { ascending: true }),
+      supabase
+        .from('contribution_cycles')
+        .select('*')
+        .eq('circle_id', circleId)
+        .order('cycle_number', { ascending: false })
+        .limit(50),
+      supabase
+        .from('invitations')
+        .select('*')
+        .eq('circle_id', circleId)
+        .order('created_at', { ascending: false })
+        .limit(50),
+      supabase
+        .from('ledger_events')
+        .select('*')
+        .eq('circle_id', circleId)
+        .order('created_at', { ascending: false })
+        .limit(50),
+      supabase
+        .from('payout_swap_requests')
+        .select('*')
+        .eq('circle_id', circleId)
+        .order('created_at', { ascending: false })
+        .limit(50),
+      supabase.from('wallet_balances').select('*').eq('circle_id', circleId),
+    ]);
 
   const circle = circleRes.data as Circle | null;
   if (!circle) {
@@ -195,6 +230,14 @@ export async function getCircleDetail(circleId: string) {
   const cycleIds = ((cyclesRes.data ?? []) as ContributionCycle[]).map((c) => c.id);
   let contributions: Contribution[] = [];
   let payouts: Payout[] = [];
+  let myContribution: Contribution | null = null;
+  let collectingCycle: ContributionCycle | null = null;
+
+  const cycles = (cyclesRes.data ?? []) as ContributionCycle[];
+  collectingCycle =
+    cycles.find((c) => c.status === 'collecting') ??
+    cycles.find((c) => c.status === 'pending') ??
+    null;
 
   if (cycleIds.length > 0) {
     const [cRes, pRes] = await Promise.all([
@@ -213,19 +256,45 @@ export async function getCircleDetail(circleId: string) {
     ]);
     contributions = (cRes.data ?? []) as unknown as Contribution[];
     payouts = (pRes.data ?? []) as unknown as Payout[];
+
+    const myMember = members.find((m) => m.user_id === user.id);
+    if (myMember && collectingCycle) {
+      myContribution =
+        contributions.find(
+          (c) =>
+            c.cycle_id === collectingCycle.id && c.member_id === myMember.id
+        ) ?? null;
+    }
   }
 
   return {
     user,
     circle,
     members,
-    cycles: (cyclesRes.data ?? []) as ContributionCycle[],
+    cycles,
     invitations: (invitesRes.data ?? []) as Invitation[],
     ledger: (ledgerRes.data ?? []) as LedgerEvent[],
     contributions,
     payouts,
     isOwner,
     isMember,
+    myContribution,
+    collectingCycle,
+    swaps: (swapsRes.data ?? []) as {
+      id: string;
+      circle_id: string;
+      requester_member_id: string;
+      target_member_id: string;
+      status: string;
+      reason: string | null;
+      created_at: string;
+    }[],
+    wallets: (walletsRes.data ?? []) as {
+      user_id: string;
+      circle_id: string;
+      paid_amount: number;
+      expected_amount: number;
+    }[],
   };
 }
 

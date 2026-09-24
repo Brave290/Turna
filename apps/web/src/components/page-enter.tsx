@@ -1,19 +1,36 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 
+/**
+ * Instant page enter — pure CSS opacity only (no transform, no filter).
+ * Blur/filter force expensive compositing and made navigation feel laggy.
+ * Also avoids creating a containing block for position:fixed dialogs.
+ */
 export function PageEnter({ children, className }: { children: ReactNode; className?: string }) {
-  const reduce = useReducedMotion();
-  if (reduce) return <div className={className}>{children}</div>;
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    // Kick animation on mount without blocking paint
+    el.style.opacity = "1";
+    return () => {
+      /* nothing */
+    };
+  }, []);
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12, filter: "blur(6px)" }}
-      animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-      transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+    <div
+      ref={ref}
       className={className}
+      style={{
+        opacity: 0,
+        animation: "page-fade-in 120ms ease-out forwards",
+        willChange: "opacity",
+      }}
     >
       {children}
-    </motion.div>
+    </div>
   );
 }

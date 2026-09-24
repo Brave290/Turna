@@ -7,14 +7,62 @@ import {
   BookOpen,
   MailPlus,
   CalendarDays,
+  Percent,
+  EyeOff,
+  Send,
 } from 'lucide-react';
 import { getCircleDetail } from '@/lib/dashboard-data';
 import { formatCurrency, formatDate, getInitials } from '@/lib/utils';
 import { StatusBadge } from '@/components/dashboard/status-badge';
 import { InviteForm } from '@/components/dashboard/invite-form';
 import { DeleteCircleButton } from '@/components/dashboard/delete-circle';
+import { CircleFeeForm } from '@/components/dashboard/circle-fee-form';
+import { PayContributionButton } from '@/components/dashboard/pay-contribution';
+import { SendPayoutButton } from '@/components/dashboard/send-payout';
+import { SwapPanel } from '@/components/dashboard/swap-panel';
+import { LifecycleControls, LeaveCircleButton } from '@/components/dashboard/lifecycle-controls';
+import { RemoveMemberButton } from '@/components/dashboard/remove-member';
+import { ContributionActions } from '@/components/dashboard/contribution-actions';
 
 export const dynamic = 'force-dynamic';
+
+/** Mask a full name for non-admin viewers: "Jane Okafor" → "J••• O•••" */
+function maskName(name?: string | null): string {
+  if (!name) return 'Member';
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) =>
+      part.length <= 1
+        ? part.toUpperCase()
+        : `${part[0].toUpperCase()}${'•'.repeat(Math.min(part.length - 1, 4))}`
+    )
+    .join(' ');
+}
+
+function maskEmail(email?: string | null): string {
+  if (!email) return '';
+  const [local, domain] = email.split('@');
+  if (!domain) return '•••';
+  const head = local.slice(0, 1);
+  return `${head}${'•'.repeat(Math.max(local.length - 1, 2))}@${domain}`;
+}
+
+const MEMBER_HIDDEN_EVENTS = new Set([
+  'CONTRIBUTION_REPORTED',
+  'CONTRIBUTION_CONFIRMED',
+  'CONTRIBUTION_REJECTED',
+  'CONTRIBUTION_DISPUTED',
+  'CONTRIBUTION_CORRECTION_REQUESTED',
+  'CONTRIBUTION_CORRECTION_APPROVED',
+  'CONTRIBUTION_CORRECTION_REJECTED',
+  'PAYOUT_INITIATED',
+  'PAYOUT_MARKED_SENT',
+  'PAYOUT_RECEIPT_CONFIRMED',
+  'PAYOUT_DISPUTED',
+  'PAYOUT_ORDER_SET',
+  'PAYOUT_ORDER_CHANGED',
+]);
 
 export default async function CircleDetailPage({
   params,
@@ -24,10 +72,41 @@ export default async function CircleDetailPage({
   const data = await getCircleDetail(params.id).catch(() => null);
   if (!data) notFound();
 
-  const { circle, members, cycles, invitations, ledger, contributions, payouts, isOwner, user } = data;
+  const {
+    circle,
+    members,
+    cycles,
+    invitations,
+    ledger,
+    contributions,
+    payouts,
+    isOwner,
+    user,
+    myContribution,
+    collectingCycle,
+    swaps,
+  } = data;
 
   const myMembership = members.find((m) => m.user_id === user.id);
   const pendingInvites = invitations.filter((i) => i.status === 'pending');
+
+  // Privacy: only owner (room admin) sees full identities & money events
+  const visibleLedger = isOwner
+    ? ledger
+    : ledger.filter((e) => !MEMBER_HIDDEN_EVENTS.has(e.event_type));
+
+  // Contributions list: non-owners only see their own + status without amounts of others
+  const visibleContributions = isOwner
+    ? contributions
+    : contributions.filter((c) => c.member_id === myMembership?.id);
+
+  const visiblePayouts = isOwner
+    ? payouts
+    : payouts.filter(
+        (p) =>
+          p.recipient_member_id === myMembership?.id ||
+          p.status === 'received'
+      );
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -46,9 +125,19 @@ export default async function CircleDetailPage({
                 {circle.name}
               </h1>
               <StatusBadge status={circle.status} />
+              {isOwner && (
+                <span className="badge bg-primary/10 text-primary">Admin</span>
+              )}
             </div>
             {circle.description && (
               <p className="text-muted mt-2 max-w-2xl">{circle.description}</p>
+            )}
+            {!isOwner && (
+              <p className="text-xs text-muted mt-2 flex items-center gap-1.5">
+                <EyeOff className="w-3.5 h-3.5" />
+                Member names and payment history are hidden for privacy. Only
+                the circle admin sees full details.
+              </p>
             )}
           </div>
           <div className="text-sm sm:text-right">
@@ -59,6 +148,35 @@ export default async function CircleDetailPage({
                   {formatCurrency(circle.contribution_amount, circle.currency)}
                 </p>
                 <p className="text-muted capitalize">{circle.frequency}</p>
+                {(circle.start_date || circle.end_date) && (
+                  <p className="text-xs text-muted mt-1">
+                    {circle.start_date
+                      ? new Date(circle.start_date + 'T00:00:00').toLocaleDateString('en-NG', {
+                          month: 'short',
+                          year: 'numeric',
+                        })
+                      : ''}
+                    {circle.start_date && circle.end_date ? ' → ' : ''}
+                    {circle.end_date
+                      ? new Date(circle.end_date + 'T00:00:00').toLocaleDateString('en-NG', {
+                          month: 'short',
+                          year: 'numeric',
+                        })
+                      : ''}
+                  </p>
+                )}
+                <div className="flex flex-wrap gap-1.5 mt-2 justify-start sm:justify-end">
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary capitalize">
+                    {(circle as { payout_mode?: string }).payout_mode === 'end_of_term'
+                      ? 'Collects at end'
+                      : 'Collects on turn'}
+                  </span>
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-forest/10 text-forest capitalize">
+                    {(circle as { payment_mode?: string }).payment_mode === 'autopay'
+                      ? 'Autopay'
+                      : 'Manual pay'}
+                  </span>
+                </div>
               </div>
               {isOwner && (
                 <DeleteCircleButton
@@ -66,6 +184,9 @@ export default async function CircleDetailPage({
                   circleName={circle.name}
                   status={circle.status}
                 />
+              )}
+              {!isOwner && myMembership && (
+                <LeaveCircleButton circleId={circle.id} circleName={circle.name} />
               )}
             </div>
           </div>
@@ -94,39 +215,193 @@ export default async function CircleDetailPage({
         </div>
       </section>
 
+      {/* Pay contribution — members with collecting cycle */}
+      {!isOwner && collectingCycle && myMembership && (
+        <section className="card border-primary/30">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <p className="text-sm text-muted">Cycle {collectingCycle.cycle_number} contribution</p>
+              <p className="font-display text-2xl font-bold text-forest">
+                {formatCurrency(
+                  collectingCycle.expected_amount +
+                    Math.floor(
+                      (collectingCycle.expected_amount *
+                        (Number(circle.fee_bps ?? 0) +
+                          Number(circle.network_charge_bps ?? 0))) /
+                        10000
+                    ),
+                  circle.currency
+                )}
+                <span className="text-sm font-normal text-muted ml-2">
+                  (incl. fees)
+                </span>
+              </p>
+              {(circle as { payment_mode?: string }).payment_mode === 'autopay' && (
+                <p className="text-xs text-primary mt-1">
+                  Autopay on — we charge your saved channel if a due date is missed
+                  (after your first successful payment).
+                </p>
+              )}
+              <p className="text-xs text-muted">
+                Due {formatDate(collectingCycle.due_date)}
+                {myContribution
+                  ? ` · status: ${myContribution.status}`
+                  : ' · not paid yet'}
+              </p>
+            </div>
+            {(!myContribution || myContribution.status !== 'confirmed') && (
+              <PayContributionButton
+                circleId={circle.id}
+                cycleId={collectingCycle.id}
+                baseAmountKobo={Number(collectingCycle.expected_amount)}
+                currency={circle.currency}
+                feeBps={Number(circle.fee_bps ?? 0)}
+                networkBps={Number(circle.network_charge_bps ?? 0)}
+                feePayer={circle.fee_payer ?? 'member'}
+              />
+            )}
+          </div>
+        </section>
+      )}
+
+      <div className="grid lg:grid-cols-2 gap-6">
+        <SwapPanel
+          circleId={circle.id}
+          isOwner={isOwner}
+          myMemberId={myMembership?.id ?? null}
+          members={members
+            .filter((m) => m.status === 'active')
+            .map((m) => ({
+              id: m.id,
+              user_id: m.user_id,
+              payout_position: m.payout_position,
+              display_name: m.profiles?.display_name,
+              isSelf: m.user_id === user.id,
+            }))}
+          swaps={swaps.map((s) => {
+            const req = members.find((m) => m.id === s.requester_member_id);
+            const tgt = members.find((m) => m.id === s.target_member_id);
+            return {
+              id: s.id,
+              requester_member_id: s.requester_member_id,
+              target_member_id: s.target_member_id,
+              status: s.status,
+              reason: s.reason,
+              requester_name: isOwner
+                ? (req?.profiles?.display_name as string | undefined)
+                : req?.user_id === user.id
+                  ? 'You'
+                  : maskName(req?.profiles?.display_name),
+              target_name: isOwner
+                ? (tgt?.profiles?.display_name as string | undefined)
+                : tgt?.user_id === user.id
+                  ? 'You'
+                  : maskName(tgt?.profiles?.display_name),
+              canDecide:
+                isOwner ||
+                tgt?.user_id === user.id ||
+                req?.user_id === user.id,
+              canCancel: req?.user_id === user.id,
+            };
+          })}
+        />
+
+        <section className="card">
+          <div className="flex items-center justify-between gap-2 mb-4">
+            <div className="flex items-center gap-2">
+              <PiggyBank className="w-5 h-5 text-primary" />
+              <h2 className="font-semibold text-forest">Your contributions</h2>
+            </div>
+          </div>
+          <ContributionActions
+            circleId={circle.id}
+            cycleId={collectingCycle?.id ?? null}
+            myContribution={
+              myContribution
+                ? {
+                    id: myContribution.id,
+                    status: myContribution.status,
+                    amount: myContribution.reported_amount ?? myContribution.expected_amount,
+                  }
+                : null
+            }
+            expectedAmount={collectingCycle?.expected_amount ?? 0}
+            currency={circle.currency}
+            canReport={Boolean(collectingCycle && collectingCycle.status === 'collecting')}
+          />
+        </section>
+      </div>
+
+      {isOwner && (
+        <LifecycleControls circleId={circle.id} status={circle.status} />
+      )}
+
       <div className="grid lg:grid-cols-2 gap-6">
         <section className="card">
-          <div className="flex items-center gap-2 mb-4">
-            <Users className="w-5 h-5 text-primary" />
-            <h2 className="font-semibold text-forest">Members</h2>
+          <div className="flex items-center justify-between gap-2 mb-4">
+            <div className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-primary" />
+              <h2 className="font-semibold text-forest">
+                {isOwner ? 'Members (full details)' : 'Members (private)'}
+              </h2>
+            </div>
+            {!isOwner && (
+              <span className="text-xs text-muted flex items-center gap-1">
+                <EyeOff className="w-3.5 h-3.5" /> anonymous
+              </span>
+            )}
           </div>
           <ul className="divide-y divide-border">
-            {members.map((member) => (
-              <li key={member.id} className="flex items-center gap-3 py-3">
-                <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold shrink-0">
-                  {getInitials(member.profiles?.display_name ?? 'M')}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-forest truncate">
-                    {member.profiles?.display_name ?? 'Member'}
-                    {member.user_id === user.id && (
-                      <span className="text-muted font-normal"> (you)</span>
+            {members.map((member) => {
+              const isSelf = member.user_id === user.id;
+              const displayName = isOwner || isSelf
+                ? member.profiles?.display_name ?? 'Member'
+                : maskName(member.profiles?.display_name);
+              const email = isOwner || isSelf
+                ? member.profiles?.email
+                : maskEmail(member.profiles?.email);
+
+              return (
+                <li key={member.id} className="flex items-center gap-3 py-3">
+                  <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold shrink-0">
+                    {isOwner || isSelf
+                      ? getInitials(member.profiles?.display_name ?? 'M')
+                      : (member.profiles?.display_name?.[0] ?? 'M').toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-forest truncate">
+                      {displayName}
+                      {isSelf && <span className="text-muted font-normal"> (you)</span>}
+                      {member.role === 'owner' && !isSelf && (
+                        <span className="badge bg-primary/10 text-primary ml-2 text-[10px]">
+                          admin
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-xs text-muted truncate">{email}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-medium text-forest">
+                      #{member.payout_position}
+                    </p>
+                    <span className="badge bg-forest/10 text-forest capitalize">
+                      {member.role}
+                    </span>
+                    {isOwner && member.role !== 'owner' && (
+                      <div className="mt-1">
+                        <RemoveMemberButton
+                          circleId={circle.id}
+                          memberId={member.id}
+                          memberLabel={
+                            member.profiles?.display_name ?? 'member'
+                          }
+                        />
+                      </div>
                     )}
-                  </p>
-                  <p className="text-xs text-muted truncate">
-                    {member.profiles?.email}
-                  </p>
-                </div>
-                <div className="text-right shrink-0">
-                  <p className="text-sm font-medium text-forest">
-                    #{member.payout_position}
-                  </p>
-                  <span className="badge bg-forest/10 text-forest capitalize">
-                    {member.role}
-                  </span>
-                </div>
-              </li>
-            ))}
+                  </div>
+                </li>
+              );
+            })}
             {members.length === 0 && (
               <li className="py-4 text-sm text-muted">No members yet.</li>
             )}
@@ -197,17 +472,25 @@ export default async function CircleDetailPage({
           <section className="card">
             <div className="flex items-center gap-2 mb-4">
               <PiggyBank className="w-5 h-5 text-primary" />
-              <h2 className="font-semibold text-forest">Recent contributions</h2>
+              <h2 className="font-semibold text-forest">
+                {isOwner ? 'Recent contributions' : 'Your contributions'}
+              </h2>
             </div>
-            {contributions.length === 0 ? (
-              <p className="text-sm text-muted">No contributions recorded yet.</p>
+            {visibleContributions.length === 0 ? (
+              <p className="text-sm text-muted">
+                {isOwner
+                  ? 'No contributions recorded yet.'
+                  : 'You have no contributions recorded yet.'}
+              </p>
             ) : (
               <ul className="divide-y divide-border">
-                {contributions.slice(0, 8).map((c) => {
+                {visibleContributions.slice(0, 8).map((c) => {
                   const member = members.find((m) => m.id === c.member_id);
-                  const name =
-                    (member?.profiles?.display_name as string | undefined) ??
-                    'Member';
+                  const name = isOwner
+                    ? (member?.profiles?.display_name as string | undefined) ?? 'Member'
+                    : member?.user_id === user.id
+                      ? 'You'
+                      : maskName(member?.profiles?.display_name);
                   return (
                     <li key={c.id} className="flex items-center justify-between py-3 gap-3">
                       <div className="min-w-0">
@@ -231,15 +514,78 @@ export default async function CircleDetailPage({
               </ul>
             )}
           </section>
+
+          {isOwner && (
+            <section className="card border-primary/30">
+              <div className="flex items-center gap-2 mb-2">
+                <Percent className="w-5 h-5 text-primary" />
+                <h2 className="font-semibold text-forest">Fees & network charge</h2>
+              </div>
+              <p className="text-xs text-muted mb-4">
+                Admin-only. Platform fee and network/VAT charged to members on
+                each contribution.
+              </p>
+              <CircleFeeForm
+                circleId={circle.id}
+                contributionAmount={Number(circle.contribution_amount)}
+                initialFeeBps={Number(circle.fee_bps ?? 0)}
+                initialNetworkBps={Number(circle.network_charge_bps ?? 0)}
+                initialFeePayer={circle.fee_payer ?? 'member'}
+                currency={circle.currency}
+              />
+            </section>
+          )}
         </div>
       </div>
 
       <section className="card">
-        <div className="flex items-center gap-2 mb-4">
-          <PiggyBank className="w-5 h-5 text-primary" />
-          <h2 className="font-semibold text-forest">Payouts</h2>
+        <div className="flex items-center justify-between gap-2 mb-4">
+          <div className="flex items-center gap-2">
+            <PiggyBank className="w-5 h-5 text-primary" />
+            <h2 className="font-semibold text-forest">Payouts</h2>
+          </div>
+          {!isOwner && (
+            <span className="text-xs text-muted flex items-center gap-1">
+              <EyeOff className="w-3.5 h-3.5" /> only your payouts shown
+            </span>
+          )}
         </div>
-        {payouts.length === 0 ? (
+        {visiblePayouts.length === 0 && isOwner && cycles.length > 0 ? (
+          <div className="space-y-3">
+            <p className="text-sm text-muted">
+              Ready cycles can pay out to the recipient&apos;s saved bank account.
+            </p>
+            {cycles
+              .filter(
+                (c) =>
+                  c.status === 'payout_pending' ||
+                  c.status === 'payout_initiated'
+              )
+              .map((c) => (
+                <div
+                  key={c.id}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-border rounded-xl px-4 py-3"
+                >
+                  <div>
+                    <p className="font-medium text-forest">
+                      Cycle {c.cycle_number} payout
+                    </p>
+                    <p className="text-xs text-muted">
+                      Pot: {formatCurrency(c.expected_amount, circle.currency)} ·{' '}
+                      <StatusBadge status={c.status} />
+                    </p>
+                  </div>
+                  <SendPayoutButton cycleId={c.id} />
+                </div>
+              ))}
+            {cycles.every(
+              (c) =>
+                c.status !== 'payout_pending' && c.status !== 'payout_initiated'
+            ) && (
+              <p className="text-sm text-muted">No payouts yet.</p>
+            )}
+          </div>
+        ) : visiblePayouts.length === 0 ? (
           <p className="text-sm text-muted">No payouts yet.</p>
         ) : (
           <div className="overflow-x-auto">
@@ -250,16 +596,20 @@ export default async function CircleDetailPage({
                   <th className="py-2 pr-3 font-medium">Expected</th>
                   <th className="py-2 pr-3 font-medium">Actual</th>
                   <th className="py-2 font-medium">Status</th>
+                  {isOwner && <th className="py-2 font-medium">Action</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {payouts.map((p) => {
+                {visiblePayouts.map((p) => {
                   const member = members.find(
                     (m) => m.id === p.recipient_member_id
                   );
-                  const name =
-                    (member?.profiles?.display_name as string | undefined) ??
-                    'Member';
+                  const isSelf = member?.user_id === user.id;
+                  const name = isOwner
+                    ? (member?.profiles?.display_name as string | undefined) ?? 'Member'
+                    : isSelf
+                      ? 'You'
+                      : maskName(member?.profiles?.display_name);
                   return (
                     <tr key={p.id}>
                       <td className="py-3 pr-3 text-forest">{name}</td>
@@ -274,6 +624,16 @@ export default async function CircleDetailPage({
                       <td className="py-3">
                         <StatusBadge status={p.status} />
                       </td>
+                      {isOwner && (
+                        <td className="py-3">
+                          {p.status !== 'received' && (
+                            <SendPayoutButton
+                              cycleId={p.cycle_id}
+                              compact
+                            />
+                          )}
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
@@ -284,15 +644,24 @@ export default async function CircleDetailPage({
       </section>
 
       <section className="card">
-        <div className="flex items-center gap-2 mb-4">
-          <BookOpen className="w-5 h-5 text-primary" />
-          <h2 className="font-semibold text-forest">Activity ledger</h2>
+        <div className="flex items-center justify-between gap-2 mb-4">
+          <div className="flex items-center gap-2">
+            <BookOpen className="w-5 h-5 text-primary" />
+            <h2 className="font-semibold text-forest">
+              {isOwner ? 'Activity ledger (full)' : 'Activity ledger (limited)'}
+            </h2>
+          </div>
+          {!isOwner && (
+            <span className="text-xs text-muted flex items-center gap-1">
+              <EyeOff className="w-3.5 h-3.5" /> payment events hidden
+            </span>
+          )}
         </div>
-        {ledger.length === 0 ? (
+        {visibleLedger.length === 0 ? (
           <p className="text-sm text-muted">No ledger events yet.</p>
         ) : (
           <ol className="space-y-3">
-            {ledger.map((event) => (
+            {visibleLedger.map((event) => (
               <li key={event.id} className="flex items-start gap-3 text-sm">
                 <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
                 <div>
@@ -306,6 +675,13 @@ export default async function CircleDetailPage({
               </li>
             ))}
           </ol>
+        )}
+        {!isOwner && (
+          <p className="text-xs text-muted mt-4 pt-4 border-t border-border flex items-start gap-1.5">
+            <Send className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+            Contribution and payout details are only visible to the circle
+            admin so member payments stay private.
+          </p>
         )}
       </section>
     </div>

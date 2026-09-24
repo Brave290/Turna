@@ -68,7 +68,7 @@ export const ledgerEventTypeSchema = z.enum([
 
 export const uuidSchema = z.string().uuid('Invalid UUID format');
 
-export const createCircleSchema = z.object({
+export const createCircleBase = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(500).optional(),
   contribution_amount: moneySchema,
@@ -76,9 +76,22 @@ export const createCircleSchema = z.object({
   frequency: frequencySchema,
   member_limit: z.number().int().min(2).max(100).default(10),
   start_date: z.string().date().optional(),
+  end_date: z.string().date().optional(),
+  start_month: z.number().int().min(0).max(11).optional(),
+  end_month: z.number().int().min(0).max(11).optional(),
+  payout_mode: z.enum(['rotating', 'end_of_term']).default('rotating'),
+  payment_mode: z.enum(['manual', 'autopay']).default('manual'),
 });
 
-export const updateCircleSchema = createCircleSchema.partial().extend({
+export const createCircleSchema = createCircleBase.refine(
+  (d) => {
+    if (d.start_date && d.end_date) return d.end_date >= d.start_date;
+    return true;
+  },
+  { message: 'End date must be on or after start date', path: ['end_date'] }
+);
+
+export const updateCircleSchema = createCircleBase.partial().extend({
   status: circleStatusSchema.optional(),
 });
 

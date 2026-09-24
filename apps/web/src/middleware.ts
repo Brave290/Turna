@@ -12,6 +12,7 @@ const PUBLIC_PATHS = [
   '/auth/reset-password',
   '/auth/update-password',
   '/auth/callback',
+  '/auth/onboarding',
   '/terms',
   '/privacy',
   '/legal',
@@ -26,31 +27,20 @@ const PUBLIC_PATHS = [
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Allow public paths
-  if (PUBLIC_PATHS.some(path => pathname === path || pathname.startsWith(path + '/'))) {
+  if (PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(path + '/'))) {
     return NextResponse.next();
   }
-
-  // Allow API routes
-  if (pathname.startsWith('/api/')) {
-    return NextResponse.next();
-  }
-
-  // Allow static files
+  if (pathname.startsWith('/api/')) return NextResponse.next();
   if (pathname.startsWith('/_next/') || pathname.startsWith('/static/') || pathname.includes('.')) {
     return NextResponse.next();
   }
 
-  const supabaseResponse = NextResponse.next({
-    request,
-  });
-
+  const supabaseResponse = NextResponse.next({ request });
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        // @supabase/ssr@0.3 uses get/set/remove (not getAll/setAll).
         get(name: string) {
           return request.cookies.get(name)?.value;
         },
@@ -66,17 +56,52 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // Validate and refresh the session from Supabase rather than trusting the
-  // locally decoded session cookie. This prevents false login redirects when
-  // the access token has expired but the refresh token is still valid.
-  const { data: { user } } = await supabase.auth.getUser();
+  // FAST PATH: if access token present and not near-expiry, skip network getUser.
+  // Only call getUser when token is missing or within 60s of expiry.
+  const accessToken = request.cookies.get('sb-dhedoxczmbwrgetibvmy-auth-token')?.value
+    ?? request.cookies.get('sb-dhedoxczmbwrgetibvmy-auth-token.0')?.value
+    ?? request.cookies.get('sb-dhedoxczmbwrgetibvmy-auth-token.1')?.value;
 
-  if (!user) {
-    const redirectUrl = new URL('/auth/login', request.url);
-    redirectUrl.searchParams.set('redirect', pathname);
-    return NextResponse.redirect(redirectUrl);
+  let needsNetwork = !accessToken;
+  if (accessToken && !needsNetwork) {
+    try {
+      // Cookie may be base64 JSON session — decode exp if present
+      const raw = accessToken;
+      if (raw.includes('.')) {
+        // JWT
+        const payload = raw.split('.')[1];
+        const json = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+        const exp = typeof json.exp === 'number' ? json.exp * 1000 : 0;
+        needsNetwork = !exp || exp - Date.now() < 60_000;
+      } else {
+        // Encoded session from @supabase/ssr — still try decode
+        const decoded = Buffer.from(raw, 'base64').toString('utf8');
+        const json = JSON.parse(decoded) as { access_token?: string };
+        if (json.access_token?.includes('.')) {
+          const payload = json.access_token.split('.')[1];
+          const claims = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+          const exp = typeof claims.exp === 'number' ? claims.exp * 1000 : 0;
+          needsNetwork = !exp || exp - Date.now() < 60_000;
+        } else {
+          needsNetwork = true;
+        }
+      }
+    } catch {
+      needsNetwork = true;
+    }
   }
 
+  if (needsNetwork) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      const redirectUrl = new URL('/auth/login', request.url);
+      redirectUrl.searchParams.set('redirect', pathname);
+      return NextResponse.redirect(redirectUrl);
+    }
+    return supabaseResponse;
+  }
+
+  // Local token valid — trust it for this request (page still validates via layout)
   return supabaseResponse;
 }
 

@@ -7,36 +7,129 @@ import {
   Bell,
   Plus,
   TrendingUp,
+  Wallet,
+  ArrowUpRight,
+  Clock,
 } from 'lucide-react';
 import { getDashboardData } from '@/lib/dashboard-data';
-import { formatCurrency, formatDate, formatRelativeTime } from '@/lib/utils';
+import {
+  formatCurrency,
+  formatDate,
+  formatRelativeTime,
+  getInitials,
+} from '@/lib/utils';
 import { StatusBadge } from '@/components/dashboard/status-badge';
 import { Stagger, StaggerItem } from '@/components/motion';
 
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardHomePage() {
-  const { profile, circles, activeCircles, stats, notifications } =
+  const { profile, circles, activeCircles, stats, notifications, user } =
     await getDashboardData();
 
   const recent = circles.slice(0, 5);
+  const wallets = (stats as { wallets?: unknown[] }).wallets ?? [];
+  const walletList = wallets as {
+    circle_id: string;
+    paid_amount: number;
+    expected_amount: number;
+    circles: { name: string; currency: string } | null;
+  }[];
+  const totalPaid = walletList.reduce((s, w) => s + Number(w.paid_amount || 0), 0);
+  const totalExpected = walletList.reduce(
+    (s, w) => s + Number(w.expected_amount || 0),
+    0
+  );
+  const settlePct =
+    totalExpected > 0
+      ? Math.min(100, Math.round((totalPaid / totalExpected) * 100))
+      : 0;
+  const initials = getInitials(profile.display_name || user.email || 'TU');
+  const firstName = (profile.display_name || 'there').split(/\s+/)[0];
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-        <div>
-          <p className="text-sm text-muted mb-1">Welcome back</p>
-          <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-forest">
-            {profile.display_name}
-          </h1>
+    <div className="space-y-7">
+      {/* ── Fintech hero ── */}
+      <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-forest text-white">
+        <div
+          className="absolute inset-0 pointer-events-none"
+          aria-hidden
+          style={{
+            background:
+              'radial-gradient(ellipse at 15% 20%, rgba(0,194,168,0.35), transparent 50%), radial-gradient(ellipse at 85% 80%, rgba(124,92,255,0.25), transparent 45%)',
+          }}
+        />
+        <div className="relative px-5 sm:px-7 py-6 sm:py-7 flex flex-col sm:flex-row sm:items-end justify-between gap-5">
+          <div className="flex items-start gap-4 min-w-0">
+            <Link
+              href="/dashboard/profile"
+              prefetch
+              className="shrink-0"
+              aria-label="Open profile"
+            >
+              <span className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary-hover text-white flex items-center justify-center font-display text-xl font-bold ring-2 ring-white/20 shadow-glow">
+                {initials}
+              </span>
+            </Link>
+            <div className="min-w-0">
+              <p className="text-xs text-primary-light/80 uppercase tracking-widest mb-1">
+                Overview
+              </p>
+              <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight truncate">
+                Hi, {firstName}
+              </h1>
+              <p className="text-sm text-white/50 mt-1">
+                {activeCircles.length > 0
+                  ? `${activeCircles.length} active circle${activeCircles.length === 1 ? '' : 's'} · cycle ${circles[0]?.current_cycle || 0}`
+                  : 'No active circles yet — start one below.'}
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2 shrink-0">
+            <Link
+              href="/dashboard/profile"
+              className="btn-outline border-white/20 text-white hover:bg-white/10 btn-sm"
+            >
+              Profile
+            </Link>
+            <Link href="/dashboard/circles/new" className="btn-primary btn-sm">
+              <Plus className="w-4 h-4" />
+              New circle
+            </Link>
+          </div>
         </div>
-        <Link href="/dashboard/circles/new" className="btn-primary">
-          <Plus className="w-4 h-4" />
-          New Circle
-        </Link>
-      </div>
 
-      <Stagger className="grid grid-cols-2 lg:grid-cols-4 gap-4" stagger={0.06}>
+        {/* Wallet strip */}
+        <div className="relative grid grid-cols-2 sm:grid-cols-4 border-t border-white/10 divide-x divide-white/10">
+          <HeroStat
+            icon={Wallet}
+            label="Settled"
+            value={formatCurrency(totalPaid)}
+            sub="Your confirmed total"
+          />
+          <HeroStat
+            icon={Clock}
+            label="Expected"
+            value={formatCurrency(totalExpected)}
+            sub="Across wallets"
+          />
+          <HeroStat
+            icon={TrendingUp}
+            label="Progress"
+            value={`${settlePct}%`}
+            sub="Paid vs expected"
+          />
+          <HeroStat
+            icon={Bell}
+            label="Unread"
+            value={String(stats.unreadNotifications)}
+            sub="Notifications"
+          />
+        </div>
+      </section>
+
+      {/* ── Metric cards ── */}
+      <Stagger className="grid grid-cols-2 lg:grid-cols-4 gap-4" stagger={0.05}>
         <StaggerItem>
           <StatCard
             label="Circles"
@@ -47,15 +140,15 @@ export default async function DashboardHomePage() {
         </StaggerItem>
         <StaggerItem>
           <StatCard
-            label="Contributions due"
+            label="Due"
             value={String(stats.pendingContributions)}
             icon={PiggyBank}
-            hint="Needs your action"
+            hint="Contributions waiting"
           />
         </StaggerItem>
         <StaggerItem>
           <StatCard
-            label="Payouts pending"
+            label="Payouts"
             value={String(stats.pendingPayouts)}
             icon={ArrowLeftRight}
             hint="In the pipeline"
@@ -63,10 +156,10 @@ export default async function DashboardHomePage() {
         </StaggerItem>
         <StaggerItem>
           <StatCard
-            label="You've contributed"
+            label="Contributed"
             value={formatCurrency(stats.totalContributed)}
-            icon={TrendingUp}
-            hint="Confirmed total"
+            icon={ArrowUpRight}
+            hint="Confirmed on-chain of trust"
           />
         </StaggerItem>
       </Stagger>
@@ -167,6 +260,31 @@ export default async function DashboardHomePage() {
           </div>
         </div>
       </section>
+    </div>
+  );
+}
+
+function HeroStat({
+  icon: Icon,
+  label,
+  value,
+  sub,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string;
+  sub: string;
+}) {
+  return (
+    <div className="px-4 sm:px-5 py-4 min-w-0">
+      <div className="flex items-center gap-1.5 text-white/45 text-[11px] uppercase tracking-wider mb-1.5">
+        <Icon className="w-3.5 h-3.5" />
+        {label}
+      </div>
+      <p className="font-display text-lg sm:text-xl font-bold text-white truncate">
+        {value}
+      </p>
+      <p className="text-[11px] text-white/40 truncate">{sub}</p>
     </div>
   );
 }

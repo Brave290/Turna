@@ -1,7 +1,7 @@
 # Project State — Turna
 
-**Last Updated**: 2026-09-23
-**Current Phase**: Phase 34 — Invite Auto-Join Chain, Circle Delete, Notifications, Join RLS Fix, UI Fixes
+**Last Updated**: 2026-09-24
+**Current Phase**: Phase 41 — Auth Terms/Remember, Profile Avatar + OTP Password, Circle Duration Modes, Full Release ZIP
 **Overall Status**: 🟡 In Progress
 
 ## Production
@@ -66,9 +66,11 @@
 | 35. Chat + Notifications + Reminders | ⏳ Partial | 2026-09-22 | — | Notifications list live; chat/reminders pending |
 | 36. Health + Streaks + Disputes + Corrections | ⏳ Pending | — | — | |
 | 37. Profile + Settings + Security | ✅ Complete | 2026-09-22 | 2026-09-23 | Profile form + delete account + theme toggle on settings |
-| 38. App Download Popup (Web) | ⏳ Pending | — | — | |
+| 38. App Download Popup (Web) | ✅ Complete | 2026-09-24 | 2026-09-24 | Get-our-app modal; Play coming soon; APK from Turna-Downloads |
 | 39. UI/UX Polish (Theme, Modal, Join, Settings) | ✅ Complete | 2026-09-23 | 2026-09-23 | App-wide theme, notification modal, join accept page, branded select, no Supabase UI branding |
 | 40. Invite Auto-Join + Circle Delete + Notifications | ✅ Complete | 2026-09-23 | 2026-09-23 | Token tracked through signup/verify/login; auto-join on return; owner delete circle; bell events; join RLS case fix |
+| 41. Auth terms + remember, avatar, OTP password, circle duration, release ZIP | ✅ Complete | 2026-09-24 | 2026-09-24 | Login/signup terms gate + remember email; profile avatar upload; OTP password change; month-range circle creation + payout/payment modes; full release ZIP on private + Turna-Downloads; 4 migrations applied |
+| 42. KYC UI, reminders cron, autopay charge, payments history, admin dashboard, digests, insights, payout receipt notify | ⏳ Pending | — | — | Server helpers exist (submitKyc, sendDueReminders); UI/routes not wired yet |
 
 ---
 

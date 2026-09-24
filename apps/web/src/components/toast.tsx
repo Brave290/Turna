@@ -130,11 +130,13 @@ function ToastViewport({
   useEffect(() => setMounted(true), []);
   if (!mounted) return null;
 
+  // Always dead-center of the viewport — never bottom/side (user requirement).
+  // Portaled to body so parent transform/filter cannot re-anchor fixed.
   return createPortal(
     <div
       aria-live="polite"
       aria-atomic="false"
-      className="fixed bottom-24 sm:bottom-6 right-0 left-0 sm:left-auto sm:right-6 z-[100] flex flex-col gap-3 px-4 sm:px-0 sm:w-[360px] pointer-events-none"
+      className="fixed inset-0 z-[120] flex items-center justify-center p-4 pointer-events-none"
     >
       <AnimatePresence mode="popLayout">
         {toasts.map((t) => {
@@ -143,32 +145,34 @@ function ToastViewport({
             <motion.div
               key={t.id}
               layout
-              initial={{ opacity: 0, y: 18, scale: 0.96, filter: "blur(8px)" }}
-              animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
-              exit={{ opacity: 0, x: 40, scale: 0.94, filter: "blur(6px)" }}
-              transition={{ type: "spring", bounce: 0.28, duration: 0.55 }}
-              className={`pointer-events-auto flex items-start gap-3 rounded-2xl border bg-white/95 backdrop-blur-xl px-4 py-3.5 shadow-card ${style.ring}`}
+              initial={{ opacity: 0, y: 12, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ type: "spring", bounce: 0.28, duration: 0.45 }}
+              className={`pointer-events-auto w-full max-w-sm rounded-2xl border bg-white/98 backdrop-blur-xl px-4 py-3.5 shadow-card ${style.ring}`}
               role="status"
             >
-              <span className="mt-0.5">{style.icon}</span>
-              <div className="min-w-0 flex-1">
-                {t.title && (
-                  <p className={`text-sm font-semibold ${style.title}`}>{t.title}</p>
-                )}
-                {t.description && (
-                  <p className="text-sm text-muted leading-snug mt-0.5 break-words">
-                    {t.description}
-                  </p>
-                )}
+              <div className="flex items-start gap-3">
+                <span className="mt-0.5">{style.icon}</span>
+                <div className="min-w-0 flex-1">
+                  {t.title && (
+                    <p className={`text-sm font-semibold ${style.title}`}>{t.title}</p>
+                  )}
+                  {t.description && (
+                    <p className="text-sm text-muted leading-snug mt-0.5 break-words">
+                      {t.description}
+                    </p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onDismiss(t.id)}
+                  aria-label="Dismiss notification"
+                  className="shrink-0 rounded-lg p-1 text-muted hover:text-forest hover:bg-border/50 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => onDismiss(t.id)}
-                aria-label="Dismiss notification"
-                className="shrink-0 rounded-lg p-1 text-muted hover:text-forest hover:bg-border/50 transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
             </motion.div>
           );
         })}

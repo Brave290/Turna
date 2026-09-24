@@ -98,7 +98,7 @@ async function notifyCircleMembers(
 /** Store 5-minute OTP + send via Gmail SMTP. Rate limit is a no-op (OTP always works). */
 async function issueCustomOtp(
   email: string,
-  purpose: 'signup' | 'login',
+  purpose: 'signup' | 'login' | 'password_change',
   displayName?: string,
   userId?: string | null
 ): Promise<{ ok: boolean; error?: string }> {
@@ -508,6 +508,186 @@ export async function updatePassword(formData: FormData): Promise<AuthError> {
   redirect('/dashboard');
 }
 
+export type PasswordChangeState = {
+  error?: Record<string, string[] | undefined> & { form?: string[] };
+  success?: string;
+  step?: 'request' | 'verify';
+  redirectTo?: string;
+} | null;
+
+/** Step 1 — send OTP to the signed-in user's email before allowing password change. */
+export async function requestPasswordChangeOtp(): Promise<PasswordChangeState> {
+  const supabase = createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.email) {
+    return { error: { form: ['Not signed in.'] }, step: 'request' };
+  }
+
+  const otp = await issueCustomOtp(
+    user.email.toLowerCase(),
+    'password_change',
+    (user.user_metadata?.display_name as string) || undefined,
+    user.id
+  );
+  if (!otp.ok) {
+    return { error: { form: [otp.error ?? 'Could not send verification code.'] }, step: 'request' };
+  }
+
+  return {
+    success: `We emailed a 6-digit code to ${user.email}. Enter it to continue.`,
+    step: 'verify',
+  };
+}
+
+/** Step 2 — verify OTP, then set the new password. */
+export async function verifyAndSetPassword(
+  _prev: PasswordChangeState,
+  formData: FormData
+): Promise<PasswordChangeState> {
+  const supabase = createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.email) {
+    return { error: { form: ['Not signed in.'] }, step: 'request' };
+  }
+
+  const email = user.email.toLowerCase();
+  const code = String(formData.get('otp') ?? '').trim();
+  const password = String(formData.get('password') ?? '');
+  const confirmPassword = String(formData.get('confirmPassword') ?? '');
+
+  if (!/^\d{6}$/.test(code)) {
+    return { error: { form: ['Enter the 6-digit code we emailed you.'] }, step: 'verify' };
+  }
+
+  const parsed = z
+    .object({
+      password: z.string().min(8, 'Password must be at least 8 characters'),
+      confirmPassword: z.string(),
+    })
+    .refine((d) => d.password === d.confirmPassword, {
+      message: 'Passwords do not match',
+      path: ['confirmPassword'],
+    })
+    .safeParse({ password, confirmPassword });
+  if (!parsed.success) {
+    return { error: parsed.error.flatten().fieldErrors as Record<string, string[] | undefined>, step: 'verify' };
+  }
+
+  const admin = createAdminSupabaseClient();
+  const { data: verified } = await admin.rpc('verify_custom_otp', {
+    p_email: email,
+    p_code: code,
+    p_purpose: 'password_change',
+  });
+  if (verified !== true) {
+    return { error: { form: ['Invalid or expired code.'] }, step: 'verify' };
+  }
+
+  const { error } = await admin.auth.admin.updateUserById(user.id, {
+    password: parsed.data.password,
+  });
+  if (error) {
+    return { error: { form: [error.message] }, step: 'verify' };
+  }
+
+  // Force re-login with the new password everywhere.
+  await supabase.auth.signOut();
+  return {
+    success: 'Password updated. Sign in with your new password.',
+    step: 'request',
+    redirectTo: '/auth/login',
+  };
+}
+
+export type AvatarActionState = {
+  error?: Record<string, string[] | undefined> & { form?: string[] };
+  success?: string;
+} | null;
+
+const MAX_AVATAR_BYTES = 5 * 1024 * 1024; // 5MB
+
+/** Upload a profile picture (avatar) — stores as base64 data URL on profiles.avatar_url. */
+export async function uploadAvatar(
+  _prev: AvatarActionState,
+  formData: FormData
+): Promise<AvatarActionState> {
+  const supabase = createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.id) {
+    return { error: { form: ['Not signed in.'] } };
+  }
+
+  const file = formData.get('avatar');
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: { form: ['Choose an image to upload.'] } };
+  }
+  if (file.size > MAX_AVATAR_BYTES) {
+    return { error: { form: ['Image must be 5MB or smaller.'] } };
+  }
+  if (!file.type.startsWith('image/')) {
+    return { error: { form: ['Only image files are allowed.'] } };
+  }
+
+  const buf = Buffer.from(await file.arrayBuffer());
+  const dataUrl = `data:${file.type};base64,${buf.toString('base64')}`;
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      avatar_url: dataUrl,
+      avatar_version: Date.now(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', user.id);
+  if (error) {
+    return { error: { form: [error.message] } };
+  }
+
+  await supabase.auth.updateUser({
+    data: { avatar_url: dataUrl },
+  });
+
+  revalidatePath('/dashboard/profile');
+  revalidatePath('/dashboard');
+  revalidatePath('/dashboard/settings');
+  return { success: 'Profile picture updated.' };
+}
+
+/** Remove the uploaded avatar (falls back to initials). */
+export async function removeAvatar(): Promise<AvatarActionState> {
+  const supabase = createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.id) {
+    return { error: { form: ['Not signed in.'] } };
+  }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      avatar_url: null,
+      avatar_version: Date.now(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', user.id);
+  if (error) {
+    return { error: { form: [error.message] } };
+  }
+
+  await supabase.auth.updateUser({ data: { avatar_url: null } });
+  revalidatePath('/dashboard/profile');
+  revalidatePath('/dashboard');
+  revalidatePath('/dashboard/settings');
+  return { success: 'Profile picture removed.' };
+}
+
 export async function getSession() {
   const supabase = createServerSupabaseClient();
   const {
@@ -585,14 +765,50 @@ export async function createCircle(
     return { error: { contribution_amount: ['Enter a valid amount'] } };
   }
 
+  const startMonthRaw = formData.get('start_month');
+  const endMonthRaw = formData.get('end_month');
+  const startMonth =
+    startMonthRaw !== null && startMonthRaw !== '' ? Number(startMonthRaw) : null;
+  const endMonth =
+    endMonthRaw !== null && endMonthRaw !== '' ? Number(endMonthRaw) : null;
+
+  let startDate = String(formData.get('start_date') ?? '').trim() || undefined;
+  let endDate = String(formData.get('end_date') ?? '').trim() || undefined;
+
+  // If only month range given, derive ISO dates (current year, or next year for end)
+  const now = new Date();
+  const year = now.getFullYear();
+  if (!startDate && startMonth !== null && !Number.isNaN(startMonth)) {
+    startDate = new Date(Date.UTC(year, startMonth, 1)).toISOString().slice(0, 10);
+  }
+  if (!endDate && endMonth !== null && !Number.isNaN(endMonth)) {
+    const endYear =
+      startMonth !== null && endMonth < startMonth ? year + 1 : year;
+    const lastDay = new Date(Date.UTC(endYear, endMonth + 1, 0)).getUTCDate();
+    endDate = new Date(Date.UTC(endYear, endMonth, lastDay)).toISOString().slice(0, 10);
+  }
+
+  const nameInput = String(formData.get('name') ?? '').trim();
+  const suggestedName = String(formData.get('suggested_name') ?? '').trim();
+  // Prefer explicit suggestion when user left name empty or accepted the auto title
+  const name = nameInput || suggestedName;
+
+  const payoutModeRaw = String(formData.get('payout_mode') ?? 'rotating');
+  const paymentModeRaw = String(formData.get('payment_mode') ?? 'manual');
+
   const parsed = createCircleSchema.safeParse({
-    name: String(formData.get('name') ?? '').trim(),
+    name,
     description: String(formData.get('description') ?? '').trim() || undefined,
     contribution_amount: Math.round(amountNumber * 100),
     currency: String(formData.get('currency') ?? 'NGN'),
     frequency: String(formData.get('frequency') ?? 'monthly'),
     member_limit: Number(formData.get('member_limit') ?? 10),
-    start_date: String(formData.get('start_date') ?? '') || undefined,
+    start_date: startDate,
+    end_date: endDate,
+    start_month: startMonth !== null && !Number.isNaN(startMonth) ? startMonth : undefined,
+    end_month: endMonth !== null && !Number.isNaN(endMonth) ? endMonth : undefined,
+    payout_mode: payoutModeRaw === 'end_of_term' ? 'end_of_term' : 'rotating',
+    payment_mode: paymentModeRaw === 'autopay' ? 'autopay' : 'manual',
   });
 
   if (!parsed.success) {
@@ -612,6 +828,11 @@ export async function createCircle(
       status: 'draft',
       current_cycle: 0,
       start_date: parsed.data.start_date ?? null,
+      end_date: parsed.data.end_date ?? null,
+      start_month: parsed.data.start_month ?? null,
+      end_month: parsed.data.end_month ?? null,
+      payout_mode: parsed.data.payout_mode,
+      payment_mode: parsed.data.payment_mode,
     })
     .select('id')
     .single();
@@ -708,6 +929,19 @@ export async function inviteMember(
     return { error: { form: ['Member limit reached'] } };
   }
 
+  // Fraud limit: max 20 invites / hour / user
+  try {
+    const { checkAbuseLimit } = await import('@/lib/circle-actions');
+    const allowed = await checkAbuseLimit(user.id, 'invite', 20);
+    if (!allowed) {
+      return {
+        error: { form: ['Too many invites this hour. Try again shortly.'] },
+      };
+    }
+  } catch {
+    // fail open
+  }
+
   const token = crypto.randomUUID();
   const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
@@ -787,21 +1021,196 @@ export async function updateProfile(
   if (!user) redirect('/auth/login');
 
   const displayName = String(formData.get('display_name') ?? '').trim();
-  if (!displayName) {
-    return { error: { display_name: ['Name is required'] } };
+  const dateOfBirth = String(formData.get('date_of_birth') ?? '').trim() || null;
+  const phone = String(formData.get('phone') ?? '').trim() || null;
+  const bio = String(formData.get('bio') ?? '').trim().slice(0, 500) || null;
+  const city = String(formData.get('city') ?? '').trim() || null;
+  const country = String(formData.get('country') ?? '').trim() || null;
+
+  if (!displayName || displayName.length < 2) {
+    return { error: { display_name: ['Name must be at least 2 characters'] } };
+  }
+  if (dateOfBirth && Number.isNaN(Date.parse(dateOfBirth))) {
+    return { error: { form: ['Enter a valid date of birth'] } };
+  }
+  if (phone && !/^[+\d][\d\s-]{6,20}$/.test(phone)) {
+    return { error: { form: ['Enter a valid phone number'] } };
   }
 
-  const { error } = await supabase
+  const { data: existing } = await supabase
     .from('profiles')
-    .update({ display_name: displayName })
-    .eq('id', user.id);
+    .select('id')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  const payload = {
+    id: user.id,
+    email: user.email ?? '',
+    display_name: displayName,
+    date_of_birth: dateOfBirth,
+    phone,
+    bio,
+    city,
+    country,
+    updated_at: new Date().toISOString(),
+  };
+
+  const error = existing
+    ? (
+        await supabase
+          .from('profiles')
+          .update(payload)
+          .eq('id', user.id)
+      ).error
+    : (await supabase.from('profiles').insert(payload)).error;
 
   if (error) {
+    console.error('[updateProfile]', error.message);
     return { error: { form: [error.message] } };
   }
 
+  try {
+    await supabase.auth.updateUser({ data: { display_name: displayName } });
+  } catch {
+    /* metadata optional */
+  }
+
+  revalidatePath('/dashboard/profile');
   revalidatePath('/dashboard/settings');
+  revalidatePath('/dashboard');
   return { success: 'Profile updated' };
+}
+
+export type CircleFeeState = {
+  error?: Record<string, string[] | undefined> & { form?: string[] };
+  success?: string;
+} | null;
+
+/** Owner-only: update platform fee + network charge (VAT) for a circle. */
+export async function updateCircleFees(
+  _prev: CircleFeeState,
+  formData: FormData
+): Promise<CircleFeeState> {
+  const supabase = createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect('/auth/login');
+
+  const circleId = String(formData.get('circle_id') ?? '');
+  const feeBps = Number(formData.get('fee_bps') ?? 0);
+  const networkBps = Number(formData.get('network_charge_bps') ?? 0);
+  const feePayer = String(formData.get('fee_payer') ?? 'member');
+
+  if (!circleId) {
+    return { error: { form: ['Circle is required'] } };
+  }
+  if (
+    !Number.isFinite(feeBps) ||
+    feeBps < 0 ||
+    feeBps > 5000 ||
+    !Number.isFinite(networkBps) ||
+    networkBps < 0 ||
+    networkBps > 5000
+  ) {
+    return { error: { form: ['Fee must be between 0% and 50%'] } };
+  }
+  if (!['member', 'owner', 'shared'].includes(feePayer)) {
+    return { error: { form: ['Invalid fee payer'] } };
+  }
+
+  const { data: circle } = await supabase
+    .from('circles')
+    .select('id, owner_id')
+    .eq('id', circleId)
+    .maybeSingle();
+
+  if (!circle || circle.owner_id !== user.id) {
+    return { error: { form: ['Only the circle owner can change fees'] } };
+  }
+
+  const { error } = await supabase
+    .from('circles')
+    .update({
+      fee_bps: Math.round(feeBps),
+      network_charge_bps: Math.round(networkBps),
+      fee_payer: feePayer,
+    })
+    .eq('id', circleId);
+
+  if (error) {
+    console.error('[updateCircleFees]', error.message);
+    return { error: { form: ['Could not save fee settings'] } };
+  }
+
+  await notify(supabase, {
+    userId: user.id,
+    circleId,
+    title: 'Fee settings updated',
+    body: `Fees for this circle were updated (owner only).`,
+    data: { circle_id: circleId, event: 'SETTINGS_CHANGED' },
+  });
+
+  revalidatePath(`/dashboard/circles/${circleId}`);
+  return { success: 'Fee settings saved' };
+}
+
+export type MarkReadState = {
+  error?: Record<string, string[] | undefined> & { form?: string[] };
+  success?: string;
+} | null;
+
+/** Mark every unread notification for the signed-in user as read.
+ *  Compatible with useFormState(prev, formData) and plain async calls. */
+export async function markAllNotificationsRead(
+  prev?: MarkReadState,
+  formData?: FormData
+): Promise<MarkReadState> {
+  void prev;
+  void formData;
+  const supabase = createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect('/auth/login');
+
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from('notifications')
+    .update({ status: 'read', read_at: now })
+    .eq('user_id', user.id)
+    .neq('status', 'read');
+
+  if (error) {
+    console.error('[markAllNotificationsRead]', error.message);
+    return { error: { form: ['Could not mark notifications as read.'] } };
+  }
+
+  revalidatePath('/dashboard');
+  revalidatePath('/dashboard/notifications');
+  return { success: 'All notifications marked as read' };
+}
+
+/** Mark a single notification as read. */
+export async function markNotificationRead(
+  notificationId: string
+): Promise<{ ok: boolean; error?: string }> {
+  const supabase = createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: 'Not signed in' };
+
+  const { error } = await supabase
+    .from('notifications')
+    .update({ status: 'read', read_at: new Date().toISOString() })
+    .eq('id', notificationId)
+    .eq('user_id', user.id);
+
+  if (error) return { ok: false, error: error.message };
+  revalidatePath('/dashboard');
+  revalidatePath('/dashboard/notifications');
+  return { ok: true };
 }
 
 export type AcceptInviteState = {

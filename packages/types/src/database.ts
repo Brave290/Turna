@@ -11,6 +11,11 @@ export type Profile = {
   email: string;
   display_name: string;
   avatar_url: string | null;
+  date_of_birth: string | null;
+  phone: string | null;
+  bio: string | null;
+  city: string | null;
+  country: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -27,6 +32,14 @@ export type Circle = {
   status: 'draft' | 'active' | 'paused' | 'completed' | 'cancelled';
   current_cycle: number;
   start_date: string | null;
+  end_date: string | null;
+  start_month: number | null;
+  end_month: number | null;
+  payout_mode: 'rotating' | 'end_of_term';
+  payment_mode: 'manual' | 'autopay';
+  fee_bps: number;
+  network_charge_bps: number;
+  fee_payer: 'member' | 'owner' | 'shared';
   created_at: string;
   updated_at: string;
 };

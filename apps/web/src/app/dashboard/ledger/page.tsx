@@ -1,25 +1,71 @@
-import { getLedgerFeed } from '@/lib/dashboard-data';
+import { getLedgerFeed, requireUser, getDashboardData } from '@/lib/dashboard-data';
 import { formatDate } from '@/lib/utils';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, EyeOff, ShieldCheck } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
+const MEMBER_HIDDEN = new Set([
+  'CONTRIBUTION_REPORTED',
+  'CONTRIBUTION_CONFIRMED',
+  'CONTRIBUTION_REJECTED',
+  'CONTRIBUTION_DISPUTED',
+  'CONTRIBUTION_CORRECTION_REQUESTED',
+  'CONTRIBUTION_CORRECTION_APPROVED',
+  'CONTRIBUTION_CORRECTION_REJECTED',
+  'PAYOUT_INITIATED',
+  'PAYOUT_MARKED_SENT',
+  'PAYOUT_RECEIPT_CONFIRMED',
+  'PAYOUT_DISPUTED',
+  'PAYOUT_ORDER_SET',
+  'PAYOUT_ORDER_CHANGED',
+]);
+
 export default async function LedgerPage() {
   const events = await getLedgerFeed();
+  const { user } = await requireUser();
+  const { ownedCircles } = await getDashboardData().catch(() => ({
+    ownedCircles: [] as { id: string }[],
+  }));
+
+  const ownedIds = new Set(ownedCircles.map((c) => c.id));
+  const isAdminSomewhere = ownedIds.size > 0;
+
+  // Non-admins: strip money events (privacy — no other members' payments)
+  const visible = isAdminSomewhere
+    ? events
+    : events.filter((e) => !MEMBER_HIDDEN.has(e.event_type));
+
+  void user;
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="font-display text-3xl font-bold tracking-tight text-forest">
-          Ledger
-        </h1>
-        <p className="text-muted mt-1 max-w-2xl">
-          Append-only history across your circles. Entries cannot be edited or
-          deleted by users — transparency is the product.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div>
+          <h1 className="font-display text-3xl font-bold tracking-tight text-forest">
+            Ledger
+          </h1>
+          <p className="text-muted mt-1 max-w-2xl">
+            {isAdminSomewhere
+              ? 'Append-only history for circles you own (admin view).'
+              : 'General activity only. Contribution and payout events for other members are hidden to protect privacy.'}
+          </p>
+        </div>
+        <span
+          className={`badge shrink-0 ${isAdminSomewhere ? 'bg-primary/10 text-primary' : 'bg-forest/10 text-forest'}`}
+        >
+          {isAdminSomewhere ? (
+            <>
+              <ShieldCheck className="w-3.5 h-3.5" /> Admin view
+            </>
+          ) : (
+            <>
+              <EyeOff className="w-3.5 h-3.5" /> Privacy mode
+            </>
+          )}
+        </span>
       </div>
 
-      {events.length === 0 ? (
+      {visible.length === 0 ? (
         <div className="card text-center py-14">
           <BookOpen className="w-8 h-8 text-muted mx-auto mb-3" />
           <p className="text-muted">No ledger events yet.</p>
@@ -36,7 +82,7 @@ export default async function LedgerPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {events.map((event) => (
+              {visible.map((event) => (
                 <tr key={event.id}>
                   <td className="py-3 pr-3 text-muted whitespace-nowrap">
                     {formatDate(event.created_at)}
@@ -53,6 +99,14 @@ export default async function LedgerPage() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {!isAdminSomewhere && (
+        <p className="text-xs text-muted flex items-start gap-1.5">
+          <EyeOff className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+          Payment and payout ledger entries only appear for the circle admin
+          (owner). Your own events still show on the circle page.
+        </p>
       )}
     </div>
   );

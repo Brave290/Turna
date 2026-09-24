@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Check } from 'lucide-react';
+import { ModalShell } from '@/components/modal-shell';
 
 export interface SelectOption {
   value: string;
@@ -40,12 +41,10 @@ export function BrandSelect({
   const rootRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
 
-  // Sync external value
   useEffect(() => {
     if (value !== undefined) setSelected(value);
   }, [value]);
 
-  // Close on outside click / Escape
   useEffect(() => {
     if (!open) return;
     function onClick(e: MouseEvent) {
@@ -131,7 +130,7 @@ export function BrandSelect({
   );
 }
 
-/** Branded confirm dialog (replaces window.confirm). */
+/** Branded confirm dialog (replaces window.confirm). Portal-centered. */
 export function useConfirm() {
   const [state, setState] = useState<{
     open: boolean;
@@ -169,22 +168,14 @@ export function useConfirm() {
     setState((s) => ({ ...s, open: false, resolve: undefined }));
   }
 
-  const dialog = state.open ? (
-    <div className="fixed inset-0 z-[95] flex items-center justify-center p-4">
-      <div
-        className="absolute inset-0 bg-forest/50 backdrop-blur-sm"
-        onClick={() => close(false)}
-        aria-hidden
-      />
-      <motion.div
-        initial={{ opacity: 0, y: 12, scale: 0.97 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ type: 'spring', bounce: 0.22, duration: 0.35 }}
-        className="relative w-full max-w-sm rounded-2xl border border-border bg-white p-6 shadow-card"
-        role="alertdialog"
-        aria-modal="true"
-        aria-label={state.title}
-      >
+  const dialog = (
+    <ModalShell
+      open={state.open}
+      onClose={() => close(false)}
+      label={state.title || 'Confirm'}
+      maxWidth="max-w-sm"
+    >
+      <div className="p-6">
         <h3 className="font-display text-lg font-bold text-forest mb-2">
           {state.title}
         </h3>
@@ -211,9 +202,28 @@ export function useConfirm() {
             {state.confirmLabel}
           </button>
         </div>
-      </motion.div>
-    </div>
-  ) : null;
+      </div>
+    </ModalShell>
+  );
 
   return { confirm, dialog };
+}
+
+/** Shared empty-state helper (kept for parity with older imports). */
+export function EmptyState({
+  icon,
+  title,
+  description,
+}: {
+  icon?: ReactNode;
+  title: string;
+  description?: string;
+}) {
+  return (
+    <div className="py-14 text-center px-6">
+      {icon}
+      <p className="text-sm font-medium text-forest mb-1">{title}</p>
+      {description && <p className="text-xs text-muted">{description}</p>}
+    </div>
+  );
 }

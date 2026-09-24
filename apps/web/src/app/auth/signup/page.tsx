@@ -17,10 +17,10 @@ type AuthState = {
   redirectTo?: string;
 } | null;
 
-function SubmitButton() {
+function SubmitButton({ disabled }: { disabled?: boolean }) {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" className="btn-primary w-full" disabled={pending}>
+    <button type="submit" className="btn-primary w-full" disabled={pending || disabled}>
       {pending ? (
         <>
           <Spinner />
@@ -50,12 +50,20 @@ export default function SignUpPage() {
     }
   }, [redirectTarget]);
 
+  const [agreed, setAgreed] = useState(false);
   const [state, formAction] = useFormState(
     (_: AuthState, formData: FormData) => {
       const email = String(formData.get("email") ?? "").trim().toLowerCase();
       if (email) sessionStorage.setItem("turna_pending_email", email);
       if (redirectTarget && !formData.get("redirect")) {
         formData.set("redirect", redirectTarget);
+      }
+      if (!formData.get("terms")) {
+        return {
+          error: {
+            form: ["You must agree to the Terms and Privacy Policy to continue."],
+          },
+        } as AuthState;
       }
       return signUp(formData);
     },
@@ -64,6 +72,13 @@ export default function SignUpPage() {
   const [showPassword, setShowPassword] = useState(false);
   const toast = useToast();
   const lastKeyRef = useRef("");
+
+  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    if (!agreed) {
+      e.preventDefault();
+      toast.error("Please agree to the Terms and Privacy Policy.");
+    }
+  }
 
   useEffect(() => {
     if (!state) return;
@@ -126,7 +141,7 @@ export default function SignUpPage() {
         <p className="text-white/55">Start saving with your circle today.</p>
       </div>
 
-      <form action={formAction} className="space-y-5" noValidate>
+      <form action={formAction} onSubmit={onSubmit} className="space-y-5" noValidate>
         {redirectTarget && (
           <input type="hidden" name="redirect" value={redirectTarget} />
         )}
@@ -207,6 +222,38 @@ export default function SignUpPage() {
           )}
         </div>
 
+        {/* Terms — must check yourself; never pre-checked */}
+        <label className="flex items-start gap-2.5 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            name="terms"
+            checked={agreed}
+            onChange={(e) => setAgreed(e.target.checked)}
+            required
+            className="mt-0.5 w-4 h-4 rounded border-border text-primary focus:ring-primary/40"
+            aria-required="true"
+          />
+          <span className="text-sm text-white/70 leading-snug">
+            I agree to the{" "}
+            <Link
+              href="/terms"
+              target="_blank"
+              className="text-primary hover:text-primary-light underline underline-offset-2"
+            >
+              Terms
+            </Link>{" "}
+            and{" "}
+            <Link
+              href="/privacy"
+              target="_blank"
+              className="text-primary hover:text-primary-light underline underline-offset-2"
+            >
+              Privacy Policy
+            </Link>
+            .
+          </span>
+        </label>
+
         {formError && (
           <div
             className="rounded-xl border border-error/30 bg-error/10 px-4 py-3 text-sm text-error"
@@ -216,7 +263,7 @@ export default function SignUpPage() {
           </div>
         )}
 
-        <SubmitButton />
+        <SubmitButton disabled={!agreed} />
       </form>
 
       <p className="text-sm text-white/50 text-center mt-8">

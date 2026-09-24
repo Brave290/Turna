@@ -94,6 +94,15 @@ jobs:
           sha256sum ${APP_NAME}-${VERSION}.aab > ${APP_NAME}-${VERSION}.aab.sha256
           sha256sum ${APP_NAME}-${VERSION}.apk > ${APP_NAME}-${VERSION}.apk.sha256
           sha256sum ${APP_NAME}-${VERSION}-source.tar.gz > ${APP_NAME}-${VERSION}-source.tar.gz.sha256
+          # Full release bundle: APK + AAB + source + all checksums
+          zip -9 ${APP_NAME}-${VERSION}-bundle.zip \
+            ${APP_NAME}-${VERSION}.aab \
+            ${APP_NAME}-${VERSION}.apk \
+            ${APP_NAME}-${VERSION}-source.tar.gz \
+            ${APP_NAME}-${VERSION}.aab.sha256 \
+            ${APP_NAME}-${VERSION}.apk.sha256 \
+            ${APP_NAME}-${VERSION}-source.tar.gz.sha256
+          sha256sum ${APP_NAME}-${VERSION}-bundle.zip > ${APP_NAME}-${VERSION}-bundle.zip.sha256
           cd ..
 
       - name: Generate changelog
@@ -123,6 +132,7 @@ jobs:
             ### Downloads
             - **Android App Bundle (for Play Store)**: `turna-${{ steps.version.outputs.version }}.aab`
             - **Android APK (for direct install)**: `turna-${{ steps.version.outputs.version }}.apk`
+            - **Full release bundle (APK + AAB + source + checksums)**: `turna-${{ steps.version.outputs.version }}-bundle.zip`
             - **Source Code**: `turna-${{ steps.version.outputs.version }}-source.tar.gz`
             
             ### Verification
@@ -134,6 +144,8 @@ jobs:
             release-artifacts/turna-${{ steps.version.outputs.version }}.aab
             release-artifacts/turna-${{ steps.version.outputs.version }}.apk
             release-artifacts/turna-${{ steps.version.outputs.version }}-source.tar.gz
+            release-artifacts/turna-${{ steps.version.outputs.version }}-bundle.zip
+            release-artifacts/turna-${{ steps.version.outputs.version }}-bundle.zip.sha256
             release-artifacts/turna-${{ steps.version.outputs.version }}.aab.sha256
             release-artifacts/turna-${{ steps.version.outputs.version }}.apk.sha256
             release-artifacts/turna-${{ steps.version.outputs.version }}-source.tar.gz.sha256
@@ -141,6 +153,46 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Mirror APK + full bundle to the public downloads-only repo (no source-only extract).
+      # Requires secret DOWNLOADS_REPO_TOKEN (fine-grained PAT: contents:write on Brave290/Turna-Downloads)
+      # and DOWNLOADS_REPO (e.g. Brave290/Turna-Downloads).
+      # Stable URLs:
+      #   https://github.com/Brave290/Turna-Downloads/releases/latest/download/turna.apk
+      #   https://github.com/Brave290/Turna-Downloads/releases/latest/download/turna-bundle.zip
+      - name: Publish APK + bundle to public downloads repo
+        if: ${{ secrets.DOWNLOADS_REPO_TOKEN != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.DOWNLOADS_REPO_TOKEN }}
+          DOWNLOADS_REPO: ${{ vars.DOWNLOADS_REPO || 'Brave290/Turna-Downloads' }}
+          VERSION: ${{ steps.version.outputs.version }}
+          TAG: ${{ steps.version.outputs.tag }}
+          APK_PATH: release-artifacts/turna-${{ steps.version.outputs.version }}.apk
+          AAB_PATH: release-artifacts/turna-${{ steps.version.outputs.version }}.aab
+          BUNDLE_PATH: release-artifacts/turna-${{ steps.version.outputs.version }}-bundle.zip
+        run: |
+          set -euo pipefail
+          gh release view "$TAG" --repo "$DOWNLOADS_REPO" >/dev/null 2>&1 || {
+            gh release create "$TAG" \
+              --repo "$DOWNLOADS_REPO" \
+              --title "Turna $VERSION" \
+              --notes "Turna $VERSION — APK, full release bundle (APK + AAB + source + checksums)." \
+              --latest
+          }
+          cp "$APK_PATH" turna.apk
+          cp "$AAB_PATH" turna.aab
+          cp "$BUNDLE_PATH" turna-bundle.zip
+          gh release upload "$TAG" \
+            --repo "$DOWNLOADS_REPO" \
+            turna.apk \
+            turna.aab \
+            turna-bundle.zip \
+            "release-artifacts/turna-${VERSION}.apk" \
+            "release-artifacts/turna-${VERSION}.apk.sha256" \
+            "release-artifacts/turna-${VERSION}.aab" \
+            "release-artifacts/turna-${VERSION}.bundle.zip.sha256" \
+            --clobber
+          gh release edit "$TAG" --repo "$DOWNLOADS_REPO" --latest
 
       - name: Check Vercel token
         id: check-vercel

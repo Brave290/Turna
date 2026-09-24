@@ -3,6 +3,7 @@ import Image from "next/image";
 import { Logo } from "@/components/logo";
 import { Reveal, AnimatedCounter, Tilt } from "@/components/animated";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { AppDownloadModal } from "@/components/app-download-modal";
 
 /* ─── Icons (SVG only, no emojis) ─── */
 const IconShield = () => (
@@ -225,12 +226,7 @@ function Hero() {
                     <path d="M3 8h10M9 4l4 4-4 4" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </Link>
-                <a
-                  href="#how"
-                  className="border border-white/15 hover:bg-white/5 text-white rounded-xl px-8 py-4 text-base font-semibold transition-colors inline-flex items-center justify-center gap-2 backdrop-blur-sm"
-                >
-                  See how it works
-                </a>
+                <AppDownloadModal />
               </div>
             </Reveal>
 
