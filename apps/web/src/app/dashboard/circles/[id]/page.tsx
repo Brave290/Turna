@@ -23,6 +23,13 @@ import { SwapPanel } from '@/components/dashboard/swap-panel';
 import { LifecycleControls, LeaveCircleButton } from '@/components/dashboard/lifecycle-controls';
 import { RemoveMemberButton } from '@/components/dashboard/remove-member';
 import { ContributionActions } from '@/components/dashboard/contribution-actions';
+import { InviteShareButton } from '@/components/dashboard/invite-share-button';
+import { CircleAnnouncements } from '@/components/dashboard/circle-announcements';
+import { CirclePolls } from '@/components/dashboard/circle-polls';
+import { CircleCalendar } from '@/components/dashboard/circle-calendar';
+import { CircleAnalytics } from '@/components/dashboard/circle-analytics';
+import { CircleRulesCard } from '@/components/dashboard/circle-rules';
+import { RoleManager } from '@/components/dashboard/role-manager';
 
 export const dynamic = 'force-dynamic';
 
@@ -85,10 +92,15 @@ export default async function CircleDetailPage({
     myContribution,
     collectingCycle,
     swaps,
+    announcements,
+    polls,
+    myAgreementVersion,
   } = data;
 
   const myMembership = members.find((m) => m.user_id === user.id);
-  const pendingInvites = invitations.filter((i) => i.status === 'pending');
+  const pendingInvites = invitations.filter(
+    (i) => i.status === 'pending' && (!i.is_open || !!i.invitee_email)
+  );
 
   // Privacy: only owner (room admin) sees full identities & money events
   const visibleLedger = isOwner
@@ -179,11 +191,22 @@ export default async function CircleDetailPage({
                 </div>
               </div>
               {isOwner && (
-                <DeleteCircleButton
-                  circleId={circle.id}
-                  circleName={circle.name}
-                  status={circle.status}
-                />
+                <div className="flex flex-wrap gap-2 justify-start sm:justify-end mt-2">
+                  <InviteShareButton
+                    circleId={circle.id}
+                    circleName={circle.name}
+                    contributionAmount={Number(circle.contribution_amount)}
+                    currency={circle.currency}
+                    frequency={circle.frequency}
+                    memberCount={members.filter((m) => m.status === 'active').length}
+                    memberLimit={circle.member_limit}
+                  />
+                  <DeleteCircleButton
+                    circleId={circle.id}
+                    circleName={circle.name}
+                    status={circle.status}
+                  />
+                </div>
               )}
               {!isOwner && myMembership && (
                 <LeaveCircleButton circleId={circle.id} circleName={circle.name} />
@@ -265,6 +288,70 @@ export default async function CircleDetailPage({
       )}
 
       <div className="grid lg:grid-cols-2 gap-6">
+        <RoleManager
+          circleId={circle.id}
+          isOwner={isOwner}
+          members={members
+            .filter((m) => m.status === 'active')
+            .map((m) => ({
+              id: m.id,
+              user_id: m.user_id,
+              role: m.role,
+              display_name: m.profiles?.display_name ?? null,
+              isSelf: m.user_id === user.id,
+            }))}
+        />
+        <CircleRulesCard
+          circleId={circle.id}
+          canEdit={isOwner}
+          frequency={circle.frequency}
+          contributionAmount={Number(circle.contribution_amount)}
+          currency={circle.currency}
+          latePolicy={(circle as { late_policy?: string }).late_policy ?? 'admin_review'}
+          payoutMode={(circle as { payout_mode?: string }).payout_mode ?? 'rotating'}
+          rules={(circle as { rules?: Record<string, unknown> | null }).rules ?? null}
+          rulesVersion={(circle as { rules_version?: number }).rules_version ?? 1}
+          myAcceptedVersion={myAgreementVersion ?? null}
+        />
+        <CircleAnnouncements
+          circleId={circle.id}
+          canPost={isOwner || myMembership?.role === 'treasurer'}
+          announcements={announcements}
+        />
+        <CirclePolls
+          circleId={circle.id}
+          canCreate={isOwner || myMembership?.role === 'treasurer'}
+          polls={polls}
+        />
+        <CircleCalendar
+          cycles={cycles.map((c) => ({
+            id: c.id,
+            cycle_number: c.cycle_number,
+            due_date: c.due_date,
+            status: c.status,
+            expected_amount: c.expected_amount,
+          }))}
+          currency={circle.currency}
+        />
+        <CircleAnalytics
+          isOwner={isOwner}
+          contributionAmount={Number(circle.contribution_amount)}
+          currency={circle.currency}
+          memberCount={members.filter((m) => m.status === 'active').length}
+          memberLimit={circle.member_limit}
+          cycles={cycles.map((c) => ({
+            id: c.id,
+            cycle_number: c.cycle_number,
+            status: c.status,
+            expected_amount: c.expected_amount,
+          }))}
+          contributions={contributions.map((c) => ({
+            id: c.id,
+            status: c.status,
+            amount: c.reported_amount ?? c.expected_amount,
+            cycle_id: c.cycle_id,
+          }))}
+        />
         <SwapPanel
           circleId={circle.id}
           isOwner={isOwner}
@@ -412,10 +499,21 @@ export default async function CircleDetailPage({
               <div className="flex items-center gap-2 mb-3">
                 <MailPlus className="w-4 h-4 text-primary" />
                 <h3 className="text-sm font-semibold text-forest">
-                  Invite by email
+                  Invite members
                 </h3>
               </div>
               <InviteForm circleId={circle.id} nextPosition={members.length + 1} />
+              <div className="mt-3">
+                <InviteShareButton
+                  circleId={circle.id}
+                  circleName={circle.name}
+                  contributionAmount={Number(circle.contribution_amount)}
+                  currency={circle.currency}
+                  frequency={circle.frequency}
+                  memberCount={members.filter((m) => m.status === 'active').length}
+                  memberLimit={circle.member_limit}
+                />
+              </div>
               {pendingInvites.length > 0 && (
                 <ul className="mt-4 space-y-2">
                   {pendingInvites.map((inv) => (
@@ -423,7 +521,9 @@ export default async function CircleDetailPage({
                       key={inv.id}
                       className="flex items-center justify-between text-sm bg-cream rounded-lg px-3 py-2"
                     >
-                      <span className="truncate text-forest">{inv.invitee_email}</span>
+                      <span className="truncate text-forest">
+                        {inv.is_open ? 'Open share link' : inv.invitee_email}
+                      </span>
                       <span className="text-xs text-muted shrink-0 ml-2">
                         exp {formatDate(inv.expires_at)}
                       </span>

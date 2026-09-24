@@ -176,7 +176,7 @@ async function loadWallets(
 export async function getCircleDetail(circleId: string) {
   const { supabase, user } = await requireUser();
 
-  const [circleRes, membersRes, cyclesRes, invitesRes, ledgerRes, swapsRes, walletsRes] =
+  const [circleRes, membersRes, cyclesRes, invitesRes, ledgerRes, swapsRes, walletsRes, annRes, pollRes, agrRes] =
     await Promise.all([
       supabase.from('circles').select('*').eq('id', circleId).maybeSingle(),
       supabase
@@ -209,6 +209,25 @@ export async function getCircleDetail(circleId: string) {
         .order('created_at', { ascending: false })
         .limit(50),
       supabase.from('wallet_balances').select('*').eq('circle_id', circleId),
+      supabase
+        .from('circle_announcements')
+        .select('*, profiles:author_id(display_name)')
+        .eq('circle_id', circleId)
+        .order('pinned', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(30),
+      supabase
+        .from('circle_polls')
+        .select('*')
+        .eq('circle_id', circleId)
+        .order('created_at', { ascending: false })
+        .limit(20),
+      supabase
+        .from('circle_agreement_acceptances')
+        .select('rules_version')
+        .eq('circle_id', circleId)
+        .eq('user_id', user.id)
+        .maybeSingle(),
     ]);
 
   const circle = circleRes.data as Circle | null;
@@ -267,6 +286,78 @@ export async function getCircleDetail(circleId: string) {
     }
   }
 
+  const announcementsRaw =
+    ((annRes.data ?? []) as {
+      id: string;
+      title: string;
+      body: string;
+      pinned: boolean;
+      created_at: string;
+      profiles?: { display_name: string } | { display_name: string }[] | null;
+    }[]) ?? [];
+  const announcements = announcementsRaw.map((a) => {
+    const p = Array.isArray(a.profiles) ? a.profiles[0] : a.profiles;
+    return {
+      id: a.id,
+      title: a.title,
+      body: a.body,
+      pinned: a.pinned,
+      created_at: a.created_at,
+      author_name: p?.display_name ?? null,
+    };
+  });
+
+  const pollsRaw =
+    ((pollRes.data ?? []) as {
+      id: string;
+      question: string;
+      options: string[] | unknown;
+      status: string;
+      created_at: string;
+    }[]) ?? [];
+  let pollVotes: { poll_id: string; option_index: number; voter_id: string }[] = [];
+  if (pollsRaw.length > 0) {
+    const { data: votes } = await supabase
+      .from('circle_poll_votes')
+      .select('poll_id, option_index, voter_id')
+      .in(
+        'poll_id',
+        pollsRaw.map((p) => p.id)
+      );
+    pollVotes = (votes ?? []) as typeof pollVotes;
+  }
+  const polls = pollsRaw.map((p) => {
+    const options = (Array.isArray(p.options) ? p.options : []).map(String);
+    const counts = options.map(
+      () => pollVotes.filter((v) => v.poll_id === p.id).length
+    );
+    const myCounts = options.map(
+      (_, i) => pollVotes.filter((v) => v.poll_id === p.id && v.option_index === i).length
+    );
+    // fix: counts per option
+    const realCounts = options.map(
+      (_, i) => pollVotes.filter((v) => v.poll_id === p.id && v.option_index === i).length
+    );
+    void myCounts;
+    void counts;
+    const mine = pollVotes.find(
+      (v) => v.poll_id === p.id && v.voter_id === user.id
+    );
+    return {
+      id: p.id,
+      question: p.question,
+      options,
+      status: p.status,
+      created_at: p.created_at,
+      total_votes: pollVotes.filter((v) => v.poll_id === p.id).length,
+      my_vote: mine?.option_index ?? null,
+      counts: realCounts,
+    };
+  });
+
+  const myAgreementVersion = (agrRes.data as { rules_version?: number } | null)
+    ?.rules_version;
+
   return {
     user,
     circle,
@@ -280,6 +371,9 @@ export async function getCircleDetail(circleId: string) {
     isMember,
     myContribution,
     collectingCycle,
+    announcements,
+    polls,
+    myAgreementVersion,
     swaps: (swapsRes.data ?? []) as {
       id: string;
       circle_id: string;

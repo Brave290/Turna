@@ -37,6 +37,10 @@ export type Circle = {
   end_month: number | null;
   payout_mode: 'rotating' | 'end_of_term';
   payment_mode: 'manual' | 'autopay';
+  preferred_payment_method?: string | null;
+  late_policy?: string | null;
+  rules?: Record<string, unknown> | null;
+  rules_version?: number;
   fee_bps: number;
   network_charge_bps: number;
   fee_payer: 'member' | 'owner' | 'shared';
@@ -48,7 +52,7 @@ export type CircleMember = {
   id: string;
   circle_id: string;
   user_id: string;
-  role: 'owner' | 'treasurer' | 'member';
+  role: 'owner' | 'admin' | 'treasurer' | 'member' | 'observer';
   payout_position: number;
   status: 'pending' | 'active' | 'left' | 'removed';
   joined_at: string | null;
@@ -61,12 +65,16 @@ export type Invitation = {
   id: string;
   circle_id: string;
   inviter_id: string;
-  invitee_email: string;
+  invitee_email: string | null;
   token: string;
   status: 'pending' | 'accepted' | 'expired' | 'cancelled';
   expires_at: string;
   created_at: string;
   accepted_at: string | null;
+  is_open?: boolean;
+  label?: string | null;
+  max_uses?: number | null;
+  use_count?: number;
 };
 
 export type ContributionCycle = {
@@ -95,6 +103,11 @@ export type Contribution = {
   expected_amount: number;
   reported_amount: number | null;
   payment_method: string | null;
+  payment_method_preferred?: string | null;
+  payment_reference?: string | null;
+  proof_note?: string | null;
+  proof_storage_path?: string | null;
+  receipt_code?: string | null;
   status: 'pending' | 'reported' | 'confirmed' | 'rejected' | 'disputed';
   reported_at: string | null;
   confirmed_at: string | null;

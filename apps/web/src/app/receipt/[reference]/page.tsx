@@ -2,8 +2,13 @@ import Link from 'next/link';
 import { Logo } from '@/components/logo';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { CheckCircle2, ArrowLeft } from 'lucide-react';
+import { ShareReceiptButton } from '@/components/dashboard/share-receipt-button';
 
 export const dynamic = 'force-dynamic';
+
+function ShareReceiptInline({ reference }: { reference: string }) {
+  return <ShareReceiptButton code={reference} reference={reference} label="Share receipt" />;
+}
 
 type ReceiptParams = {
   params: { reference: string };
@@ -182,7 +187,11 @@ export default async function ReceiptPage({ params }: ReceiptParams) {
             </Link>
           </div>
 
-          <p className="text-center text-xs text-white/65 mt-6">
+          <div className="mt-3">
+            <ShareReceiptInline reference={payment.reference} />
+          </div>
+
+          <p className="text-center text-xs text-white/40 mt-6">
             Keep this reference for support. Receipts are also listed under Payments.
           </p>
         </div>

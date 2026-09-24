@@ -594,6 +594,9 @@ export async function reportContribution(
   const { supabase, user } = await requireUser();
   const cycleId = String(formData.get('cycle_id') ?? '');
   const amountKobo = Number(formData.get('amount_kobo') ?? 0);
+  const paymentMethod = String(formData.get('payment_method') ?? 'bank_transfer').slice(0, 40);
+  const paymentReference = String(formData.get('payment_reference') ?? '').trim().slice(0, 80);
+  const proofNote = String(formData.get('proof_note') ?? '').trim().slice(0, 500);
   if (!cycleId || amountKobo <= 0) {
     return { error: { form: ['Valid amount required'] } };
   }
@@ -620,7 +623,7 @@ export async function reportContribution(
 
   const { data: existing } = await supabase
     .from('contributions')
-    .select('id, status')
+    .select('id, status, receipt_code')
     .eq('cycle_id', cycleId)
     .eq('member_id', member.id)
     .maybeSingle();
@@ -636,10 +639,24 @@ export async function reportContribution(
         reported_amount: Math.floor(amountKobo),
         status: 'reported',
         reported_at: new Date().toISOString(),
+        payment_method: paymentMethod,
+        payment_method_preferred: paymentMethod,
+        payment_reference: paymentReference || null,
+        proof_note: proofNote || null,
+        receipt_code:
+          existing.receipt_code ||
+          `TRN-${Date.now().toString(36).toUpperCase()}-${Math.random()
+            .toString(36)
+            .slice(2, 6)
+            .toUpperCase()}`,
       })
       .eq('id', existing.id);
     if (error) return { error: { form: ['Could not report'] } };
   } else {
+    const receiptCode = `TRN-${Date.now().toString(36).toUpperCase()}-${Math.random()
+      .toString(36)
+      .slice(2, 6)
+      .toUpperCase()}`;
     const { error } = await supabase.from('contributions').insert({
       cycle_id: cycleId,
       member_id: member.id,
@@ -647,6 +664,11 @@ export async function reportContribution(
       reported_amount: Math.floor(amountKobo),
       status: 'reported',
       reported_at: new Date().toISOString(),
+      payment_method: paymentMethod,
+      payment_method_preferred: paymentMethod,
+      payment_reference: paymentReference || null,
+      proof_note: proofNote || null,
+      receipt_code: receiptCode,
     });
     if (error) return { error: { form: ['Could not report'] } };
   }
@@ -724,6 +746,12 @@ export async function decideContribution(
 
   const updates: Record<string, unknown> = { status: decision };
   if (decision === 'confirmed') updates.confirmed_at = new Date().toISOString();
+  if (decision === 'confirmed' && !contribution.receipt_code) {
+    updates.receipt_code = `TRN-${Date.now().toString(36).toUpperCase()}-${Math.random()
+      .toString(36)
+      .slice(2, 6)
+      .toUpperCase()}`;
+  }
 
   const { error } = await supabase
     .from('contributions')

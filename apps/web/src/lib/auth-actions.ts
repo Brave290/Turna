@@ -1273,14 +1273,14 @@ export async function acceptInvitation(
   // Recover pending invite if a callback hop dropped the query string
   const { data: invite } = await supabase
     .from('invitations')
-    .select('id, circle_id, invitee_email, status, expires_at')
+    .select('id, circle_id, invitee_email, status, expires_at, is_open')
     .eq('token', token)
     .maybeSingle();
 
   if (!invite) {
     return { error: { form: ['This invitation link is invalid or has expired'] } };
   }
-  if (invite.status === 'accepted') {
+  if (invite.status === 'accepted' && !invite.is_open) {
     return { error: { form: ['This invitation has already been used'] } };
   }
   if (invite.status === 'cancelled' || invite.status === 'expired') {
@@ -1293,12 +1293,29 @@ export async function acceptInvitation(
       .eq('id', invite.id);
     return { error: { form: ['This invitation has expired. Ask for a new one.'] } };
   }
-  if (invite.invitee_email.toLowerCase() !== user.email.toLowerCase()) {
-    return {
-      error: {
-        form: ['Sign in with the email that received this invitation'],
-      },
-    };
+
+  const { data: inviteFull } = await supabase
+    .from('invitations')
+    .select('is_open, max_uses, use_count, invitee_email')
+    .eq('id', invite.id)
+    .maybeSingle();
+
+  const isOpen = !!inviteFull?.is_open;
+  if (!isOpen && inviteFull?.invitee_email) {
+    if (inviteFull.invitee_email.toLowerCase() !== user.email.toLowerCase()) {
+      return {
+        error: {
+          form: ['Sign in with the email that received this invitation'],
+        },
+      };
+    }
+  }
+  if (
+    isOpen &&
+    inviteFull?.max_uses &&
+    (inviteFull.use_count ?? 0) >= inviteFull.max_uses
+  ) {
+    return { error: { form: ['This invite link has reached its member limit'] } };
   }
 
   const { data: existing } = await supabase
@@ -1309,10 +1326,12 @@ export async function acceptInvitation(
     .maybeSingle();
 
   if (existing && existing.status !== 'left') {
-    await supabase
-      .from('invitations')
-      .update({ status: 'accepted', accepted_at: new Date().toISOString() })
-      .eq('id', invite.id);
+    if (!isOpen) {
+      await supabase
+        .from('invitations')
+        .update({ status: 'accepted', accepted_at: new Date().toISOString() })
+        .eq('id', invite.id);
+    }
     return {
       success: 'You are already a member of this circle',
       circleId: invite.circle_id,
@@ -1359,10 +1378,17 @@ export async function acceptInvitation(
     }
   }
 
-  await supabase
-    .from('invitations')
-    .update({ status: 'accepted', accepted_at: new Date().toISOString() })
-    .eq('id', invite.id);
+  if (isOpen) {
+    await supabase
+      .from('invitations')
+      .update({ use_count: (inviteFull?.use_count ?? 0) + 1 })
+      .eq('id', invite.id);
+  } else {
+    await supabase
+      .from('invitations')
+      .update({ status: 'accepted', accepted_at: new Date().toISOString() })
+      .eq('id', invite.id);
+  }
 
   // ledger_insert_owner requires membership first (already inserted above)
   await supabase.from('ledger_events').insert({

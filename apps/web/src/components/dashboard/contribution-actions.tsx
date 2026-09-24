@@ -135,6 +135,57 @@ export function ContributionActions({
               dispute if something looks wrong.
             </p>
           </div>
+
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div>
+              <label className="label" htmlFor="report-method">
+                Payment method
+              </label>
+              <select
+                id="report-method"
+                name="payment_method"
+                className="input"
+                defaultValue="bank_transfer"
+              >
+                <option value="bank_transfer">Bank transfer</option>
+                <option value="cash">Cash</option>
+                <option value="mobile_money">Mobile money</option>
+                <option value="payment_link">Payment link</option>
+                <option value="card">Card</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label className="label" htmlFor="report-ref">
+                Reference <span className="text-muted font-normal">(optional)</span>
+              </label>
+              <input
+                id="report-ref"
+                name="payment_reference"
+                className="input"
+                placeholder="e.g. 839201"
+                maxLength={80}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="label" htmlFor="report-note">
+              Proof note <span className="text-muted font-normal">(optional)</span>
+            </label>
+            <textarea
+              id="report-note"
+              name="proof_note"
+              className="input min-h-[64px]"
+              placeholder="₦20,000 sent via bank transfer"
+              maxLength={500}
+            />
+            <p className="text-xs text-muted mt-1">
+              Screenshot upload is coming soon — paste the transfer note or
+              reference for now. Proof stays on the contribution record.
+            </p>
+          </div>
+
           <div className="flex flex-wrap gap-2">
             <button type="submit" className="btn-primary btn-sm" disabled={pending}>
               {pending ? <Spinner /> : 'Submit report'}
