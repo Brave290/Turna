@@ -61,7 +61,6 @@ apps/mobile/android/*.ap_
 apps/mobile/ios/build
 apps/mobile/ios/Pods
 apps/mobile/ios/*.xcworkspace
-apps/mobile/ios/*.xcodeproj
 apps/mobile/ios/*.pbxuser
 apps/mobile/ios/*.mode1v3
 apps/mobile/ios/*.mode2v3

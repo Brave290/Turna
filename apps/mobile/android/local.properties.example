@@ -1,0 +1,3 @@
+# Copy this file to local.properties and replace the path for your machine.
+# This file is ignored by Git because SDK paths are machine-specific.
+sdk.dir=/absolute/path/to/Android/sdk
