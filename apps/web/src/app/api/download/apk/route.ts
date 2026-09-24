@@ -3,14 +3,21 @@ import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * First-party APK download — resolves the latest android-latest release APK
- * from the (private) GitHub repo and 302-redirects to GitHub's pre-signed CDN URL.
+ * First-party APK download.
  *
- * Why redirect: APKs are ~100MB+; streaming through Vercel serverless hits
- * response size limits. The CDN URL is short-lived and already authenticated.
+ * Preferred: 302 to the public Turna-Downloads release URL (unauthenticated,
+ * stable, works in the app and any browser).
  *
- * Requires env GITHUB_TOKEN (fine-grained PAT: contents:read on Brave290/Turna).
+ * Fallback: if the public repo has no release yet, resolve the private repo's
+ * android-latest release via the GitHub API and 302-redirect to GitHub's
+ * pre-signed CDN URL (APKs are ~50MB+; never stream through Vercel).
+ *
+ * Requires env GITHUB_TOKEN only for the fallback path.
  */
+const PUBLIC_APK_URL =
+  process.env.DOWNLOADS_APK_URL ||
+  'https://github.com/Brave290/Turna-Downloads/releases/latest/download/turna.apk';
+
 const GITHUB_API =
   'https://api.github.com/repos/Brave290/Turna/releases/tags/android-latest';
 
@@ -54,6 +61,24 @@ function unauthorized(message: string) {
 }
 
 export async function GET() {
+  // 1. Preferred: public downloads repo — no auth, stable URL.
+  try {
+    const probe = await fetch(PUBLIC_APK_URL, {
+      redirect: 'manual',
+      cache: 'no-store',
+      headers: { 'User-Agent': 'TurnaAppDownloader/1.0' },
+    });
+    await probe.body?.cancel().catch(() => {});
+    if (probe.status >= 300 && probe.status < 400) {
+      return NextResponse.redirect(PUBLIC_APK_URL, {
+        status: 302,
+        headers: { 'Cache-Control': 'public, max-age=60' },
+      });
+    }
+  } catch {
+    /* fall through to private-repo fallback */
+  }
+
   const token =
     process.env.GITHUB_TOKEN ||
     process.env.GH_TOKEN ||
@@ -61,11 +86,11 @@ export async function GET() {
 
   if (!token) {
     return unauthorized(
-      'APK download not configured: set GITHUB_TOKEN (contents:read on Brave290/Turna).'
+      'APK download not available: public downloads repo unreachable and GITHUB_TOKEN not set.'
     );
   }
 
-  // 1. Resolve latest rolling release assets
+  // 2. Fallback: resolve android-latest rolling release assets
   let asset: GhAsset | null = null;
   try {
     const rel = await fetch(GITHUB_API, {
@@ -77,16 +102,7 @@ export async function GET() {
       asset = pickApk(data.assets ?? []);
     }
   } catch {
-    /* fall through to override */
-  }
-
-  // 2. Optional direct override (e.g. public Turna-Downloads URL)
-  const override = process.env.DOWNLOADS_APK_URL;
-  if (!asset && override) {
-    return NextResponse.redirect(override, {
-      status: 302,
-      headers: { 'Cache-Control': 'public, max-age=300' },
-    });
+    /* handled below */
   }
 
   if (!asset) {
