@@ -263,7 +263,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -e\n\nWITH_ENVIRONMENT=\"../node_modules/react-native/scripts/xcode/with-environment.sh\"\nREACT_NATIVE_XCODE=\"../node_modules/react-native/scripts/react-native-xcode.sh\"\n\n/bin/sh -c \"$WITH_ENVIRONMENT $REACT_NATIVE_XCODE\"\n";
+			shellScript = "set -e\n\n# Resolve react-native: pnpm hoisted installs put deps at the monorepo root\nRN_ROOT=\"\"\nfor CAND in \"$PROJECT_DIR/../node_modules/react-native\" \"$PROJECT_DIR/../../node_modules/react-native\" \"$PROJECT_DIR/../../../node_modules/react-native\"; do\n  if [ -f \"$CAND/scripts/xcode/with-environment.sh\" ]; then\n    RN_ROOT=\"$CAND\"\n    break\n  fi\ndone\nif [ -z \"$RN_ROOT\" ] && command -v node >/dev/null 2>&1; then\n  RN_ROOT=$(node -e \"const p=require('path');for(const b of process.argv.slice(1)){try{console.log(p.dirname(require.resolve('react-native/package.json',{paths:[b]})));process.exit(0)}catch(e){}}\" \"$PROJECT_DIR\" 2>/dev/null || true)\nfi\nif [ -z \"$RN_ROOT\" ] || [ ! -f \"$RN_ROOT/scripts/xcode/with-environment.sh\" ]; then\n  echo \"error: react-native not found in node_modules\" >&2\n  exit 1\nfi\nWITH_ENVIRONMENT=\"$RN_ROOT/scripts/xcode/with-environment.sh\"\nREACT_NATIVE_XCODE=\"$RN_ROOT/scripts/react-native-xcode.sh\"\n\n/bin/sh -c \"$WITH_ENVIRONMENT $REACT_NATIVE_XCODE\"\n";
 		};
 		00EEFC60759A1932668264C0 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
