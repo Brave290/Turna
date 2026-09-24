@@ -25,6 +25,8 @@ react {
     codegenDir = codegenDir
     cliFile = new File(rnPackageDir, "cli.js")
     hermesFlags = ["-O"]
+    // Hoisted pnpm layout: resolve hermesc from the real react-native package
+    hermesCommand = new File(rnPackageDir, "sdks/hermesc/%OS-BIN%/hermesc").absolutePath
     // Bundle JS into every APK so installs work without Metro
     debuggableVariants = []
 }

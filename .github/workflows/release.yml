@@ -160,8 +160,19 @@ jobs:
       # Stable URLs:
       #   https://github.com/Brave290/Turna-Downloads/releases/latest/download/turna.apk
       #   https://github.com/Brave290/Turna-Downloads/releases/latest/download/turna-bundle.zip
+      - name: Check downloads token
+        id: check-downloads
+        env:
+          DOWNLOADS_REPO_TOKEN: ${{ secrets.DOWNLOADS_REPO_TOKEN }}
+        run: |
+          if [ -n "$DOWNLOADS_REPO_TOKEN" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Publish APK + bundle to public downloads repo
-        if: ${{ secrets.DOWNLOADS_REPO_TOKEN != '' }}
+        if: steps.check-downloads.outputs.available == 'true'
         env:
           GH_TOKEN: ${{ secrets.DOWNLOADS_REPO_TOKEN }}
           DOWNLOADS_REPO: ${{ vars.DOWNLOADS_REPO || 'Brave290/Turna-Downloads' }}
