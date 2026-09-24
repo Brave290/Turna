@@ -1,0 +1,24 @@
+# Vercel uploads — replaces .gitignore while present, so list secrets too.
+# Vercel installs dependencies from the lockfile on its build machines.
+node_modules
+**/node_modules
+
+# Secrets / local env
+.env
+.env.local
+.env.*.local
+**/.env.local
+**/.env.*.local
+*.keystore
+apps/mobile/android/keystore
+
+# Build caches / artifacts
+.vercel
+**/.next
+**/.turbo
+**/dist
+**/build
+
+# Repo metadata
+.git
+*.log

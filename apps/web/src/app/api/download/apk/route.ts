@@ -66,6 +66,7 @@ export async function GET() {
     const probe = await fetch(PUBLIC_APK_URL, {
       redirect: 'manual',
       cache: 'no-store',
+      signal: AbortSignal.timeout(6000),
       headers: { 'User-Agent': 'TurnaAppDownloader/1.0' },
     });
     await probe.body?.cancel().catch(() => {});
@@ -96,6 +97,7 @@ export async function GET() {
     const rel = await fetch(GITHUB_API, {
       headers: ghHeaders(),
       cache: 'no-store',
+      signal: AbortSignal.timeout(8000),
     });
     if (rel.ok) {
       const data = (await rel.json()) as { assets?: GhAsset[] };
@@ -119,6 +121,7 @@ export async function GET() {
       },
       redirect: 'manual',
       cache: 'no-store',
+      signal: AbortSignal.timeout(8000),
     });
 
     const location =
