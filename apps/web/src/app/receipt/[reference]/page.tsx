@@ -7,7 +7,13 @@ import { ShareReceiptButton } from '@/components/dashboard/share-receipt-button'
 export const dynamic = 'force-dynamic';
 
 function ShareReceiptInline({ reference }: { reference: string }) {
-  return <ShareReceiptButton code={reference} reference={reference} label="Share receipt" />;
+  return (
+    <ShareReceiptButton
+      code={reference}
+      reference={reference}
+      label="Share receipt"
+    />
+  );
 }
 
 type ReceiptParams = {
@@ -72,7 +78,7 @@ export default async function ReceiptPage({ params }: ReceiptParams) {
         <div
           className="absolute w-[500px] h-[500px] rounded-full blur-[100px] opacity-30"
           style={{
-            background: 'radial-gradient(circle, #00C2A8 0%, transparent 70%)',
+            background: 'radial-gradient(circle, #007A65 0%, transparent 70%)',
             top: '-15%',
             right: '-20%',
           }}

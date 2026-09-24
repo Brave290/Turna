@@ -1,101 +1,113 @@
-import {APP_NAME} from '@turna/config';
-import React from 'react';
-import {StyleSheet, Text, View} from 'react-native';
-import {Badge, Card, Stat} from './components/Card';
-import {Button} from './components/Button';
-import {Screen} from './components/Screen';
-import {colors, radius, spacing, typography} from './theme';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthScreen } from './screens/AuthScreen';
+import { OnboardingScreen } from './screens/OnboardingScreen';
+import { HomeScreen } from './screens/HomeScreen';
+import { CirclesScreen } from './screens/CirclesScreen';
+import { LedgerScreen } from './screens/LedgerScreen';
+import { ProfileScreen } from './screens/ProfileScreen';
+import { SoloLedgersScreen } from './screens/SoloLedgersScreen';
+import { SoloLedgerDetailScreen } from './screens/SoloLedgerDetailScreen';
+import { TabBar } from './navigation/TabBar';
+import { UpdatePopup } from './components/UpdatePopup';
+import { colors, spacing, typography } from './theme';
 
-export default function App(): React.ReactElement {
+type TabKey = 'home' | 'circles' | 'ledger' | 'solo' | 'profile';
+
+function Gate() {
+  const { status } = useAuth();
+  const [tab, setTab] = useState<TabKey>('home');
+  const [guest, setGuest] = useState(false);
+  const [soloId, setSoloId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (status !== 'signedIn') setTab('home');
+  }, [status]);
+
+  const body = useMemo(() => {
+    if (status === 'loading') {
+      return (
+        <View style={styles.loading}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Turna</Text>
+        </View>
+      );
+    }
+    if (status === 'needsVerify' || status === 'signedOut') {
+      if (guest) {
+        return <AuthScreen onSwitch={() => setGuest(false)} />;
+      }
+      return <AuthScreen onSwitch={() => setGuest(true)} />;
+    }
+    if (status === 'onboarding') {
+      return <OnboardingScreen />;
+    }
+    switch (tab) {
+      case 'circles':
+        return <CirclesScreen />;
+      case 'ledger':
+        return <LedgerScreen />;
+      case 'solo':
+        if (soloId) {
+          return (
+            <SoloLedgerDetailScreen ledgerId={soloId} onBack={() => setSoloId(null)} />
+          );
+        }
+        return <SoloLedgersScreen onOpen={setSoloId} />;
+      case 'profile':
+        return <ProfileScreen />;
+      case 'home':
+      default:
+        return <HomeScreen />;
+    }
+  }, [status, tab, guest, soloId]);
+
+  const showTabs = status === 'signedIn';
+
   return (
-    <Screen tone="forest">
-      <View style={styles.hero}>
-        <View style={styles.mark}>
-          <Text style={styles.markLetter}>T</Text>
-        </View>
-        <Text style={styles.title}>{APP_NAME}</Text>
-        <Text style={styles.tagline}>Save together. Grow together.</Text>
-        <View style={styles.badgeRow}>
-          <Badge label="Live circles" tone="active" />
-          <Badge label="Member payouts" tone="muted" />
-        </View>
-      </View>
+    <View style={styles.root}>
+      <View style={styles.body}>{body}</View>
+      {showTabs && (
+        <TabBar
+          active={tab}
+          onChange={(k) => {
+            if (k !== 'solo') setSoloId(null);
+            setTab(k);
+          }}
+        />
+      )}
+      <UpdatePopup />
+    </View>
+  );
+}
 
-      <Card style={styles.card}>
-        <Text style={styles.cardTitle}>Your circle, one place</Text>
-        <Text style={styles.cardBody}>
-          Track contributions, confirmations, and payouts with a clear ledger built for trust.
-        </Text>
-        <View style={styles.stats}>
-          <Stat label="Members" value="2–100" />
-          <View style={styles.gap} />
-          <Stat label="Currency" value="NGN" />
-        </View>
-        <Button label="Continue to dashboard" style={styles.cta} />
-        <Button label="Sign in" variant="outline" style={styles.cta} />
-      </Card>
-    </Screen>
+export default function App() {
+  return (
+    <AuthProvider>
+      <Gate />
+    </AuthProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  hero: {
-    alignItems: 'center',
-    paddingVertical: spacing.xl,
+  root: {
+    flex: 1,
+    backgroundColor: colors.forest,
   },
-  mark: {
-    width: 72,
-    height: 72,
-    borderRadius: radius.lg,
-    backgroundColor: colors.primary,
+  body: {
+    flex: 1,
+  },
+  loading: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.md,
+    backgroundColor: colors.forest,
   },
-  markLetter: {
-    color: colors.forest,
-    fontSize: 36,
+  loadingText: {
+    color: colors.white,
+    fontSize: typography.title,
     fontWeight: '700',
-  },
-  title: {
-    color: colors.cream,
-    fontSize: typography.display,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  tagline: {
-    color: colors.muted,
-    fontSize: typography.body,
-    marginTop: spacing.sm,
-    textAlign: 'center',
-  },
-  badgeRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.md,
-  },
-  card: {
-    marginTop: spacing.lg,
-  },
-  cardTitle: {
-    color: colors.forest,
-    fontSize: typography.heading,
-    fontWeight: '700',
-  },
-  cardBody: {
-    color: colors.muted,
-    fontSize: typography.body,
-    marginTop: spacing.sm,
-    lineHeight: 22,
-  },
-  stats: {
-    flexDirection: 'row',
-    marginTop: spacing.lg,
-  },
-  gap: {
-    width: spacing.sm,
-  },
-  cta: {
     marginTop: spacing.md,
   },
 });

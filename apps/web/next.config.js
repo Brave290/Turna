@@ -15,6 +15,8 @@ const nextConfig = {
       },
     ],
   },
+  // Keep dashboard navigations fast — skip static opt for dynamic pages only
+  // (loading.tsx skeletons give instant feedback on RSC refetch).
   async headers() {
     return [
       {
@@ -23,6 +25,15 @@ const nextConfig = {
           { key: 'X-Frame-Options', value: 'DENY' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+        ],
+      },
+      {
+        source: '/dashboard/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'private, no-cache, no-store, max-age=0, must-revalidate',
+          },
         ],
       },
     ];

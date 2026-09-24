@@ -6,13 +6,13 @@
       <stop offset="1" stop-color="#0A1628"/>
     </linearGradient>
     <linearGradient id="g2" x1="200" y1="100" x2="1400" y2="900" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#00C2A8" stop-opacity="0.35"/>
+      <stop stop-color="#007A65" stop-opacity="0.35"/>
       <stop offset="0.5" stop-color="#7C5CFF" stop-opacity="0.22"/>
       <stop offset="1" stop-color="#38BDF8" stop-opacity="0.18"/>
     </linearGradient>
     <radialGradient id="orb1" cx="0" cy="0" r="1" gradientTransform="translate(1200 180) rotate(90) scale(420)" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#00C2A8" stop-opacity="0.45"/>
-      <stop offset="1" stop-color="#00C2A8" stop-opacity="0"/>
+      <stop stop-color="#007A65" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#007A65" stop-opacity="0"/>
     </radialGradient>
     <radialGradient id="orb2" cx="0" cy="0" r="1" gradientTransform="translate(280 780) rotate(90) scale(380)" gradientUnits="userSpaceOnUse">
       <stop stop-color="#7C5CFF" stop-opacity="0.4"/>

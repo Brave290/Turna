@@ -19,10 +19,9 @@ export function AppDownloadModal({
 }) {
   const [open, setOpen] = useState(false);
 
-  // Public downloads-only repo (no source). CI publishes APK here on release.
+  // First-party silent download — user never sees GitHub in the flow
   const APK_URL =
-    process.env.NEXT_PUBLIC_APK_URL ??
-    'https://github.com/Brave290/Turna-Downloads/releases/latest/download/turna.apk';
+    process.env.NEXT_PUBLIC_APK_URL ?? '/api/download/apk';
 
   return (
     <>
@@ -70,7 +69,7 @@ export function AppDownloadModal({
           </div>
 
           <div className="mt-5 space-y-3">
-            {/* Direct APK — latest release from public downloads repo */}
+            {/* Direct APK — first-party proxy (streams from our release channel) */}
             <a
               href={APK_URL}
               className="group flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-4 hover:bg-primary/10 transition-colors"
@@ -85,7 +84,7 @@ export function AppDownloadModal({
                   Download APK
                 </span>
                 <span className="block text-xs text-muted">
-                  Direct install · latest release
+                  Instant install · latest build
                 </span>
               </span>
               <Download className="w-4 h-4 text-primary shrink-0 group-hover:translate-y-0.5 transition-transform" />

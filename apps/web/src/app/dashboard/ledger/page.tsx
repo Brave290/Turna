@@ -1,6 +1,8 @@
 import { getLedgerFeed, requireUser, getDashboardData } from '@/lib/dashboard-data';
 import { formatDate } from '@/lib/utils';
 import { BookOpen, EyeOff, ShieldCheck } from 'lucide-react';
+import { ExportCsvButton } from '@/components/dashboard/export-csv-button';
+import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,19 +52,37 @@ export default async function LedgerPage() {
               : 'General activity only. Contribution and payout events for other members are hidden to protect privacy.'}
           </p>
         </div>
-        <span
-          className={`badge shrink-0 ${isAdminSomewhere ? 'bg-primary/10 text-primary' : 'bg-forest/10 text-forest'}`}
-        >
-          {isAdminSomewhere ? (
-            <>
-              <ShieldCheck className="w-3.5 h-3.5" /> Admin view
-            </>
-          ) : (
-            <>
-              <EyeOff className="w-3.5 h-3.5" /> Privacy mode
-            </>
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <span
+            className={`badge ${isAdminSomewhere ? 'bg-primary/10 text-primary' : 'bg-forest/10 text-forest'}`}
+          >
+            {isAdminSomewhere ? (
+              <>
+                <ShieldCheck className="w-3.5 h-3.5" /> Admin view
+              </>
+            ) : (
+              <>
+                <EyeOff className="w-3.5 h-3.5" /> Privacy mode
+              </>
+            )}
+          </span>
+          {visible.length > 0 && (
+            <ExportCsvButton
+              filename={`turna-ledger-${new Date().toISOString().slice(0, 10)}.csv`}
+              headers={['timestamp', 'circle', 'event', 'entity', 'event_id']}
+              rows={visible.map((e) => [
+                e.created_at,
+                e.circles?.name ?? '',
+                e.event_type,
+                e.entity_type,
+                e.id,
+              ])}
+            />
           )}
-        </span>
+          <Link href="/dashboard/audit-log" className="btn-ghost btn-sm">
+            Audit log
+          </Link>
+        </div>
       </div>
 
       {visible.length === 0 ? (

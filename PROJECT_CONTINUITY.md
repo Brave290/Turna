@@ -4,6 +4,70 @@
 
 ---
 
+## Store Release Readiness Roadmap (NOT yet store-ready)
+
+Structure exists for Android/iOS builds. Still missing before Play/App Store:
+
+### 1. Android release signing
+- Permanent upload keystore **outside Git**
+- Secrets: `SIGNING_STORE_FILE`, `SIGNING_KEY_ALIAS`, `SIGNING_STORE_PASSWORD`, `SIGNING_KEY_PASSWORD`
+- Remove debug-keystore fallback in `build.gradle` release (must fail if missing)
+- Package ID `com.hx.turna` registered in Play Console
+- Google Play App Signing + first signed AAB
+- versionCode / versionName management; internal/closed/production tracks
+
+### 2. Android SDK / build env
+- SDK Platform 34, Build-Tools 34.0.0, NDK 26.1.10909125, JDK 17
+- `ANDROID_HOME` / `local.properties` (template: `apps/mobile/android/local.properties.example`)
+
+### 3. Android assets
+- Adaptive + legacy + round launcher icons, notification icon, splash (incl. Android 12)
+- Play feature graphic + screenshots (phone/tablet)
+
+### 4. iOS signing / Apple
+- Apple Developer Program, App Store Connect app, bundle `com.hx.turna`
+- Team ID, dev/dist certs, provisioning profiles, archive/export config
+- App Store Connect API key for CI
+
+### 5. iOS capabilities (if used)
+Push, Associated Domains, Sign in with Apple, Background Modes, Keychain, Universal Links, camera/photos for KYC, Face ID
+
+### 6. iOS assets & metadata
+Full AppIcon set, splash, screenshots, description/keywords, support/marketing/privacy/terms URLs, age rating, export compliance, privacy nutrition labels
+
+### 7. iOS privacy
+`PrivacyInfo.xcprivacy`, data collection declarations, account deletion, permission strings (camera/photos/notifications/biometrics)
+
+### 8. Production env vars
+- Supabase URL/anon/service + migrations + RLS + auth redirects + email + backups
+- `NEXT_PUBLIC_APP_URL`, `NODE_ENV` — consolidate `turnaapp.vercel.app` vs `turna.name.ng` fallbacks
+- Google OAuth client + consent + redirect URLs
+- SMTP + SPF/DKIM/DMARC + bounce monitoring
+- Paystack live keys + webhook + refunds + reconciliation
+- `CRON_SECRET`, `ADMIN_EMAILS` + MFA
+
+### 9. KYC / compliance
+Real KYC provider, doc storage/encryption/retention, AML/fraud/limits, regulatory review for ajo/esusu
+
+### 10. Backend hardening
+Rate limits, OTP abuse monitoring, webhook replay protection, payment idempotency, backups, error/uptime monitoring
+
+### 11. CI/CD
+Web checks + Android signing secrets + AAB upload; iOS macOS runner + CocoaPods + Xcode archive + TestFlight; Fastlane; env promotion
+
+### 12. Web deploy verification
+Vercel env complete, custom domain DNS/HTTPS, Supabase/OAuth/Paystack redirects, crons active, rollback tested
+
+### 13. Mobile↔web integration
+Deep links, intent filters, URL schemes, universal links, OAuth/password-reset/invite/payment callbacks, app download links
+
+### 14. Testing
+Emulator + physical Android/iOS; signup/OTP/login/reset/OAuth; circles/contributions/payments/payouts; notifications/KYC; offline, restart, upgrade, a11y, small screens
+
+**Most urgent**: Android SDK + real release keystore (no debug fallback) + Apple signing team + store console records + branded icons + production secrets + compliance review + device tests + CI signing.
+
+---
+
 ## Quick Resume Checklist
 
 When starting a new session:
@@ -115,6 +179,55 @@ Get local keys from `supabase status` after `supabase start`.
 ---
 
 ## Current Work Context
+
+### Phase 46: Solo Ledger + UX locks + email polish + store roadmap — Complete (2026-09-24)
+
+**Completed this session (on top of Phase 43–45)**:
+- **Store Release Readiness Roadmap** in this file (14 sections — signing, SDK, assets, iOS, env, KYC, CI/CD, testing)
+- **Email templates Rebrand v2**: `#007A65` primary / `#0A1628` forest / `#4A5D73` muted (no `#00C2A8`)
+- **Spam-folder tip on every template**: “Not in your inbox? Check Spam/Junk/Promotions…” + sender address — so users don’t say “email didn’t come”
+- **Nav loading skeletons**: `loading.tsx` for dashboard, settings, circles, ledger, solo-ledger
+- **Bank account lock after save** + email OTP unlock (`/api/auth/sensitive-otp`, purpose `bank_change`)
+- **Profile field lock after save** + OTP unlock (`ProfileEditGate`, purpose `profile_change`)
+- **Settings = tile menu** (Account / Preferences / Circle / Support) navigating to sub-pages
+- **Circles page compact** interactive grid (Join + New)
+- Audit/typecheck fixes: `Set-Cookie` join, App.tsx imports, offline UUIDs, NEXT_REDIRECT rethrow, unused imports
+
+**Next**:
+1. Typecheck + lint green, commit + push, verify CI + Vercel
+2. User approval → tag **v1.0.0**
+3. Store-release blockers per roadmap above
+
+---
+
+### Phase 43: Solo Ledger, App Updates, Silent APK — Complete (2026-09-24)
+
+**Completed this session**:
+- **Solo Ledger** (personal ajo tracker, no circle): tables `solo_ledgers`, `solo_contributors`, `solo_entries` + RLS (migration `20260924180000_solo_ledgers.sql` applied via Management API)
+- Web: `/dashboard/solo-ledger` list + detail board (calendar months, mark paid/partial/unpaid, offline localStorage queue → server actions)
+- Export: **Branded PDF** (print letterhead window) **or CSV** — user chooses; Share summary + Remind unpaid (WhatsApp/copy)
+- Mobile: Solo tab, AsyncStorage offline store, pull/push sync on login/foreground
+- **Multi-admin approvals UI**: `ApprovalPanel` on circle detail using existing `requestApproval`/`approveRequest`
+- **Audit log** page `/dashboard/audit-log` + CSV export; nav links
+- **Ledger/Payments CSV export** buttons
+- **Receipt share polish**: QR, email, copy, open receipt
+- **App update**: `GET /api/app/version` (build 2 / v1.0.1); `UpdatePrompt` web + `UpdatePopup` mobile — Later twice, force on 3rd
+- **Silent APK**: `GET /api/download/apk` streams from Turna-Downloads/repo releases; app-download-modal points here (no GitHub redirect)
+- CI: rolling `android-latest` prerelease with direct `turna-debug.apk` upload
+
+**Key paths**:
+- `apps/web/src/lib/solo-{actions,data,local}.ts`
+- `apps/web/src/components/dashboard/solo/*`
+- `apps/web/src/app/api/app/version/route.ts`, `api/download/apk/route.ts`
+- `apps/mobile/src/lib/solo-store.ts`, `screens/Solo*.tsx`, `components/UpdatePopup.tsx`
+- `supabase/migrations/20260924180000_solo_ledgers.sql`
+
+**Next**:
+1. Green CI + Vercel deploy
+2. Verify silent APK download + update popup on prod
+3. Tag **v1.0.0** after user approval (VERSION_CODE already 2 for update testing)
+
+---
 
 ### Phase 28: Dashboard Shell + Real Auth — In Progress (2026-09-22)
 

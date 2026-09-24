@@ -4,6 +4,7 @@ import { getDashboardData } from '@/lib/dashboard-data';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { StatusBadge } from '@/components/dashboard/status-badge';
+import { ExportCsvButton } from '@/components/dashboard/export-csv-button';
 
 export const dynamic = 'force-dynamic';
 
@@ -112,13 +113,40 @@ export default async function PaymentsPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="font-display text-3xl font-bold tracking-tight text-forest">
-          Payments
-        </h1>
-        <p className="text-muted mt-1">
-          Paystack transactions for your circles — contributions and payouts.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div>
+          <h1 className="font-display text-3xl font-bold tracking-tight text-forest">
+            Payments
+          </h1>
+          <p className="text-muted mt-1">
+            Paystack transactions for your circles — contributions and payouts.
+          </p>
+        </div>
+        {rows.length > 0 && (
+          <ExportCsvButton
+            filename={`turna-payments-${new Date().toISOString().slice(0, 10)}.csv`}
+            headers={[
+              'reference',
+              'circle',
+              'kind',
+              'status',
+              'amount',
+              'total',
+              'currency',
+              'date',
+            ]}
+            rows={rows.map((r) => [
+              r.reference,
+              r.circleName,
+              r.kind,
+              r.status,
+              r.amount,
+              r.total,
+              r.currency,
+              r.createdAt,
+            ])}
+          />
+        )}
       </div>
 
       <div className="card">

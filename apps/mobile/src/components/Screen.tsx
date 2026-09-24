@@ -1,28 +1,30 @@
-import React from 'react';
-import {SafeAreaView, StatusBar, StyleProp, StyleSheet, View, ViewStyle} from 'react-native';
-import {colors, spacing} from '../theme';
+import React, { ReactNode } from 'react';
+import { SafeAreaView, StatusBar, StyleProp, StyleSheet, ViewStyle } from 'react-native';
+import { colors } from '../theme';
 
-type ScreenProps = {
-  children: React.ReactNode;
+export function Screen({
+  children,
+  tone = 'cream',
+  style,
+}: {
+  children: ReactNode;
   tone?: 'forest' | 'cream';
   style?: StyleProp<ViewStyle>;
-};
-
-export function Screen({children, tone = 'cream', style}: ScreenProps) {
-  const isForest = tone === 'forest';
+}) {
+  const forest = tone === 'forest';
   return (
-    <SafeAreaView style={[styles.safe, isForest ? styles.forest : styles.cream, style]}>
+    <SafeAreaView style={[styles.root, forest ? styles.forest : styles.cream, style]}>
       <StatusBar
-        barStyle={isForest ? 'light-content' : 'dark-content'}
-        backgroundColor={isForest ? colors.forest : colors.cream}
+        barStyle={forest ? 'light-content' : 'dark-content'}
+        backgroundColor={forest ? colors.forest : colors.cream}
       />
-      <View style={styles.content}>{children}</View>
+      {children}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
+  root: {
     flex: 1,
   },
   forest: {
@@ -30,10 +32,5 @@ const styles = StyleSheet.create({
   },
   cream: {
     backgroundColor: colors.cream,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
   },
 });

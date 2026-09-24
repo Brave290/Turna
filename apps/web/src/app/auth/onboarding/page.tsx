@@ -114,7 +114,7 @@ export default function OnboardingPage() {
           className="absolute w-[420px] h-[420px] rounded-full blur-[80px] opacity-40"
           style={{
             background:
-              'radial-gradient(circle, #00C2A8 0%, transparent 70%)',
+              'radial-gradient(circle, #007A65 0%, transparent 70%)',
             top: '-8%',
             right: '-12%',
           }}

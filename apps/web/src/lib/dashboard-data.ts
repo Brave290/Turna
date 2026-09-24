@@ -176,7 +176,7 @@ async function loadWallets(
 export async function getCircleDetail(circleId: string) {
   const { supabase, user } = await requireUser();
 
-  const [circleRes, membersRes, cyclesRes, invitesRes, ledgerRes, swapsRes, walletsRes, annRes, pollRes, agrRes] =
+  const [circleRes, membersRes, cyclesRes, invitesRes, ledgerRes, swapsRes, walletsRes, annRes, pollRes, agrRes, apprRes] =
     await Promise.all([
       supabase.from('circles').select('*').eq('id', circleId).maybeSingle(),
       supabase
@@ -228,6 +228,12 @@ export async function getCircleDetail(circleId: string) {
         .eq('circle_id', circleId)
         .eq('user_id', user.id)
         .maybeSingle(),
+      supabase
+        .from('approval_requests')
+        .select('id, action, status, requester_id, required_approvals, approvals, created_at')
+        .eq('circle_id', circleId)
+        .order('created_at', { ascending: false })
+        .limit(30),
     ]);
 
   const circle = circleRes.data as Circle | null;
@@ -374,6 +380,15 @@ export async function getCircleDetail(circleId: string) {
     announcements,
     polls,
     myAgreementVersion,
+    approvals: ((apprRes.data ?? []) as {
+      id: string;
+      action: string;
+      status: string;
+      requester_id: string;
+      required_approvals: number;
+      approvals: { user_id: string; at?: string }[];
+      created_at: string;
+    }[]) ?? [],
     swaps: (swapsRes.data ?? []) as {
       id: string;
       circle_id: string;

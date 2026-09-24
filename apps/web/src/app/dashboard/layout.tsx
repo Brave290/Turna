@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { DashboardNav, SwipeRouter } from '@/components/dashboard/nav';
 import { PageEnter } from '@/components/page-enter';
+import { UpdatePrompt } from '@/components/update-prompt';
 import type { Notification } from '@turna/types';
 
 export const metadata: Metadata = {
@@ -78,6 +79,7 @@ export default async function DashboardLayout({
           </SwipeRouter>
         </div>
       </main>
+      <UpdatePrompt currentVersionCode={2} />
     </div>
   );
 }

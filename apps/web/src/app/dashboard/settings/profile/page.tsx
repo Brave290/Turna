@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { AvatarUploader } from '@/components/dashboard/avatar-uploader';
 import { ProfileForm } from '@/components/dashboard/profile-form';
 import { SettingsPanel } from '@/components/dashboard/settings/shell';
+import { ProfileEditGate } from '@/components/dashboard/profile-edit-gate';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,6 +31,10 @@ export default async function SettingsProfilePage() {
   const avatarVersion =
     typeof row?.avatar_version === 'number' ? row.avatar_version : null;
 
+  const hasProfileData = Boolean(
+    row?.phone || row?.bio || row?.city || row?.date_of_birth
+  );
+
   return (
     <div>
       <SettingsPanel
@@ -46,19 +51,21 @@ export default async function SettingsProfilePage() {
 
       <SettingsPanel
         title="Public profile"
-        description="Manage how you appear inside circles."
+        description="Locked after first save — unlock with an email code to edit."
       >
-        <ProfileForm
-          initial={{
-            display_name: displayName,
-            email,
-            date_of_birth: row?.date_of_birth ?? null,
-            phone: row?.phone ?? null,
-            bio: row?.bio ?? null,
-            city: row?.city ?? null,
-            country: row?.country ?? 'NG',
-          }}
-        />
+        <ProfileEditGate initiallyLocked={hasProfileData}>
+          <ProfileForm
+            initial={{
+              display_name: displayName,
+              email,
+              date_of_birth: row?.date_of_birth ?? null,
+              phone: row?.phone ?? null,
+              bio: row?.bio ?? null,
+              city: row?.city ?? null,
+              country: row?.country ?? 'NG',
+            }}
+          />
+        </ProfileEditGate>
       </SettingsPanel>
     </div>
   );

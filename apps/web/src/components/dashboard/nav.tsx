@@ -12,6 +12,7 @@ import {
   Settings,
   HelpCircle,
   LogOut,
+  NotebookPen,
 } from 'lucide-react';
 import { Logo } from '@/components/logo';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -24,14 +25,16 @@ export const SWIPE_ROUTES = [
   '/dashboard',
   '/dashboard/circles',
   '/dashboard/ledger',
+  '/dashboard/solo-ledger',
   '/dashboard/profile',
 ] as const;
 
-/** Mobile bottom nav — Home, Circles, Ledger, Profile */
+/** Mobile bottom nav — Home, Circles, Ledger, Solo, Profile */
 const bottomNav = [
   { href: '/dashboard', label: 'Home', icon: Home },
   { href: '/dashboard/circles', label: 'Circles', icon: Users },
   { href: '/dashboard/ledger', label: 'Ledger', icon: FileText },
+  { href: '/dashboard/solo-ledger', label: 'Solo', icon: NotebookPen },
   { href: '/dashboard/profile', label: 'Profile', icon: User },
 ] as const;
 
@@ -40,10 +43,12 @@ const sidePrimary = [
   { href: '/dashboard', label: 'Home', icon: Home },
   { href: '/dashboard/circles', label: 'Circles', icon: Users },
   { href: '/dashboard/ledger', label: 'Ledger', icon: FileText },
+  { href: '/dashboard/solo-ledger', label: 'Solo Ledger', icon: NotebookPen },
   { href: '/dashboard/profile', label: 'Profile', icon: User },
 ] as const;
 
 const sideSecondary = [
+  { href: '/dashboard/audit-log', label: 'Audit log', icon: FileText },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },
   { href: '/dashboard/settings/help', label: 'Help', icon: HelpCircle },
 ] as const;
@@ -310,7 +315,7 @@ export function DashboardNav({
         className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-border pb-[env(safe-area-inset-bottom)] bottom-nav-stable"
         aria-label="Primary"
       >
-        <div className="grid grid-cols-4">
+        <div className="grid grid-cols-5">
           {bottomNav.map((item) => {
             const active = isActive(pathname, item.href);
             return (

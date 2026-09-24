@@ -2,92 +2,52 @@ import React from 'react';
 import {
   ActivityIndicator,
   Pressable,
-  PressableProps,
   StyleProp,
   StyleSheet,
   Text,
-  TextStyle,
   ViewStyle,
 } from 'react-native';
-import {colors, radius, spacing, typography} from '../theme';
+import { colors, radius, spacing, typography } from '../theme';
 
-type Variant = 'primary' | 'secondary' | 'outline' | 'ghost';
-
-type ButtonProps = PressableProps & {
-  label: string;
-  variant?: Variant;
-  loading?: boolean;
-  size?: 'md' | 'sm';
-  style?: StyleProp<ViewStyle>;
-  labelStyle?: StyleProp<TextStyle>;
-};
-
-const variantStyles: Record<
-  Variant,
-  {container: ViewStyle; text: TextStyle}
-> = {
-  primary: {
-    container: {backgroundColor: colors.primary},
-    text: {color: colors.white},
-  },
-  secondary: {
-    container: {backgroundColor: colors.forest},
-    text: {color: colors.white},
-  },
-  outline: {
-    container: {
-      backgroundColor: 'transparent',
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    text: {color: colors.forest},
-  },
-  ghost: {
-    container: {backgroundColor: 'transparent'},
-    text: {color: colors.primary},
-  },
-};
+type Variant = 'primary' | 'outline' | 'ghost' | 'danger';
 
 export function Button({
   label,
+  onPress,
   variant = 'primary',
   loading = false,
-  size = 'md',
-  disabled,
+  disabled = false,
   style,
-  labelStyle,
-  ...rest
-}: ButtonProps) {
+}: {
+  label: string;
+  onPress: () => void;
+  variant?: Variant;
+  loading?: boolean;
+  disabled?: boolean;
+  style?: StyleProp<ViewStyle>;
+}) {
   const isDisabled = disabled || loading;
-  const palette = variantStyles[variant];
-
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ disabled: isDisabled, busy: loading }}
       disabled={isDisabled}
-      style={({pressed}) => [
+      onPress={onPress}
+      style={({ pressed }) => [
         styles.base,
-        size === 'sm' && styles.sm,
-        palette.container,
+        variantStyles[variant],
         pressed && !isDisabled && styles.pressed,
         isDisabled && styles.disabled,
         style,
       ]}
-      {...rest}>
+    >
       {loading ? (
         <ActivityIndicator
-          color={variant === 'outline' || variant === 'ghost' ? colors.primary : colors.white}
+          size="small"
+          color={variant === 'primary' ? colors.white : colors.primary}
         />
       ) : (
-        <Text
-          style={[
-            styles.label,
-            palette.text,
-            size === 'sm' && styles.labelSm,
-            labelStyle,
-          ]}>
-          {label}
-        </Text>
+        <Text style={[styles.label, labelStyles[variant]]}>{label}</Text>
       )}
     </Pressable>
   );
@@ -96,27 +56,38 @@ export function Button({
 const styles = StyleSheet.create({
   base: {
     minHeight: 48,
-    paddingHorizontal: spacing.lg,
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
     flexDirection: 'row',
-  },
-  sm: {
-    minHeight: 40,
-    paddingHorizontal: spacing.md,
-  },
-  pressed: {
-    opacity: 0.88,
-  },
-  disabled: {
-    opacity: 0.5,
   },
   label: {
     fontSize: typography.body,
     fontWeight: '600',
   },
-  labelSm: {
-    fontSize: 14,
+  pressed: {
+    opacity: 0.85,
   },
+  disabled: {
+    opacity: 0.5,
+  },
+});
+
+const variantStyles: Record<Variant, ViewStyle> = {
+  primary: { backgroundColor: colors.primary },
+  outline: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  ghost: { backgroundColor: 'transparent' },
+  danger: { backgroundColor: colors.error },
+};
+
+const labelStyles = StyleSheet.create({
+  primary: { color: colors.white },
+  outline: { color: colors.primary },
+  ghost: { color: colors.primary },
+  danger: { color: colors.white },
 });

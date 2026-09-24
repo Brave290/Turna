@@ -1,8 +1,8 @@
 # Project State — Turna
 
 **Last Updated**: 2026-09-24
-**Current Phase**: Phase 42 — KYC UI, Reminders/Autopay/Digest Crons, Payments History, Admin Ops, Insights, Payout Receipt Notify
-**Overall Status**: 🟡 In Progress
+**Current Phase**: Phase 46 — Solo Ledger audit fixes, UX OTP locks, email spam tip, store roadmap
+**Overall Status**: 🟡 In Progress — **not store-release ready** (see PROJECT_CONTINUITY.md roadmap)
 
 ## Production
 
@@ -14,6 +14,10 @@
 | **GitHub Repo** | https://github.com/Brave290/Turna (private) |
 | **Custom Domain** | turna.name.ng (pending DNS) |
 | **Keep-Alive Cron** | /api/health (Vercel cron) + cron-job.org backup |
+| **Silent APK** | `/api/download/apk` (first-party proxy) |
+| **App Version API** | `/api/app/version` (build 2 / v1.0.1) |
+| **Email palette** | Rebrand v2 `#007A65` / `#0A1628` + spam-folder tip in all templates |
+| **Store readiness** | ⚠️ Not ready — signing, assets, secrets, compliance (see continuity) |
 
 ## Design System (Master Prompt v1.0)
 
@@ -71,6 +75,10 @@
 | 40. Invite Auto-Join + Circle Delete + Notifications | ✅ Complete | 2026-09-23 | 2026-09-23 | Token tracked through signup/verify/login; auto-join on return; owner delete circle; bell events; join RLS case fix |
 | 41. Auth terms + remember, avatar, OTP password, circle duration, release ZIP | ✅ Complete | 2026-09-24 | 2026-09-24 | Login/signup terms gate + remember email; profile avatar upload; OTP password change; month-range circle creation + payout/payment modes; full release ZIP on private + Turna-Downloads; 4 migrations applied |
 | 42. KYC UI, reminders cron, autopay charge, payments history, admin dashboard, digests, insights, payout receipt notify | ✅ Complete | 2026-09-24 | 2026-09-24 | KYC form on settings; `/api/cron/{reminders,autopay,digest}` + vercel crons; payments history nav page; admin ops (`ADMIN_EMAILS`); on-time % + next payout insights; webhook saves Paystack auth + payout receipt notify/email |
+| 43. Solo Ledger + update popup + silent APK + multi-admin approvals + audit log | ✅ Complete | 2026-09-24 | 2026-09-24 | Personal offline-first ajo ledger (web+mobile) with branded PDF/CSV export, share/remind; `/api/app/version` + update prompt (Later×2 then force); `/api/download/apk` proxy; ApprovalPanel on circle detail; audit-log page; rolling android-latest release in CI |
+| 44. UX polish: nav loading, OTP locks, settings tiles, compact circles, email spam tip | ✅ Complete | 2026-09-24 | 2026-09-24 | dashboard loading.tsx skeletons; bank+profile lock with email OTP unlock; settings multi-choice tile grid; compact circle cards; email templates Rebrand v2 + Spam/Junk tip; color tokens only (no hardcoded nav hex) |
+| 45. Branded selects, owner member control, Android packaging, store roadmap, email palette | ✅ Complete | 2026-09-24 | 2026-09-24 | From prior commits (16f6fe2/a0f45ff); continuity store-release 14-section roadmap; all emails use `#007A65`/`#0A1628` + spam hint |
+| 46. Solo Ledger audit fixes + UX locks complete + docs | ✅ Complete | 2026-09-24 | 2026-09-24 | typecheck-oriented fixes (Set-Cookie, imports, offline UUID); bank/profile OTP gates live; settings/circles/loading done; Phase 46 in continuity |
 
 ---
 

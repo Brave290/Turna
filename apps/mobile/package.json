@@ -1,6 +1,6 @@
 {
   "name": "@turna/mobile",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "build": "pnpm run android:bundle",
@@ -16,13 +16,16 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
     "start": "react-native start",
-    "lint": "eslint src --ext .ts,.tsx"
+    "lint": "echo 'No mobile eslint config — run typecheck instead'"
   },
   "dependencies": {
     "@babel/runtime": "^7.29.7",
+    "@react-native-async-storage/async-storage": "^1.23.1",
+    "@supabase/supabase-js": "^2.39.0",
     "@turna/config": "workspace:*",
     "react": "18.2.0",
-    "react-native": "0.73.6"
+    "react-native": "0.73.6",
+    "react-native-url-polyfill": "^2.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.24.0",

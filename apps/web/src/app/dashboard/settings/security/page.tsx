@@ -54,7 +54,7 @@ export default async function SecurityPage() {
 
       <SettingsPanel
         title="Active sessions"
-        description="Devices currently signed into your account."
+        description="Devices currently signed into your account. Supabase keeps one session per browser profile."
       >
         <ul className="divide-y divide-border text-sm mb-4">
           <li className="py-3 flex items-start justify-between gap-3">
@@ -62,12 +62,27 @@ export default async function SecurityPage() {
               <MonitorSmartphone className="w-4 h-4 text-primary mt-0.5 shrink-0" />
               <div className="min-w-0">
                 <p className="font-medium text-forest">This browser</p>
-                <p className="text-xs text-muted">
+                <p className="text-xs text-muted break-all">
                   Current session · signed in as {user.email}
+                </p>
+                <p className="text-[11px] text-muted mt-1 font-mono break-all">
+                  {user.id}
                 </p>
               </div>
             </div>
             <span className="badge badge-active shrink-0">Active now</span>
+          </li>
+          <li className="py-3 flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3 min-w-0">
+              <Smartphone className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+              <div className="min-w-0">
+                <p className="font-medium text-forest">Turna mobile app</p>
+                <p className="text-xs text-muted">
+                  Native Android app shares the same account when you sign in there.
+                </p>
+              </div>
+            </div>
+            <span className="badge bg-forest/10 text-forest shrink-0">If installed</span>
           </li>
         </ul>
         <SignOutOtherDevices />

@@ -31,6 +31,7 @@ import { CircleCalendar } from '@/components/dashboard/circle-calendar';
 import { CircleAnalytics } from '@/components/dashboard/circle-analytics';
 import { CircleRulesCard } from '@/components/dashboard/circle-rules';
 import { RoleManager } from '@/components/dashboard/role-manager';
+import { ApprovalPanel } from '@/components/dashboard/approval-panel';
 
 export const dynamic = 'force-dynamic';
 
@@ -96,6 +97,7 @@ export default async function CircleDetailPage({
     announcements,
     polls,
     myAgreementVersion,
+    approvals,
   } = data;
 
   const myMembership = members.find((m) => m.user_id === user.id);
@@ -308,6 +310,12 @@ export default async function CircleDetailPage({
               display_name: m.profiles?.display_name ?? null,
               isSelf: m.user_id === user.id,
             }))}
+        />
+        <ApprovalPanel
+          circleId={circle.id}
+          myUserId={user.id}
+          canRequest={isOwner || myMembership?.role === 'treasurer'}
+          requests={approvals}
         />
         <CircleRulesCard
           circleId={circle.id}
