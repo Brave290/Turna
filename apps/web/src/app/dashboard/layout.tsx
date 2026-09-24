@@ -23,7 +23,6 @@ export default async function DashboardLayout({
     redirect('/auth/login?redirect=/dashboard');
   }
 
-  // Onboarding gate — first-time users see branded motion intro
   const seenOnboarding =
     typeof user.user_metadata?.onboarded === 'boolean'
       ? (user.user_metadata.onboarded as boolean)
@@ -35,15 +34,20 @@ export default async function DashboardLayout({
   let displayName =
     (user.user_metadata?.display_name as string) ||
     (user.email ?? 'Member').split('@')[0];
+  let avatarUrl =
+    (user.user_metadata?.avatar_url as string | null) ?? null;
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('display_name')
+    .select('display_name, avatar_url')
     .eq('id', user.id)
     .maybeSingle();
 
   if (profile?.display_name) {
     displayName = profile.display_name;
+  }
+  if (profile?.avatar_url) {
+    avatarUrl = profile.avatar_url;
   }
 
   const { data: notifList } = await supabase
@@ -62,12 +66,13 @@ export default async function DashboardLayout({
         user={{
           email: user.email ?? null,
           displayName,
+          avatarUrl,
         }}
         notifications={notifications}
         unreadCount={unreadCount}
       />
-      <main className="lg:pl-64 pt-14 lg:pt-0 pb-24 lg:pb-0">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+      <main className="lg:pl-60 pt-14 lg:pt-0 pb-24 lg:pb-8">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-5 lg:py-7">
           <SwipeRouter>
             <PageEnter>{children}</PageEnter>
           </SwipeRouter>

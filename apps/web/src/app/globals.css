@@ -26,10 +26,8 @@
     @apply border-border;
   }
 
-  /* Rebrand v2: base type ~90% + page zoom ~95% */
   html {
-    font-size: 90%;
-    zoom: 0.95;
+    font-size: 95%;
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
   }
@@ -41,11 +39,10 @@
   }
 
   ::selection {
-    background: rgba(0, 194, 168, 0.28);
+    background: rgba(0, 168, 120, 0.22);
     color: var(--forest);
   }
 
-  /* Smooth page lock feel — no rubber-band on app chrome */
   html.lock-scroll {
     overflow: hidden;
   }
@@ -59,10 +56,10 @@
 
   .btn-primary {
     @apply btn bg-primary text-white hover:bg-primary-hover rounded-xl px-6 py-3;
-    box-shadow: 0 0 40px rgba(0, 194, 168, 0.18);
+    box-shadow: 0 1px 2px rgba(3, 37, 27, 0.12);
   }
   .btn-primary:hover {
-    box-shadow: 0 0 40px rgba(0, 194, 168, 0.25);
+    box-shadow: 0 4px 14px rgba(0, 168, 120, 0.28);
   }
 
   .btn-secondary {
@@ -70,7 +67,7 @@
   }
 
   .btn-outline {
-    @apply btn border border-border bg-transparent text-forest hover:bg-white/80 rounded-xl px-6 py-3;
+    @apply btn border border-border bg-white text-forest hover:bg-cream rounded-xl px-6 py-3;
   }
 
   .btn-ghost {
@@ -104,13 +101,20 @@
     @apply block text-sm font-medium text-forest mb-1.5;
   }
 
-  /* Cards */
+  /* Cards — restrained fintech (thin border, small radius, light shadow) */
   .card {
-    @apply rounded-2xl border border-border bg-white p-6 shadow-card;
+    @apply rounded-[18px] border border-border bg-white p-5 sm:p-6;
+    box-shadow: 0 1px 2px rgba(3, 37, 27, 0.03);
   }
 
   .card-hover {
-    @apply card transition-all duration-300 hover:shadow-card-hover hover:-translate-y-0.5 hover:border-primary/30;
+    @apply card transition-all duration-200 hover:shadow-card-hover hover:border-primary/25;
+  }
+
+  /* Flat stat card for dashboard grid */
+  .stat-card {
+    @apply rounded-[18px] border border-border bg-white p-4 sm:p-5;
+    box-shadow: 0 1px 2px rgba(3, 37, 27, 0.03);
   }
 
   /* Badges */
@@ -160,22 +164,10 @@
     @apply bg-white/80 backdrop-blur-xl border-white/50;
   }
 
-  /* App background image layer (dashboard / auth — not landing) */
+  /* App background — solid cream (no heavy art) */
   .app-bg {
     position: relative;
-  }
-
-  .app-bg::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: 0;
-    pointer-events: none;
-    background-image: url("/bg-app.svg");
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    opacity: 0.55;
+    background-color: var(--cream);
   }
 
   .app-bg > * {
@@ -207,8 +199,8 @@
 
 .theme-toggle {
   @apply inline-flex h-9 w-9 items-center justify-center rounded-xl border text-forest transition-all duration-200;
-  border-color: rgba(10, 22, 40, 0.12);
-  background: rgba(255, 255, 255, 0.55);
+  border-color: rgba(3, 37, 27, 0.12);
+  background: rgba(255, 255, 255, 0.85);
 }
 
 .theme-toggle:hover {
@@ -225,18 +217,18 @@
   stroke-linejoin: round;
 }
 
-/* On dark forest sidebar */
+/* On light sidebar chrome */
 .theme-toggle-on-dark,
 [data-theme="dark"] .theme-toggle {
-  color: #e8f7ee;
-  border-color: rgba(232, 247, 238, 0.16);
-  background: rgba(232, 247, 238, 0.08);
+  color: var(--forest);
+  border-color: var(--border);
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .theme-toggle-on-dark:hover,
 [data-theme="dark"] .theme-toggle:hover {
-  background: rgba(0, 194, 168, 0.15);
-  color: var(--primary-light);
+  background: rgba(0, 168, 120, 0.12);
+  color: var(--primary);
 }
 
 .landing-logo {

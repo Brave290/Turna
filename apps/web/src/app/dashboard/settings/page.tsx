@@ -1,155 +1,96 @@
-import { getDashboardData } from '@/lib/dashboard-data';
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
-import { formatDate } from '@/lib/utils';
-import { ProfileForm } from '@/components/dashboard/profile-form';
-import { BankAccountForm } from '@/components/dashboard/bank-account-form';
-import { KycForm, KycStatusBadge } from '@/components/dashboard/kyc-form';
-import { DeleteAccountPanel } from '@/components/dashboard/delete-account';
-import { ThemeToggle } from '@/components/theme-toggle';
-import { signOut } from '@/lib/auth-actions';
-import { User, Shield, Palette, Activity, Landmark, BadgeCheck } from 'lucide-react';
+import { getInitials } from '@/lib/utils';
+import { SettingsGroup, SettingsRow } from '@/components/dashboard/settings/shell';
+import { SETTINGS_SECTIONS } from '@/components/dashboard/settings/nav-config';
+import { ChevronRight, Trash2 } from 'lucide-react';
+import { DangerSignOut } from '@/components/dashboard/settings/confirm-signout';
 
 export const dynamic = 'force-dynamic';
 
-export default async function SettingsPage() {
-  const { profile, user, stats } = await getDashboardData();
-
+export default async function SettingsIndexPage() {
   const supabase = createServerSupabaseClient();
-  const { data: bank } = await supabase
-    .from('bank_accounts')
-    .select('id, bank_code, bank_name, account_number, account_name, is_default')
-    .eq('user_id', user.id)
-    .eq('is_default', true)
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect('/auth/login');
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('display_name, email, avatar_url, username')
+    .eq('id', user.id)
     .maybeSingle();
 
-  const { data: kyc } = await supabase
-    .from('kyc_records')
-    .select('status, document_type, document_number, full_legal_name, rejection_reason')
-    .eq('user_id', user.id)
-    .maybeSingle();
+  const displayName =
+    profile?.display_name ||
+    (user.user_metadata?.display_name as string) ||
+    (user.email ?? 'Member').split('@')[0];
+  const email = profile?.email || user.email || '';
+  const avatarUrl = profile?.avatar_url ?? null;
+  const initials = getInitials(displayName || email || 'TU');
 
   return (
-    <div className="space-y-8 animate-fade-in max-w-2xl">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="font-display text-3xl font-bold tracking-tight text-forest">
-            Settings
-          </h1>
-          <p className="text-muted mt-1">Profile, payouts, appearance, account.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Palette className="w-4 h-4 text-muted hidden sm:block" />
-          <ThemeToggle />
-        </div>
-      </div>
+    <div>
+      {/* Profile header */}
+      <Link
+        href="/dashboard/settings/profile"
+        prefetch
+        className="flex items-center gap-4 rounded-2xl border border-border bg-white p-4 shadow-card mb-7 hover:border-primary/30 transition-colors"
+      >
+        {avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={avatarUrl}
+            alt={displayName}
+            className="w-14 h-14 rounded-2xl object-cover border border-border"
+          />
+        ) : (
+          <span className="w-14 h-14 rounded-2xl bg-forest text-primary-light flex items-center justify-center font-display text-lg font-bold">
+            {initials}
+          </span>
+        )}
+        <span className="min-w-0 flex-1">
+          <span className="block font-display text-lg font-bold text-forest truncate">
+            {displayName}
+          </span>
+          <span className="block text-sm text-muted truncate">{email}</span>
+        </span>
+        <span className="inline-flex items-center gap-1 text-sm text-primary font-medium shrink-0">
+          Edit profile
+          <ChevronRight className="w-4 h-4" />
+        </span>
+      </Link>
 
-      <section className="card">
-        <div className="flex items-center gap-2 mb-5">
-          <User className="w-4 h-4 text-primary" />
-          <h2 className="font-semibold text-forest">Profile</h2>
-        </div>
-        <ProfileForm
-          initial={{
-            display_name: profile.display_name,
-            email: profile.email,
-            date_of_birth: (profile as { date_of_birth?: string | null }).date_of_birth ?? null,
-            phone: (profile as { phone?: string | null }).phone ?? null,
-            bio: (profile as { bio?: string | null }).bio ?? null,
-            city: (profile as { city?: string | null }).city ?? null,
-            country: (profile as { country?: string | null }).country ?? 'NG',
-          }}
+      {SETTINGS_SECTIONS.map((section) => (
+        <SettingsGroup key={section.id} title={section.title}>
+          {section.items.map((item) => (
+            <SettingsRow
+              key={item.href}
+              href={item.href}
+              icon={item.icon}
+              label={item.label}
+              description={item.description}
+            />
+          ))}
+        </SettingsGroup>
+      ))}
+
+      {/* Danger zone */}
+      <SettingsGroup title="Danger zone">
+        <DangerSignOut />
+        <SettingsRow
+          href="/dashboard/settings/delete"
+          icon={Trash2}
+          label="Delete account"
+          description="Permanently remove your account"
+          danger
         />
-      </section>
+      </SettingsGroup>
 
-      <section className="card">
-        <div className="flex items-center gap-2 mb-2">
-          <Landmark className="w-4 h-4 text-primary" />
-          <h2 className="font-semibold text-forest">Payout account</h2>
-        </div>
-        <p className="text-sm text-muted mb-5">
-          Add the bank account where circle payouts are sent. We verify the
-          account name with Paystack Resolve before saving.
-        </p>
-        <BankAccountForm
-          initialAccount={
-            bank
-              ? {
-                  id: bank.id,
-                  bank_code: bank.bank_code,
-                  bank_name: bank.bank_name,
-                  account_number: bank.account_number,
-                  account_name: bank.account_name,
-                  is_default: bank.is_default,
-                }
-              : null
-          }
-        />
-      </section>
-
-      <section className="card">
-        <div className="flex items-center justify-between gap-3 mb-5">
-          <div className="flex items-center gap-2">
-            <BadgeCheck className="w-4 h-4 text-primary" />
-            <h2 className="font-semibold text-forest">Identity (KYC)</h2>
-          </div>
-          <KycStatusBadge status={kyc?.status ?? null} />
-        </div>
-        <p className="text-sm text-muted mb-5">
-          Verify your identity with NIN, BVN, or an ID card before large payouts.
-        </p>
-        <KycForm
-          initial={
-            kyc
-              ? {
-                  status: kyc.status,
-                  document_type: kyc.document_type,
-                  document_number: kyc.document_number,
-                  full_legal_name: kyc.full_legal_name,
-                  rejection_reason: kyc.rejection_reason,
-                }
-              : null
-          }
-        />
-      </section>
-
-      <section className="card">
-        <div className="flex items-center gap-2 mb-5">
-          <Activity className="w-4 h-4 text-primary" />
-          <h2 className="font-semibold text-forest">Account</h2>
-        </div>
-        <dl className="space-y-3.5 text-sm">
-          <div className="flex justify-between gap-4 items-center py-1">
-            <dt className="text-muted">Member since</dt>
-            <dd className="text-forest font-medium">
-              {formatDate(profile.created_at || user.created_at)}
-            </dd>
-          </div>
-          <div className="flex justify-between gap-4 items-center py-1 border-t border-border/50 pt-3">
-            <dt className="text-muted">Circles</dt>
-            <dd className="text-forest font-medium">
-              {stats.circleCount} total · {stats.ownedCount} owned
-            </dd>
-          </div>
-          <div className="flex justify-between gap-4 items-center py-1 border-t border-border/50 pt-3">
-            <dt className="text-muted flex items-center gap-1.5">
-              <Shield className="w-3.5 h-3.5" />
-              Account ID
-            </dt>
-            <dd className="text-forest font-mono text-xs break-all text-right">
-              {user.id}
-            </dd>
-          </div>
-        </dl>
-        <div className="mt-6 pt-5 border-t border-border/50">
-          <form action={signOut}>
-            <button type="submit" className="btn-outline w-full sm:w-auto">
-              Sign out
-            </button>
-          </form>
-        </div>
-      </section>
-
-      <DeleteAccountPanel />
+      <p className="text-xs text-muted text-center mt-2 pb-2">
+        Turna · Version 1.0.0 · © 2026
+      </p>
     </div>
   );
 }

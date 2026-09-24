@@ -646,7 +646,22 @@ export async function uploadAvatar(
     })
     .eq('id', user.id);
   if (error) {
-    return { error: { form: [error.message] } };
+    // Fallback if column is still INT (migration not applied yet)
+    if (error.message?.includes('out of range')) {
+      const retry = await supabase
+        .from('profiles')
+        .update({
+          avatar_url: dataUrl,
+          avatar_version: Math.floor(Date.now() / 1000),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', user.id);
+      if (retry.error) {
+        return { error: { form: [retry.error.message] } };
+      }
+    } else {
+      return { error: { form: [error.message] } };
+    }
   }
 
   await supabase.auth.updateUser({
@@ -678,7 +693,21 @@ export async function removeAvatar(): Promise<AvatarActionState> {
     })
     .eq('id', user.id);
   if (error) {
-    return { error: { form: [error.message] } };
+    if (error.message?.includes('out of range')) {
+      const retry = await supabase
+        .from('profiles')
+        .update({
+          avatar_url: null,
+          avatar_version: Math.floor(Date.now() / 1000),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', user.id);
+      if (retry.error) {
+        return { error: { form: [retry.error.message] } };
+      }
+    } else {
+      return { error: { form: [error.message] } };
+    }
   }
 
   await supabase.auth.updateUser({ data: { avatar_url: null } });

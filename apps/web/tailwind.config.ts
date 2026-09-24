@@ -28,14 +28,14 @@ const config: Config = {
         success: "#007A65",
       },
       fontSize: {
-        // Rebrand v2: ~90% of previous scale
-        xs: ["0.675rem", { lineHeight: "1rem" }],
-        sm: ["0.765rem", { lineHeight: "1.125rem" }],
-        base: ["0.855rem", { lineHeight: "1.35rem" }],
-        lg: ["0.975rem", { lineHeight: "1.5rem" }],
-        xl: ["1.14rem", { lineHeight: "1.65rem" }],
-        "2xl": ["1.4rem", { lineHeight: "1.9rem" }],
-        "3xl": ["1.75rem", { lineHeight: "2.15rem" }],
+        // Slightly larger base for readability (was ~90%)
+        xs: ["0.75rem", { lineHeight: "1rem" }],
+        sm: ["0.8125rem", { lineHeight: "1.2rem" }],
+        base: ["0.9rem", { lineHeight: "1.4rem" }],
+        lg: ["1rem", { lineHeight: "1.5rem" }],
+        xl: ["1.15rem", { lineHeight: "1.65rem" }],
+        "2xl": ["1.45rem", { lineHeight: "1.9rem" }],
+        "3xl": ["1.85rem", { lineHeight: "2.25rem" }],
         "4xl": ["2.25rem", { lineHeight: "2.55rem" }],
         "5xl": ["2.9rem", { lineHeight: "3.15rem" }],
         "6xl": ["3.6rem", { lineHeight: "3.85rem" }],
@@ -45,8 +45,10 @@ const config: Config = {
       },
       fontFamily: {
         sans: [
-          "Plus Jakarta Sans",
+          "var(--font-inter)",
+          "var(--font-manrope)",
           "Inter",
+          "Manrope",
           "system-ui",
           "-apple-system",
           "Segoe UI",
@@ -54,19 +56,28 @@ const config: Config = {
           "sans-serif",
         ],
         display: [
-          "Playfair Display",
-          "Georgia",
-          "Cambria",
-          "Times New Roman",
-          "serif",
+          "var(--font-manrope)",
+          "var(--font-inter)",
+          "Manrope",
+          "Inter",
+          "system-ui",
+          "-apple-system",
+          "Segoe UI",
+          "Roboto",
+          "sans-serif",
         ],
       },
       boxShadow: {
-        glow: "0 0 40px rgba(0, 194, 168, 0.25)",
-        "glow-violet": "0 0 40px rgba(124, 92, 255, 0.22)",
-        card: "0 8px 30px rgba(10, 22, 40, 0.06)",
-        "card-hover": "0 16px 48px rgba(10, 22, 40, 0.1)",
-        glass: "0 4px 30px rgba(10, 22, 40, 0.08)",
+        glow: "0 0 32px rgba(0, 168, 120, 0.16)",
+        "glow-violet": "0 8px 24px rgba(6, 56, 42, 0.12)",
+        card: "0 1px 2px rgba(3, 37, 27, 0.04), 0 4px 16px rgba(3, 37, 27, 0.04)",
+        "card-hover": "0 4px 20px rgba(3, 37, 27, 0.08)",
+        glass: "0 4px 24px rgba(3, 37, 27, 0.06)",
+      },
+      borderRadius: {
+        xl: "0.75rem",
+        "2xl": "1rem",
+        "3xl": "1.25rem",
       },
       animation: {
         "fade-in": "fadeIn 0.35s cubic-bezier(0.16,1,0.3,1)",
@@ -88,11 +99,11 @@ const config: Config = {
           "100%": { opacity: "1" },
         },
         slideUp: {
-          "0%": { opacity: "0", transform: "translateY(18px)" },
+          "0%": { opacity: "0", transform: "translateY(14px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
         scaleIn: {
-          "0%": { opacity: "0", transform: "scale(0.94)" },
+          "0%": { opacity: "0", transform: "scale(0.96)" },
           "100%": { opacity: "1", transform: "scale(1)" },
         },
         blurIn: {
@@ -105,7 +116,7 @@ const config: Config = {
         },
         float: {
           "0%, 100%": { transform: "translateY(0)" },
-          "50%": { transform: "translateY(-12px)" },
+          "50%": { transform: "translateY(-10px)" },
         },
         pulseSoft: {
           "0%, 100%": { opacity: "1" },
@@ -117,7 +128,7 @@ const config: Config = {
         },
         otpPop: {
           "0%": { transform: "scale(0.86)", opacity: "0.5" },
-          "60%": { transform: "scale(1.06)" },
+          "60%": { transform: "scale(1.06)", opacity: "1" },
           "100%": { transform: "scale(1)", opacity: "1" },
         },
         otpShake: {
