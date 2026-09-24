@@ -100,7 +100,7 @@ export function JoinCircleClient({ sessionEmail }: { sessionEmail: string | null
         <h1 className="font-display text-3xl font-bold text-white mb-2">
           Invalid link
         </h1>
-        <p className="text-white/55 text-sm mb-8">
+        <p className="text-white/75 text-sm mb-8">
           This invitation link is missing a token. Ask the circle owner to
           resend the invite.
         </p>
@@ -124,7 +124,7 @@ export function JoinCircleClient({ sessionEmail }: { sessionEmail: string | null
         <h1 className="font-display text-3xl font-bold text-white mb-2">
           You&apos;re in!
         </h1>
-        <p className="text-white/55 text-sm mb-8">{state.success}</p>
+        <p className="text-white/75 text-sm mb-8">{state.success}</p>
         <Link
           href={`/dashboard/circles/${state.circleId}`}
           className="btn-primary w-full inline-flex"
@@ -147,7 +147,7 @@ export function JoinCircleClient({ sessionEmail }: { sessionEmail: string | null
       <h1 className="font-display text-3xl font-bold text-white mb-2">
         {sessionEmail ? 'Confirm to join' : 'Join a savings circle'}
       </h1>
-      <p className="text-white/55 text-sm mb-8 leading-relaxed">
+      <p className="text-white/75 text-sm mb-8 leading-relaxed">
         {sessionEmail ? (
           <>
             You&apos;re signed in as{' '}
@@ -195,7 +195,7 @@ export function JoinCircleClient({ sessionEmail }: { sessionEmail: string | null
       <div className="mt-6 space-y-3 text-center">
         {!sessionEmail && (
           <>
-            <p className="text-sm text-white/50">
+            <p className="text-sm text-white/70">
               No account yet?{' '}
               <Link
                 href={signupHref}
@@ -204,7 +204,7 @@ export function JoinCircleClient({ sessionEmail }: { sessionEmail: string | null
                 Create one — then join automatically
               </Link>
             </p>
-            <p className="text-sm text-white/50">
+            <p className="text-sm text-white/70">
               Already have an account?{' '}
               <Link
                 href={loginHref}
@@ -216,7 +216,7 @@ export function JoinCircleClient({ sessionEmail }: { sessionEmail: string | null
           </>
         )}
         {sessionEmail && (
-          <p className="text-sm text-white/50">
+          <p className="text-sm text-white/70">
             Wrong account?{' '}
             <Link
               href={loginHref}
@@ -255,7 +255,7 @@ function Shell({ children }: { children: React.ReactNode }) {
           {children}
         </motion.div>
       </main>
-      <footer className="px-6 py-5 text-center text-sm text-white/30">
+      <footer className="px-6 py-5 text-center text-sm text-white/60">
         &copy; {new Date().getFullYear()} Turna. All rights reserved.
       </footer>
     </div>

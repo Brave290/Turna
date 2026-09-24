@@ -139,7 +139,7 @@ export default function VerifyEmailPage() {
         <h1 className="font-display text-3xl font-bold tracking-tight mb-2 text-white">
           What&apos;s your email?
         </h1>
-        <p className="text-white/55 text-sm mb-8">
+        <p className="text-white/75 text-sm mb-8">
           We&apos;ll send a 6-digit code to finish verifying your account.
         </p>
         <form
@@ -168,7 +168,7 @@ export default function VerifyEmailPage() {
             Send code
           </button>
         </form>
-        <p className="text-sm text-white/50 mt-6">
+        <p className="text-sm text-white/70 mt-6">
           <Link
             href="/auth/login"
             className="text-primary hover:text-primary-light font-medium"
@@ -189,7 +189,7 @@ export default function VerifyEmailPage() {
         <h1 className="font-display text-3xl font-bold tracking-tight mb-2 text-white">
           Check your inbox
         </h1>
-        <p className="text-white/55 text-sm leading-relaxed">
+        <p className="text-white/75 text-sm leading-relaxed">
           We sent a 6-digit code to
           <br />
           <span className="text-primary-light font-medium break-all">{email}</span>
@@ -255,10 +255,10 @@ export default function VerifyEmailPage() {
       </form>
 
       <div className="text-center mt-6 space-y-3">
-        <p className="text-sm text-white/50">
+        <p className="text-sm text-white/70">
           Didn&apos;t get it?{" "}
           {secondsLeft > 0 ? (
-            <span className="text-white/40">Resend in {secondsLeft}s</span>
+            <span className="text-white/65">Resend in {secondsLeft}s</span>
           ) : (
             <button
               type="button"
@@ -271,7 +271,7 @@ export default function VerifyEmailPage() {
             </button>
           )}
         </p>
-        <p className="text-sm text-white/50">
+        <p className="text-sm text-white/70">
           <button
             type="button"
             onClick={() => {
@@ -285,7 +285,7 @@ export default function VerifyEmailPage() {
             Change email
           </button>
         </p>
-        <p className="text-xs text-white/35 flex items-center justify-center gap-1">
+        <p className="text-xs text-white/60 flex items-center justify-center gap-1">
           <Mail className="w-3 h-3" />
           This code expires in 5 minutes.
         </p>

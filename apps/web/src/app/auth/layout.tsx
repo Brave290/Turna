@@ -25,7 +25,7 @@ export default function AuthLayout({
       </main>
 
       {/* Footer — big-company style */}
-      <footer className="px-6 py-5 text-center text-sm text-white/30">
+      <footer className="px-6 py-5 text-center text-sm text-white/60">
         &copy; {new Date().getFullYear()} Turna. All rights reserved.
       </footer>
     </div>

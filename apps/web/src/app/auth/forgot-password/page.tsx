@@ -64,7 +64,7 @@ export default function ForgotPasswordPage() {
         <h1 className="font-display text-3xl font-bold tracking-tight mb-2">
           Check your email
         </h1>
-        <p className="text-white/55 mb-8">{state.success}</p>
+        <p className="text-white/75 mb-8">{state.success}</p>
         <Link href="/auth/login" className="btn-primary w-full inline-flex">
           Back to sign in
         </Link>
@@ -81,7 +81,7 @@ export default function ForgotPasswordPage() {
         <h1 className="font-display text-3xl font-bold tracking-tight mb-2">
           Reset password
         </h1>
-        <p className="text-white/55">
+        <p className="text-white/75">
           Enter your email and we&apos;ll send a reset link.
         </p>
       </div>
@@ -119,7 +119,7 @@ export default function ForgotPasswordPage() {
         <SubmitButton />
       </form>
 
-      <p className="text-sm text-white/50 text-center mt-8">
+      <p className="text-sm text-white/70 text-center mt-8">
         Remembered it?{" "}
         <Link
           href="/auth/login"

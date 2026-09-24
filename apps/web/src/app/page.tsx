@@ -100,7 +100,7 @@ function PhoneMockup() {
             </div>
 
             <div className="bg-forest rounded-2xl p-3.5 text-white">
-              <p className="text-[9px] text-white/50">Circle activity</p>
+              <p className="text-[9px] text-white/70">Circle activity</p>
               <p className="text-lg font-bold text-primary-light mt-0.5">On track</p>
               <div className="flex items-center gap-1 mt-1.5">
                 <svg viewBox="0 0 12 12" className="w-2.5 h-2.5 text-primary-light"><path d="M6 2l4 5H2z" fill="currentColor"/></svg>
@@ -208,7 +208,7 @@ function Hero() {
             </Reveal>
 
             <Reveal type="fade-up" delay={200}>
-              <p className="text-lg md:text-xl text-white/50 max-w-lg mb-10 leading-relaxed">
+              <p className="text-lg md:text-xl text-white/70 max-w-lg mb-10 leading-relaxed">
                 Manage your savings circle in one place. Invite members, track
                 every contribution, and always know whose turn it is — with a
                 shared ledger everyone can see.
@@ -243,7 +243,7 @@ function Hero() {
                     <div className="text-2xl md:text-3xl font-bold text-primary-light">
                       {s.display || <AnimatedCounter end={s.value} suffix={s.suffix} />}
                     </div>
-                    <div className="text-xs text-white/40 mt-1">{s.label}</div>
+                    <div className="text-xs text-white/65 mt-1">{s.label}</div>
                   </div>
                 ))}
               </div>
@@ -374,7 +374,7 @@ function Savings() {
             <h2 className="font-display text-3xl md:text-5xl font-bold mt-3 mb-6">
               Your circle, your rules
             </h2>
-            <p className="text-white/50 text-lg leading-relaxed mb-8">
+            <p className="text-white/70 text-lg leading-relaxed mb-8">
               Turna does not hold your money. It helps your circle coordinate —
               who paid, who confirmed, whose turn it is. A shared ledger with
               the simplicity of a modern app.
@@ -399,7 +399,7 @@ function Savings() {
           <Reveal type="fade-right" delay={150}>
             <Tilt max={6}>
               <div className="glass-dark rounded-2xl p-8">
-                <div className="text-sm text-white/40 mb-1">How confirmation works</div>
+                <div className="text-sm text-white/65 mb-1">How confirmation works</div>
                 <div className="text-2xl font-display font-bold text-primary-light mb-6">
                   Report → Confirm → Record
                 </div>
@@ -415,7 +415,7 @@ function Savings() {
                     >
                       <div>
                         <div className="font-medium text-white">{name}</div>
-                        <div className="text-sm text-white/40">{amount}</div>
+                        <div className="text-sm text-white/65">{amount}</div>
                       </div>
                       <div className="text-right">
                         <span className="inline-flex text-[11px] font-medium px-2 py-0.5 rounded-full bg-primary/20 text-primary-light">
@@ -496,7 +496,7 @@ function Footer() {
   ];
 
   return (
-    <footer className="bg-forest text-white/50 pt-16 pb-10">
+    <footer className="bg-forest text-white/70 pt-16 pb-10">
       <div className="mx-auto max-w-6xl px-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-10 pb-12 border-b border-white/10">
           <div className="col-span-2 md:col-span-1">
@@ -504,7 +504,7 @@ function Footer() {
               <Logo variant="on-dark" size={28} />
               <span className="font-bold text-lg">Turna</span>
             </Link>
-            <p className="text-sm leading-relaxed text-white/40 max-w-xs">
+            <p className="text-sm leading-relaxed text-white/65 max-w-xs">
               Savings circles, made clear. Built for Ajo, Esusu, and Susu
               groups who want trust without the group-chat chaos.
             </p>
@@ -536,7 +536,7 @@ function Footer() {
           <p>
             &copy; {currentYear} Turna. All rights reserved.
           </p>
-          <p className="text-white/35">
+          <p className="text-white/60">
             Built by Akanji Mus&apos;ab
           </p>
         </div>

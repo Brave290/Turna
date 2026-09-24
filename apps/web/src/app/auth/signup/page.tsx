@@ -109,14 +109,14 @@ export default function SignUpPage() {
         <h1 className="font-display text-3xl font-bold tracking-tight mb-2 text-white">
           Code sent
         </h1>
-        <p className="text-white/55 mb-8">{state.success}</p>
+        <p className="text-white/75 mb-8">{state.success}</p>
         <Link
           href={state.redirectTo || "/auth/verify"}
           className="btn-primary w-full inline-flex"
         >
           Enter 6-digit code
         </Link>
-        <p className="text-sm text-white/50 mt-6">
+        <p className="text-sm text-white/70 mt-6">
           Wrong address?{" "}
           <Link
             href="/auth/signup"
@@ -138,7 +138,7 @@ export default function SignUpPage() {
         <h1 className="font-display text-3xl font-bold tracking-tight mb-2 text-white">
           Create your account
         </h1>
-        <p className="text-white/55">Start saving with your circle today.</p>
+        <p className="text-white/75">Start saving with your circle today.</p>
       </div>
 
       <form action={formAction} onSubmit={onSubmit} className="space-y-5" noValidate>
@@ -212,7 +212,7 @@ export default function SignUpPage() {
               )}
             </button>
           </div>
-          <p className="text-xs text-white/40 mt-1.5">
+          <p className="text-xs text-white/65 mt-1.5">
             Must be at least 8 characters.
           </p>
           {passwordError && (
@@ -266,7 +266,7 @@ export default function SignUpPage() {
         <SubmitButton disabled={!agreed} />
       </form>
 
-      <p className="text-sm text-white/50 text-center mt-8">
+      <p className="text-sm text-white/70 text-center mt-8">
         Already have an account?{" "}
         <Link
           href="/auth/login"

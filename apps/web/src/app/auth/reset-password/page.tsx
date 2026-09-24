@@ -73,7 +73,7 @@ export default function ResetPasswordPage() {
         <h1 className="font-display text-3xl font-bold tracking-tight mb-2 text-white">
           Invalid link
         </h1>
-        <p className="text-white/55 mb-8">
+        <p className="text-white/75 mb-8">
           This password reset link is missing or invalid. Request a new one.
         </p>
         <Link href="/auth/forgot-password" className="btn-primary w-full inline-flex">
@@ -94,7 +94,7 @@ export default function ResetPasswordPage() {
         <h1 className="font-display text-3xl font-bold tracking-tight mb-2 text-white">
           Password updated
         </h1>
-        <p className="text-white/55 mb-8">{state.success}</p>
+        <p className="text-white/75 mb-8">{state.success}</p>
         <Link href="/auth/login" className="btn-primary w-full inline-flex">
           Sign in
         </Link>
@@ -111,7 +111,7 @@ export default function ResetPasswordPage() {
         <h1 className="font-display text-3xl font-bold tracking-tight mb-2 text-white">
           Set new password
         </h1>
-        <p className="text-white/55">Choose a strong password for your account.</p>
+        <p className="text-white/75">Choose a strong password for your account.</p>
       </div>
 
       <form action={formAction} className="space-y-5" noValidate>
@@ -168,7 +168,7 @@ export default function ResetPasswordPage() {
         <SubmitButton />
       </form>
 
-      <p className="text-sm text-white/50 text-center mt-6">
+      <p className="text-sm text-white/70 text-center mt-6">
         Remembered it?{" "}
         <Link href="/auth/login" className="text-primary hover:text-primary-light font-medium">
           Sign in

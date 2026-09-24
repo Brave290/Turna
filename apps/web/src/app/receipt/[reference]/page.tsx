@@ -182,7 +182,7 @@ export default async function ReceiptPage({ params }: ReceiptParams) {
             </Link>
           </div>
 
-          <p className="text-center text-xs text-white/40 mt-6">
+          <p className="text-center text-xs text-white/65 mt-6">
             Keep this reference for support. Receipts are also listed under Payments.
           </p>
         </div>

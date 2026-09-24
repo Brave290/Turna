@@ -140,7 +140,7 @@ export default function LoginPage() {
         <h1 className="font-display text-3xl font-bold tracking-tight mb-2 text-white">
           Welcome back
         </h1>
-        <p className="text-white/55">Sign in to pick up where you left off.</p>
+        <p className="text-white/75">Sign in to pick up where you left off.</p>
       </div>
 
       <form action={formAction} onSubmit={onSubmit} className="space-y-5" noValidate>
@@ -265,7 +265,7 @@ export default function LoginPage() {
         <SubmitButton disabled={!agreed} />
       </form>
 
-      <p className="text-sm text-white/50 text-center mt-8">
+      <p className="text-sm text-white/70 text-center mt-8">
         No account yet?{" "}
         <Link
           href="/auth/signup"

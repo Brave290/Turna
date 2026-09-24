@@ -154,7 +154,7 @@ export default function OnboardingPage() {
         <button
           type="button"
           onClick={skip}
-          className="text-sm text-white/50 hover:text-white transition-colors"
+          className="text-sm text-white/70 hover:text-white transition-colors"
           disabled={busy}
         >
           Skip
@@ -215,7 +215,7 @@ export default function OnboardingPage() {
               <button
                 type="button"
                 onClick={() => setI((v) => Math.min(v + 1, SLIDES.length - 1))}
-                className="inline-flex items-center gap-1.5 text-xs text-white/40 hover:text-white/70 transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs text-white/65 hover:text-white/70 transition-colors"
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 Show me everything

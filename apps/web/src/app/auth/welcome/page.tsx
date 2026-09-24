@@ -31,7 +31,7 @@ export default function WelcomePage() {
         <h1 className="font-display text-3xl font-bold tracking-tight mb-3">
           Welcome to Turna
         </h1>
-        <p className="text-white/55 leading-relaxed">
+        <p className="text-white/75 leading-relaxed">
           You&apos;re ready to start or join your first savings circle.
         </p>
       </div>

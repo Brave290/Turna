@@ -78,7 +78,7 @@ export default async function DashboardHomePage() {
               <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight truncate">
                 Hi, {firstName}
               </h1>
-              <p className="text-sm text-white/50 mt-1">
+              <p className="text-sm text-white/70 mt-1">
                 {activeCircles.length > 0
                   ? `${activeCircles.length} active circle${activeCircles.length === 1 ? '' : 's'} · cycle ${circles[0]?.current_cycle || 0}`
                   : 'No active circles yet — start one below.'}
@@ -284,7 +284,7 @@ function HeroStat({
       <p className="font-display text-lg sm:text-xl font-bold text-white truncate">
         {value}
       </p>
-      <p className="text-[11px] text-white/40 truncate">{sub}</p>
+      <p className="text-[11px] text-white/65 truncate">{sub}</p>
     </div>
   );
 }
