@@ -92,7 +92,7 @@ export function NotificationBell({ notifications, unreadCount }: NotificationBel
                 type="button"
                 onClick={handleMarkAll}
                 disabled={isPending}
-                className="btn-ghost btn-sm text-xs px-2 py-1.5 text-primary hover:bg-primary/10"
+                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-white bg-primary hover:bg-primary/90 transition-colors disabled:opacity-60"
                 title="Mark all as read"
               >
                 {isPending ? <Spinner className="w-3.5 h-3.5" /> : <CheckCheck className="w-3.5 h-3.5" />}
@@ -102,7 +102,7 @@ export function NotificationBell({ notifications, unreadCount }: NotificationBel
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="text-muted hover:text-forest p-1.5 rounded-lg hover:bg-border/50 transition-colors"
+              className="p-1.5 rounded-lg text-forest/70 hover:text-forest hover:bg-border/60 transition-colors"
               aria-label="Close notifications"
             >
               <X className="w-4 h-4" />
@@ -155,7 +155,7 @@ export function NotificationBell({ notifications, unreadCount }: NotificationBel
                         type="button"
                         onClick={() => handleMarkOne(n.id)}
                         disabled={isPending}
-                        className="shrink-0 mt-0.5 w-7 h-7 rounded-lg flex items-center justify-center text-primary hover:bg-primary/10 transition-colors"
+                        className="shrink-0 mt-0.5 w-8 h-8 rounded-lg flex items-center justify-center text-white bg-primary hover:bg-primary/90 transition-colors disabled:opacity-50"
                         aria-label="Mark as read"
                       >
                         <Check className="w-4 h-4" />

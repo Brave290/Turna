@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { LogOut } from 'lucide-react';
 import { signOut } from '@/lib/auth-actions';
-import { useConfirm } from '@/components/ui';
 import { SettingsRow } from '@/components/dashboard/settings/shell';
+import { useConfirm } from '@/components/ui';
 
 /** Log out row with confirmation modal (not immediate sign-out). */
 export function DangerSignOut() {

@@ -101,6 +101,8 @@ android {
 
     packagingOptions {
         pickFirst "**/*.so"
+        pickFirst "META-INF/com.android.tools/proguard/coroutines.pro"
+        pickFirst "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
         excludes = [
             "**/lib/x86/**",
             "**/lib/x86_64/**",

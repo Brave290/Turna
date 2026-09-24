@@ -1,11 +1,11 @@
 'use client';
 
 import { useFormState, useFormStatus } from 'react-dom';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, XCircle, Mail } from 'lucide-react';
+import { CheckCircle2, Mail } from 'lucide-react';
 import { acceptInvitation, type AcceptInviteState } from '@/lib/auth-actions';
 import { Logo } from '@/components/logo';
 import { Spinner } from '@/components/spinner';
@@ -94,21 +94,7 @@ export function JoinCircleClient({ sessionEmail }: { sessionEmail: string | null
   }, [state, toast]);
 
   if (!token) {
-    return (
-      <Shell>
-        <XCircle className="w-12 h-12 text-error mx-auto mb-4" />
-        <h1 className="font-display text-3xl font-bold text-white mb-2">
-          Invalid link
-        </h1>
-        <p className="text-white/75 text-sm mb-8">
-          This invitation link is missing a token. Ask the circle owner to
-          resend the invite.
-        </p>
-        <Link href="/auth/login" className="btn-primary w-full inline-flex">
-          Go to sign in
-        </Link>
-      </Shell>
-    );
+    return <NoToken sessionEmail={sessionEmail} />;
   }
 
   if (state?.success && state.circleId) {
@@ -226,6 +212,88 @@ export function JoinCircleClient({ sessionEmail }: { sessionEmail: string | null
             </Link>
           </p>
         )}
+      </div>
+    </Shell>
+  );
+}
+
+function NoToken({ sessionEmail }: { sessionEmail: string | null }) {
+  const router = useRouter();
+  const [code, setCode] = useState('');
+
+  function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const trimmed = code.trim();
+    if (!trimmed) return;
+    // Accept full invite URLs pasted as well as bare tokens/codes
+    let token = trimmed;
+    try {
+      const url = new URL(trimmed);
+      token =
+        url.searchParams.get('token') ||
+        url.pathname.split('/').filter(Boolean).pop() ||
+        trimmed;
+    } catch {
+      /* bare token */
+    }
+    if (!token) return;
+    try {
+      sessionStorage.setItem(PENDING_INVITE_KEY, token);
+    } catch {
+      /* ignore */
+    }
+    router.push(`/circles/join?token=${encodeURIComponent(token)}`);
+  }
+
+  return (
+    <Shell>
+      <div className="flex justify-center mb-4">
+        <Logo variant="on-dark" size={48} />
+      </div>
+      <h1 className="font-display text-3xl font-bold text-white mb-2">
+        {sessionEmail ? 'Join with an invite code' : 'Join a savings circle'}
+      </h1>
+      <p className="text-white/75 text-sm mb-8 leading-relaxed">
+        Paste the invite code or link you received from the circle owner.
+      </p>
+
+      <form onSubmit={onSubmit} className="space-y-3 text-left">
+        <label htmlFor="invite-code" className="block text-xs font-medium text-white/80">
+          Invite code or link
+        </label>
+        <input
+          id="invite-code"
+          type="text"
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          placeholder="Paste code or link"
+          autoComplete="off"
+          spellCheck={false}
+          className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-white/40 outline-none focus:border-primary focus:ring-2 focus:ring-primary/40"
+        />
+        <button
+          type="submit"
+          disabled={!code.trim()}
+          className="btn-primary w-full disabled:opacity-50"
+        >
+          Continue
+        </button>
+      </form>
+
+      <div className="mt-6 space-y-3 text-center">
+        {!sessionEmail && (
+          <p className="text-sm text-white/70">
+            Already have an account?{' '}
+            <Link href="/auth/login" className="text-primary hover:text-primary-light font-medium">
+              Sign in
+            </Link>
+          </p>
+        )}
+        <p className="text-sm text-white/70">
+          <Link href="/" className="text-primary hover:text-primary-light font-medium">
+            Back to Turna
+          </Link>
+        </p>
       </div>
     </Shell>
   );

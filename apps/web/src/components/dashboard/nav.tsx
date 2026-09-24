@@ -14,6 +14,7 @@ import {
   LogOut,
 } from 'lucide-react';
 import { Logo } from '@/components/logo';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { signOut } from '@/lib/auth-actions';
 import { NotificationBell } from '@/components/dashboard/notification-bell';
 import type { Notification } from '@turna/types';
@@ -245,6 +246,7 @@ export function DashboardNav({
               notifications={notifications}
               unreadCount={unreadCount}
             />
+            <ThemeToggle />
           </div>
           {sideSecondary.map((item) => {
             const active = isActive(pathname, item.href);
@@ -286,6 +288,7 @@ export function DashboardNav({
             </span>
           </Link>
           <div className="flex items-center gap-1.5 shrink-0">
+            <ThemeToggle />
             <NotificationBell
               notifications={notifications}
               unreadCount={unreadCount}

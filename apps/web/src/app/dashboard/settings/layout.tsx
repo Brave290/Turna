@@ -1,4 +1,4 @@
-import { SettingsShell } from '@/components/dashboard/settings/shell';
+import { SettingsShell } from '@/components/dashboard/settings/shell-nav';
 
 export const dynamic = 'force-dynamic';
 
