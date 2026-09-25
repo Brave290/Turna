@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { createServerSupabaseClientFromRequest } from '@/lib/supabase-request';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,7 +15,7 @@ const CATEGORIES = new Set([
 ]);
 
 export async function POST(req: Request) {
-  const supabase = createServerSupabaseClient();
+  const supabase = createServerSupabaseClientFromRequest(req);
   const {
     data: { user },
   } = await supabase.auth.getUser();

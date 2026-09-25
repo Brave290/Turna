@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { createServerSupabaseClientFromRequest } from '@/lib/supabase-request';
 import { createAdminSupabaseClient } from '@/lib/supabase-admin';
 import { sendEmail, emailTemplates } from '@/lib/email';
 
@@ -10,7 +10,7 @@ const ALLOWED = new Set(['bank_change', 'profile_change']);
 /** POST — send OTP for a sensitive edit (bank / profile unlock). */
 export async function POST(req: NextRequest) {
   try {
-    const supabase = createServerSupabaseClient();
+    const supabase = createServerSupabaseClientFromRequest(req);
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
 /** PUT — verify OTP for sensitive edit unlock. */
 export async function PUT(req: NextRequest) {
   try {
-    const supabase = createServerSupabaseClient();
+    const supabase = createServerSupabaseClientFromRequest(req);
     const {
       data: { user },
     } = await supabase.auth.getUser();

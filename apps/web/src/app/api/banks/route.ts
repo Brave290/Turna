@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { createServerSupabaseClientFromRequest } from '@/lib/supabase-request';
 import { listBanks, resolveAccount } from '@/lib/paystack';
 
 export const dynamic = 'force-dynamic';
@@ -24,7 +24,7 @@ export async function GET() {
 
 /** POST /api/banks/resolve — resolve account name (requires session) */
 export async function POST(req: Request) {
-  const supabase = createServerSupabaseClient();
+  const supabase = createServerSupabaseClientFromRequest(req);
   const {
     data: { user },
   } = await supabase.auth.getUser();
