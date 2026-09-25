@@ -11,6 +11,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Button } from '../components/Button';
+import { AppSelect } from '../components/AppSelect';
 import { Card, Badge } from '../components/Card';
 import { Screen } from '../components/Screen';
 import { colors, spacing, typography } from '../theme';
@@ -295,18 +296,16 @@ export function NewCircleScreen({ onDone, onBack }: { onDone?: () => void; onBac
             placeholder="5000"
             placeholderTextColor={colors.muted}
           />
-          <Text style={styles.label}>Frequency</Text>
-          <View style={styles.freqRow}>
-            {['weekly', 'monthly'].map((f) => (
-              <Text
-                key={f}
-                style={[styles.freq, frequency === f && styles.freqOn]}
-                onPress={() => setFrequency(f)}
-              >
-                {f === 'weekly' ? 'Weekly' : 'Monthly'}
-              </Text>
-            ))}
-          </View>
+          <AppSelect
+            label="Frequency"
+            value={frequency}
+            onChange={setFrequency}
+            options={[
+              { value: 'weekly', label: 'Weekly' },
+              { value: 'monthly', label: 'Monthly' },
+            ]}
+            style={{ marginTop: spacing.sm }}
+          />
           <Text style={styles.label}>Description (optional)</Text>
           <TextInput
             style={styles.input}
@@ -456,27 +455,6 @@ const styles = StyleSheet.create({
     color: colors.forest,
     fontSize: typography.body,
     backgroundColor: colors.white,
-  },
-  freqRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  freq: {
-    flex: 1,
-    textAlign: 'center',
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    color: colors.muted,
-    fontSize: typography.body,
-    overflow: 'hidden',
-  },
-  freqOn: {
-    borderColor: colors.primary,
-    backgroundColor: 'rgba(0,122,101,0.08)',
-    color: colors.primary,
-    fontWeight: '600',
   },
   error: {
     color: colors.error,

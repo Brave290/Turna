@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert,
   FlatList,
   Keyboard,
   PanResponder,
@@ -13,6 +12,7 @@ import {
 } from 'react-native';
 import { Screen } from '../components/Screen';
 import { LoadingOverlay } from '../components/Loading';
+import { useConfirm } from '../components/Popup';
 import { colors, spacing, typography } from '../theme';
 import { Check, ChevronLeft, ChevronRight, Plus } from 'lucide-react-native';
 import {
@@ -73,6 +73,7 @@ export function SoloLedgerDetailScreen({
   const [addName, setAddName] = useState('');
   const [addAmount, setAddAmount] = useState('');
   const [addRef, setAddRef] = useState<{ focus?: () => void } | null>(null);
+  const { confirm, node: confirmNode } = useConfirm();
 
   const load = useCallback(async () => {
     const L = await getSoloLedger(ledgerId);
@@ -248,24 +249,20 @@ export function SoloLedgerDetailScreen({
 
   function removePerson(c: SoloContributor) {
     if (!ledger) return;
-    Alert.alert('Remove person?', `${c.name} will be removed from this sheet.`, [
-      {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: () => {
-          void (async () => {
-            await queueContributor(ledger.id, {
-              ...c,
-              archived: true,
-              local_updated_at: new Date().toISOString(),
-            });
-            const next = await getSoloLedger(ledger.id);
-            if (next) void mutate(next);
-          })();
-        },
-      },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
+    void (async () => {
+      const ok = await confirm('Remove person?', `${c.name} will be removed from this sheet.`, {
+        confirmLabel: 'Remove',
+        danger: true,
+      });
+      if (!ok) return;
+      await queueContributor(ledger.id, {
+        ...c,
+        archived: true,
+        local_updated_at: new Date().toISOString(),
+      });
+      const next = await getSoloLedger(ledger.id);
+      if (next) void mutate(next);
+    })();
   }
 
   if (!ledger) {
@@ -449,6 +446,8 @@ export function SoloLedgerDetailScreen({
         Tap the box to toggle paid · swipe the month bar to change months ·
         long-press a row to remove it. Edits save as you go.
       </Text>
+
+      {confirmNode}
     </Screen>
   );
 }

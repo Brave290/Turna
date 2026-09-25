@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Alert,
   Image,
   Pressable,
   RefreshControl,
@@ -31,6 +30,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Button } from '../components/Button';
+import { useConfirm } from '../components/Popup';
 import { Screen } from '../components/Screen';
 import { colors, spacing } from '../theme';
 import { LOCAL_VERSION_NAME } from '../generated/version';
@@ -238,6 +238,7 @@ export function SettingsScreen({
   } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const { confirm, node: confirmNode } = useConfirm();
 
   const load = useCallback(async () => {
     try {
@@ -273,20 +274,16 @@ export function SettingsScreen({
   const initials = getInitials(displayName || displayEmail || 'TU');
 
   function confirmSignOut() {
-    Alert.alert(
-      'Log out?',
-      'Are you sure you want to log out of your Turna account?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Log out',
-          onPress: () => {
-            setSigningOut(true);
-            void signOut().finally(() => setSigningOut(false));
-          },
-        },
-      ]
-    );
+    void (async () => {
+      const ok = await confirm(
+        'Log out?',
+        'Are you sure you want to log out of your Turna account?',
+        { confirmLabel: 'Log out' }
+      );
+      if (!ok) return;
+      setSigningOut(true);
+      await signOut().finally(() => setSigningOut(false));
+    })();
   }
 
   return (
@@ -398,6 +395,7 @@ export function SettingsScreen({
         <Text style={styles.footer}>
           Turna · Version {LOCAL_VERSION_NAME} · © 2026
         </Text>
+        {confirmNode}
       </ScrollView>
     </Screen>
   );

@@ -1,8 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Alert,
   FlatList,
-  Modal,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -16,6 +14,7 @@ import { Screen } from '../components/Screen';
 import { Card, Badge } from '../components/Card';
 import { Button } from '../components/Button';
 import { LoadingOverlay } from '../components/Loading';
+import { Popup, useConfirm } from '../components/Popup';
 import { colors, spacing, typography } from '../theme';
 import { Trash2 } from 'lucide-react-native';
 import {
@@ -39,6 +38,7 @@ function money(n: number, currency = 'NGN') {
 
 export function SoloLedgersScreen({ onOpen, onPush }: { onOpen?: (id: string) => void; onPush?: (screen: any) => void } = {}) {
   const { user } = useAuth();
+  const { confirm, node: confirmNode } = useConfirm();
   const [rows, setRows] = useState<SoloLedger[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -103,20 +103,14 @@ export function SoloLedgersScreen({ onOpen, onPush }: { onOpen?: (id: string) =>
     onOpen?.(id);
   }
 
-  function remove(id: string, ledgerName: string) {
-    Alert.alert('Delete ledger?', `${ledgerName} and its records will be removed.`, [
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: () => {
-          void (async () => {
-            await deleteSoloLedger(id);
-            await load();
-          })();
-        },
-      },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
+  async function remove(id: string, ledgerName: string) {
+    const ok = await confirm('Delete ledger?', `${ledgerName} and its records will be removed.`, {
+      confirmLabel: 'Delete',
+      danger: true,
+    });
+    if (!ok) return;
+    await deleteSoloLedger(id);
+    await load();
   }
 
   return (
@@ -139,68 +133,56 @@ export function SoloLedgersScreen({ onOpen, onPush }: { onOpen?: (id: string) =>
         />
       </View>
 
-      <Modal
+      <Popup
         visible={creating}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setCreating(false)}
-      >
-        <Pressable style={styles.modalBackdrop} onPress={() => setCreating(false)}>
-          <Pressable style={styles.modalCard} onPress={() => undefined}>
-            <Text style={styles.modalTitle}>New solo sheet</Text>
-            <Text style={styles.modalSub}>
-              Pick the month — the sheet is named after it.
-            </Text>
-
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.monthChips}
-            >
-              {Array.from({ length: 15 }, (_, i) => shiftPeriod(periodKey(), i - 1)).map(
-                (m) => {
-                  const on = m === month;
-                  return (
-                    <Pressable
-                      key={m}
-                      onPress={() => setMonth(m)}
-                      style={[styles.monthChip, on && styles.monthChipOn]}
-                    >
-                      <Text style={[styles.monthChipText, on && styles.monthChipTextOn]}>
-                        {formatPeriodLabel(m)}
-                      </Text>
-                    </Pressable>
-                  );
-                }
-              )}
-            </ScrollView>
-
-            <Text style={styles.label}>Default monthly amount</Text>
-            <TextInput
-              style={styles.input}
-              value={amount}
-              onChangeText={setAmount}
-              keyboardType="numeric"
-              placeholder="5000"
-              placeholderTextColor={colors.muted}
+        onClose={() => setCreating(false)}
+        title="New solo sheet"
+        subtitle="Pick the month — the sheet is named after it."
+        footer={
+          <View style={styles.createActions}>
+            <Button label="Create sheet" onPress={create} style={{ flex: 1 }} />
+            <Button
+              label="Cancel"
+              variant="ghost"
+              onPress={() => setCreating(false)}
+              style={{ flex: 1 }}
             />
+          </View>
+        }
+      >
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.monthChips}
+        >
+          {Array.from({ length: 15 }, (_, i) => shiftPeriod(periodKey(), i - 1)).map((m) => {
+            const on = m === month;
+            return (
+              <Pressable
+                key={m}
+                onPress={() => setMonth(m)}
+                style={[styles.monthChip, on && styles.monthChipOn]}
+              >
+                <Text style={[styles.monthChipText, on && styles.monthChipTextOn]}>
+                  {formatPeriodLabel(m)}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
 
-            <View style={styles.createActions}>
-              <Button
-                label="Create sheet"
-                onPress={create}
-                style={{ flex: 1 }}
-              />
-              <Button
-                label="Cancel"
-                variant="ghost"
-                onPress={() => setCreating(false)}
-                style={{ flex: 1 }}
-              />
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+        <Text style={styles.label}>Default monthly amount</Text>
+        <TextInput
+          style={styles.input}
+          value={amount}
+          onChangeText={setAmount}
+          keyboardType="numeric"
+          placeholder="5000"
+          placeholderTextColor={colors.muted}
+        />
+      </Popup>
+
+      {confirmNode}
 
       {loading ? (
         <LoadingOverlay label="Loading ledgers…" />
@@ -308,30 +290,6 @@ const styles = StyleSheet.create({
   createCard: {
     marginHorizontal: spacing.lg,
     marginBottom: spacing.sm,
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(10,22,40,0.5)',
-    justifyContent: 'center',
-    padding: spacing.lg,
-  },
-  modalCard: {
-    backgroundColor: colors.white,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
-  },
-  modalTitle: {
-    fontSize: typography.heading,
-    fontWeight: '700',
-    color: colors.forest,
-  },
-  modalSub: {
-    fontSize: typography.caption,
-    color: colors.muted,
-    marginTop: 4,
-    marginBottom: spacing.md,
   },
   monthChips: {
     gap: spacing.sm,

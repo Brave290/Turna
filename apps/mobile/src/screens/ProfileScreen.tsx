@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Alert,
   Image,
   Pressable,
   ScrollView,
@@ -25,6 +24,8 @@ import { supabase } from '../lib/supabase';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { Screen } from '../components/Screen';
+import { useConfirm } from '../components/Popup';
+import { useToast } from '../components/Toast';
 import { colors, spacing, typography } from '../theme';
 
 type ProfileRow = {
@@ -65,6 +66,8 @@ export function ProfileScreen({
   const [circleCount, setCircleCount] = useState(0);
   const [activeCount, setActiveCount] = useState(0);
   const [busy, setBusy] = useState(false);
+  const { confirm, node: confirmNode } = useConfirm();
+  const { show: toast, node: toastNode } = useToast();
 
   const [f, setF] = useState({
     display_name: '',
@@ -194,37 +197,24 @@ export function ProfileScreen({
   };
 
   const signOutOthers = () => {
-    Alert.alert(
-      'Sign out other devices?',
-      'This will sign out every other browser and device. You stay signed in here.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Sign out others',
-          style: 'destructive',
-          onPress: () => {
-            setBusy(true);
-            void (async () => {
-              try {
-                const { error } = await supabase.auth.signOut({ scope: 'others' });
-                if (error) {
-                  Alert.alert('Could not sign out other devices', error.message);
-                } else {
-                  Alert.alert('Signed out', 'Other devices signed out');
-                }
-              } catch {
-                Alert.alert(
-                  'Network error',
-                  'Other devices were not signed out'
-                );
-              } finally {
-                setBusy(false);
-              }
-            })();
-          },
-        },
-      ]
-    );
+    void (async () => {
+      const ok = await confirm(
+        'Sign out other devices?',
+        'This will sign out every other browser and device. You stay signed in here.',
+        { confirmLabel: 'Sign out others', danger: true }
+      );
+      if (!ok) return;
+      setBusy(true);
+      try {
+        const { error } = await supabase.auth.signOut({ scope: 'others' });
+        if (error) toast(error.message, 'error');
+        else toast('Other devices signed out');
+      } catch {
+        toast('Network error — other devices were not signed out', 'error');
+      } finally {
+        setBusy(false);
+      }
+    })();
   };
 
   const accountRows: {
@@ -498,6 +488,8 @@ export function ProfileScreen({
         >
           <Text style={styles.delete}>Delete account</Text>
         </Pressable>
+        {confirmNode}
+        {toastNode}
       </ScrollView>
     </Screen>
   );
