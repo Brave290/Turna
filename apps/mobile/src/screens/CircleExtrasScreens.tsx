@@ -12,6 +12,9 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Button } from '../components/Button';
 import { AppSelect } from '../components/AppSelect';
+import { useToast } from '../components/Toast';
+import { enqueueOp, isOfflineError } from '../lib/offline';
+import { offlineUuid } from '../lib/solo-store';
 import { Card, Badge } from '../components/Card';
 import { Screen } from '../components/Screen';
 import { colors, spacing, typography } from '../theme';
@@ -243,6 +246,7 @@ export function NewCircleScreen({ onDone, onBack }: { onDone?: () => void; onBac
   const [description, setDescription] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { show: toast, node: toastNode } = useToast();
 
   async function create() {
     if (!name.trim() || !user) {
@@ -251,19 +255,30 @@ export function NewCircleScreen({ onDone, onBack }: { onDone?: () => void; onBac
     }
     setBusy(true);
     setError(null);
+    const row = {
+      name: name.trim(),
+      owner_id: user.id,
+      status: 'draft',
+      contribution_amount: Math.round(Number(amount.replace(/[^\d.]/g, '') || '0') * 100),
+      currency: 'NGN',
+      frequency,
+      description: description.trim() || null,
+    };
     try {
-      const { error: e } = await supabase.from('circles').insert({
-        name: name.trim(),
-        owner_id: user.id,
-        status: 'draft',
-        contribution_amount: Math.round(Number(amount.replace(/[^\d.]/g, '') || '0') * 100),
-        currency: 'NGN',
-        frequency,
-        description: description.trim() || null,
-      });
+      const { error: e } = await supabase.from('circles').insert(row);
       if (e) throw e;
       onDone?.();
     } catch (e) {
+      if (isOfflineError(e)) {
+        await enqueueOp({
+          table: 'circles',
+          action: 'insert',
+          payload: { id: offlineUuid(), ...row, created_at: new Date().toISOString() },
+        });
+        toast('Offline — your circle will sync when you’re back online.');
+        onDone?.();
+        return;
+      }
       setError(e instanceof Error ? e.message : 'Could not create circle.');
     } finally {
       setBusy(false);
@@ -317,6 +332,7 @@ export function NewCircleScreen({ onDone, onBack }: { onDone?: () => void; onBac
           {error && <Text style={styles.error}>{error}</Text>}
           <Button label="Create circle" onPress={() => void create()} loading={busy} style={{ marginTop: spacing.md }} />
         </Card>
+        {toastNode}
       </View>
     </Screen>
   );

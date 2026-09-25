@@ -24,6 +24,7 @@ import {
 } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import { cacheGet, cacheSet, drainQueue } from '../lib/offline';
 import { Card, Badge, Stat } from '../components/Card';
 import { Screen } from '../components/Screen';
 import { colors, spacing, typography } from '../theme';
@@ -113,6 +114,26 @@ export function HomeScreen({
   const load = useCallback(async () => {
     if (!user) return;
     setError(null);
+    const ck = 'home:' + user.id;
+    type HomeCache = {
+      circles: CircleRow[];
+      memberships: MembershipRow[];
+      notifications: NotificationRow[];
+      wallets: WalletRow[];
+      stats: {
+        pendingContributions: number;
+        pendingPayouts: number;
+        totalContributed: number;
+      };
+    };
+    const cached = await cacheGet<HomeCache>(ck);
+    if (cached) {
+      setCircles(cached.circles);
+      setMemberships(cached.memberships);
+      setNotifications(cached.notifications);
+      setWallets(cached.wallets);
+      setStats(cached.stats);
+    }
     try {
       const [cRes, mRes, nRes, wRes] = await Promise.all([
         supabase
@@ -143,16 +164,19 @@ export function HomeScreen({
 
       const circleList = (cRes.data ?? []) as CircleRow[];
       const memberList = (mRes.data ?? []) as unknown as MembershipRow[];
+      const notificationList = (nRes.data ?? []) as NotificationRow[];
+      const w = wRes.data as unknown as WalletRow[] | null;
+      const walletList = Array.isArray(w) ? w : [];
       setCircles(circleList);
       setMemberships(memberList);
-      setNotifications((nRes.data ?? []) as NotificationRow[]);
-      const w = wRes.data as unknown as WalletRow[] | null;
-      setWallets(Array.isArray(w) ? w : []);
+      setNotifications(notificationList);
+      setWallets(walletList);
       if (cRes.error && cRes.error.code !== 'PGRST116') {
         setError(cRes.error.message);
       }
 
       // Stats — same queries/semantics as web getDashboardData()
+      let nextStats: HomeCache['stats'];
       if (circleList.length > 0) {
         const ids = circleList.map((c) => c.id);
         const myMemberIds = new Set(memberList.map((m) => m.id));
@@ -171,8 +195,8 @@ export function HomeScreen({
             .limit(200),
         ]);
         const contributions = (contribRes.data ?? []) as unknown as ContributionRow[];
-        const payouts = (payoutRes.data ?? []) as unknown as PayoutRow[];
-        setStats({
+        const payouts = (payoutRes.data ?? []) as PayoutRow[];
+        nextStats = {
           pendingContributions: contributions.filter(
             (c) =>
               myMemberIds.has(c.member_id) &&
@@ -190,12 +214,21 @@ export function HomeScreen({
               (sum, c) => sum + Number(c.reported_amount ?? c.expected_amount ?? 0),
               0
             ),
-        });
+        };
       } else {
-        setStats({ pendingContributions: 0, pendingPayouts: 0, totalContributed: 0 });
+        nextStats = { pendingContributions: 0, pendingPayouts: 0, totalContributed: 0 };
       }
+      setStats(nextStats);
+      void cacheSet(ck, {
+        circles: circleList,
+        memberships: memberList,
+        notifications: notificationList,
+        wallets: walletList,
+        stats: nextStats,
+      });
+      void drainQueue();
     } catch {
-      setError('Could not load dashboard. Pull to retry.');
+      if (!cached) setError('Could not load dashboard. Pull to retry.');
     } finally {
       setLoading(false);
       setRefreshing(false);

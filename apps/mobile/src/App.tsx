@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { BackHandler, StyleSheet, Text, View } from 'react-native';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { drainQueue } from './lib/offline';
 import { AuthScreen } from './screens/AuthScreen';
 import { OnboardingScreen } from './screens/OnboardingScreen';
 import { HomeScreen } from './screens/HomeScreen';
@@ -57,7 +58,9 @@ function Gate() {
     if (status !== 'signedIn') {
       setTab('home');
       setStack([{ name: 'home' }]);
+      return;
     }
+    void drainQueue();
   }, [status]);
 
   // Android back: step backwards through the stack; only exit at the root.

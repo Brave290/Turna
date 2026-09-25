@@ -21,6 +21,7 @@ import {
 } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import { enqueueOp, isOfflineError } from '../lib/offline';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { Screen } from '../components/Screen';
@@ -157,6 +158,18 @@ export function ProfileScreen({
     }
     if (!user) return;
 
+    const payload = {
+      id: user.id,
+      email: user.email ?? '',
+      display_name: displayNameV,
+      date_of_birth: dob,
+      phone,
+      bio,
+      city,
+      country,
+      updated_at: new Date().toISOString(),
+    };
+
     setSaving(true);
     try {
       const { data: existing } = await supabase
@@ -164,21 +177,21 @@ export function ProfileScreen({
         .select('id')
         .eq('id', user.id)
         .maybeSingle();
-      const payload = {
-        id: user.id,
-        email: user.email ?? '',
-        display_name: displayNameV,
-        date_of_birth: dob,
-        phone,
-        bio,
-        city,
-        country,
-        updated_at: new Date().toISOString(),
-      };
       const { error } = existing
         ? await supabase.from('profiles').update(payload).eq('id', user.id)
         : await supabase.from('profiles').insert(payload);
       if (error) {
+        if (isOfflineError(new Error(error.message))) {
+          await enqueueOp({
+            table: 'profiles',
+            action: 'update',
+            match: { id: user.id },
+            payload,
+          });
+          setSaved(true);
+          toast('Saved — will sync when you’re back online.');
+          return;
+        }
         setFormError(error.message);
         return;
       }
@@ -189,7 +202,18 @@ export function ProfileScreen({
       }
       setSaved(true);
       void load();
-    } catch {
+    } catch (e) {
+      if (isOfflineError(e)) {
+        await enqueueOp({
+          table: 'profiles',
+          action: 'update',
+          match: { id: user.id },
+          payload,
+        });
+        setSaved(true);
+        toast('Saved — will sync when you’re back online.');
+        return;
+      }
       setFormError('Could not save profile. Please try again.');
     } finally {
       setSaving(false);

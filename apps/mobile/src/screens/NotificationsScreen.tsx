@@ -11,6 +11,7 @@ import {
 import { Bell, CheckCheck } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import { cacheGet, cacheSet, drainQueue } from '../lib/offline';
 import { formatRelativeTime } from '../lib/format';
 import { Button } from '../components/Button';
 import { Card, Badge, type BadgeTone } from '../components/Card';
@@ -98,14 +99,23 @@ export function NotificationsScreen({ onBack }: { onBack?: () => void } = {}) {
 
   const load = useCallback(async () => {
     if (!user) return;
+    const ck = 'notifications:' + user.id;
+    const cached = await cacheGet<N[]>(ck);
+    if (cached) setRows(cached);
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('notifications')
         .select('id, title, body, status, created_at')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(100);
-      setRows((data ?? []) as N[]);
+      if (error) throw new Error(error.message);
+      const list = (data ?? []) as N[];
+      setRows(list);
+      void cacheSet(ck, list);
+      void drainQueue();
+    } catch {
+      /* offline — keep cached rows */
     } finally {
       setLoading(false);
       setRefreshing(false);

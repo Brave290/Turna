@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import { cacheGet, cacheSet, drainQueue } from '../lib/offline';
 import { Card, Badge } from '../components/Card';
 import { Screen } from '../components/Screen';
 import { colors, spacing, typography } from '../theme';
@@ -62,6 +63,12 @@ export function LedgerScreen({ onPush }: { onPush?: (screen: any) => void } = {}
   const load = useCallback(async () => {
     if (!user) return;
     setError(null);
+    const ck = 'ledger:' + user.id;
+    const cached = await cacheGet<{ events: Event[]; isAdmin: boolean }>(ck);
+    if (cached) {
+      setEvents(cached.events);
+      setIsAdmin(cached.isAdmin);
+    }
     try {
       const [owned, feed] = await Promise.all([
         supabase
@@ -82,9 +89,11 @@ export function LedgerScreen({ onPush }: { onPush?: (screen: any) => void } = {}
         rows = rows.filter((e) => !MEMBER_HIDDEN.has(e.event_type));
       }
       setEvents(rows);
+      void cacheSet(ck, { events: rows, isAdmin: ownedCount > 0 });
+      void drainQueue();
       if (feed.error) setError(feed.error.message);
     } catch {
-      setError('Could not load ledger.');
+      if (!cached) setError('Could not load ledger.');
     } finally {
       setLoading(false);
       setRefreshing(false);

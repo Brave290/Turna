@@ -3,6 +3,7 @@ import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Tex
 import { Users } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import { cacheGet, cacheSet, drainQueue } from '../lib/offline';
 import { Card, Badge } from '../components/Card';
 import { Screen } from '../components/Screen';
 import { formatCurrency } from '../lib/format';
@@ -40,6 +41,10 @@ export function CirclesScreen({ onPush, onNewCircle }: { onPush?: (screen: any) 
   const load = useCallback(async () => {
     if (!user) return;
     setError(null);
+    const ck = 'circles:' + user.id;
+    type Row = Circle & { role: string; payoutPosition: number | null };
+    const cached = await cacheGet<Row[]>(ck);
+    if (cached) setRows(cached);
     try {
       const [owned, member] = await Promise.all([
         supabase
@@ -81,10 +86,13 @@ export function CirclesScreen({ onPush, onNewCircle }: { onPush?: (screen: any) 
           });
         }
       });
-      setRows(Array.from(map.values()));
+      const merged = Array.from(map.values());
+      setRows(merged);
+      void cacheSet(ck, merged);
+      void drainQueue();
       if (owned.error) setError(owned.error.message);
     } catch {
-      setError('Could not load circles.');
+      if (!cached) setError('Could not load circles.');
     } finally {
       setLoading(false);
       setRefreshing(false);
