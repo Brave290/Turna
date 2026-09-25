@@ -37,6 +37,7 @@ export function Button({
         styles.base,
         variantStyles[variant],
         pressed && !isDisabled && styles.pressed,
+        pressed && !isDisabled && styles.pressedScale,
         isDisabled && styles.disabled,
         style,
       ]}
@@ -68,6 +69,9 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.85,
+  },
+  pressedScale: {
+    transform: [{ scale: 0.97 }],
   },
   disabled: {
     opacity: 0.5,
