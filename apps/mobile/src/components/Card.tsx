@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.lg,
+    padding: 20,
     marginBottom: spacing.sm,
   },
   badge: {

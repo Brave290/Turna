@@ -17,6 +17,14 @@ export function formatCurrency(amount: number, currency = 'NGN'): string {
   }
 }
 
+export function formatDate(date: string | Date): string {
+  return new Date(date).toLocaleDateString('en-NG', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
 export function formatRelativeTime(date: string | Date): string {
   const now = new Date();
   const then = new Date(date);
