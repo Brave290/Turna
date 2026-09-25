@@ -36,7 +36,7 @@ export function CookieConsent() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 80, opacity: 0 }}
           transition={{ type: "spring", bounce: 0.2, duration: 0.55 }}
-          className="fixed bottom-0 inset-x-0 z-50 p-4 sm:p-6"
+          className="no-print fixed bottom-0 inset-x-0 z-50 p-4 sm:p-6"
           role="dialog"
           aria-label="Cookie consent"
         >

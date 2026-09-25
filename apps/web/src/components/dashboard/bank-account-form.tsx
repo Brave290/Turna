@@ -35,6 +35,7 @@ export function BankAccountForm({
   const [resolvedName, setResolvedName] = useState(
     initialAccount?.account_name ?? ''
   );
+  const [manualName, setManualName] = useState(false);
   const [resolving, setResolving] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [locked, setLocked] = useState(Boolean(initialAccount));
@@ -131,6 +132,7 @@ export function BankAccountForm({
     if (!canResolve) return;
     setResolving(true);
     setResolvedName('');
+    setManualName(false);
     try {
       const res = await fetch('/api/banks', {
         method: 'POST',
@@ -139,6 +141,11 @@ export function BankAccountForm({
       });
       const data = await res.json();
       if (!res.ok) {
+        if (data.manual) {
+          setManualName(true);
+          toast.info('Type the account name exactly as it appears on your statement');
+          return;
+        }
         toast.error(data.error || 'Could not verify account');
         return;
       }
@@ -290,6 +297,7 @@ export function BankAccountForm({
             onChange={(v) => {
               setBankCode(v);
               setResolvedName('');
+              setManualName(false);
             }}
             options={[
               {
@@ -319,6 +327,7 @@ export function BankAccountForm({
               onChange={(e) => {
                 setAccountNumber(e.target.value.replace(/\D/g, '').slice(0, 10));
                 setResolvedName('');
+                setManualName(false);
               }}
               className="input flex-1"
               placeholder="0123456789"
@@ -342,6 +351,30 @@ export function BankAccountForm({
         </div>
       </div>
 
+      {manualName && (
+        <div>
+          <label htmlFor="account_name" className="label">
+            Account name{' '}
+            <span className="text-muted font-normal">(as on your statement)</span>
+          </label>
+          <input
+            id="account_name"
+            name="account_name"
+            value={resolvedName}
+            onChange={(e) => setResolvedName(e.target.value.slice(0, 120))}
+            className="input"
+            placeholder="e.g. Adaeze Nwosu"
+            maxLength={120}
+            required
+          />
+          <p className="text-xs text-muted mt-1">
+            Automatic name checks are unavailable right now — type the name
+            exactly as the bank shows it. The circle admin still reviews every
+            payout.
+          </p>
+        </div>
+      )}
+
       {(resolvedName || resolving) && (
         <div
           className={`rounded-xl border px-4 py-3 text-sm flex items-start gap-2 ${
@@ -357,7 +390,8 @@ export function BankAccountForm({
               <div>
                 <p className="font-medium">{resolvedName}</p>
                 <p className="text-xs text-muted mt-0.5">
-                  {bankLabel} · {accountNumber} — verified via Paystack Resolve
+                  {bankLabel} · {accountNumber}
+                  {manualName ? ' — confirmed by you' : ' — verified name'}
                 </p>
               </div>
             </>

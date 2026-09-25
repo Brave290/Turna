@@ -13,16 +13,16 @@ const SLIDES = [
     body: 'Create or join a savings circle. Everyone contributes on schedule.',
   },
   {
-    title: 'Pay in seconds',
-    body: 'Card or bank transfer via Paystack with transparent fees.',
+    title: 'Pay directly',
+    body: 'Send your contribution straight to the circle admin, then report it in-app.',
   },
   {
     title: 'Private by design',
     body: 'Members see masked identities. Admins see the full ledger.',
   },
   {
-    title: 'Payouts on autopilot',
-    body: 'Save your bank once — when it is your turn, the pot ships to you.',
+    title: 'Payouts to your account',
+    body: 'Save your bank details once — when it is your turn, the pot is sent to you.',
   },
 ];
 

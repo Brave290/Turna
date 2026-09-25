@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import {
   BellRing,
-  CreditCard,
   Mail,
   Database,
   PlayCircle,
@@ -12,7 +11,7 @@ import {
 import { useToast } from '@/components/toast';
 import { Spinner } from '@/components/spinner';
 
-type JobId = 'reminders' | 'autopay' | 'digest' | 'db-ping' | 'all';
+type JobId = 'reminders' | 'digest' | 'db-ping' | 'all';
 
 const JOBS: { id: JobId; label: string; hint: string; icon: typeof BellRing }[] =
   [
@@ -21,12 +20,6 @@ const JOBS: { id: JobId; label: string; hint: string; icon: typeof BellRing }[] 
       label: 'Reminders',
       hint: 'Email + in-app contribution due notices',
       icon: BellRing,
-    },
-    {
-      id: 'autopay',
-      label: 'Autopay',
-      hint: 'Charge due autopay circle members',
-      icon: CreditCard,
     },
     {
       id: 'digest',
@@ -74,15 +67,13 @@ export function AdminCronPanel() {
         return;
       }
       const parts = Object.entries(data.results ?? {}).map(([k, v]) => {
-        const body = v.body as { sent?: number; charged?: number; skipped?: number; db?: string } | undefined;
+        const body = v.body as { sent?: number; db?: string } | undefined;
         const detail =
           body?.sent != null
             ? `sent=${body.sent}`
-            : body?.charged != null
-              ? `charged=${body.charged} skip=${body.skipped ?? 0}`
-              : body?.db
-                ? `db=${body.db}`
-                : `http=${v.status ?? 0}`;
+            : body?.db
+              ? `db=${body.db}`
+              : `http=${v.status ?? 0}`;
         return `${k}: ${detail}${v.error ? ` (${v.error})` : ''}`;
       });
       toast.success(parts.join(' · ') || 'Jobs finished');

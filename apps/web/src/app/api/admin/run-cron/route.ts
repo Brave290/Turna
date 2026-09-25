@@ -6,7 +6,6 @@ export const dynamic = 'force-dynamic';
 
 const JOBS = {
   reminders: '/api/cron/reminders',
-  autopay: '/api/cron/autopay',
   digest: '/api/cron/digest',
   'db-ping': '/api/cron/db-ping',
 } as const;
@@ -24,7 +23,7 @@ function isAdminEmail(email: string | null | undefined): boolean {
 
 /**
  * POST /api/admin/run-cron
- * Body: { job: 'reminders' | 'autopay' | 'digest' | 'db-ping' | 'all' }
+ * Body: { job: 'reminders' | 'digest' | 'db-ping' | 'all' }
  * Admin-only manual trigger when Vercel/cron-job.org fails.
  * Runs jobs in-process (no HTTP hop) with full auth context.
  */

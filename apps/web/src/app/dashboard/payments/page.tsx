@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { CreditCard } from 'lucide-react';
+import { ReceiptText } from 'lucide-react';
 import { getDashboardData } from '@/lib/dashboard-data';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { formatCurrency, formatDate } from '@/lib/utils';
@@ -9,106 +9,122 @@ import { ExportCsvButton } from '@/components/dashboard/export-csv-button';
 export const dynamic = 'force-dynamic';
 
 /**
- * Payments history — every Paystack payment for circles you belong to
- * (own rows via RLS + circle-owner rows for circles you own).
+ * Payments history — a read-only ledger of the contributions and payouts
+ * recorded for circles you belong to. Nothing is charged here: members
+ * settle directly with the circle and Turna keeps the record.
  */
 export default async function PaymentsPage() {
-  const { circles, user } = await getDashboardData();
+  const { circles, memberships, user } = await getDashboardData();
   const circleIds = circles.map((c) => c.id);
-  const nameById = new Map(circles.map((c) => [c.id, c.name]));
-  const currencyById = new Map(circles.map((c) => [c.id, c.currency]));
+  const myMemberIds = new Set(memberships.map((m) => m.id));
 
-  const supabase = createServerSupabaseClient();
-
-  // RLS already scopes to own payments + owned-circle payments.
-  // Also pull member payments on circles you own explicitly for completeness.
-  let rows: {
+  type Row = {
     id: string;
-    reference: string;
-    kind: string;
-    amount: number;
-    total: number;
-    status: string;
-    createdAt: string;
-    circleId: string | null;
+    kind: 'contribution' | 'payout';
+    reference: string | null;
+    circleId: string;
     circleName: string;
     currency: string;
-    mine: boolean;
-  }[] = [];
-
-  const { data } = await supabase
-    .from('payments')
-    .select('id, reference, kind, amount, total_amount, status, created_at, circle_id, user_id, currency')
-    .order('created_at', { ascending: false })
-    .limit(100);
-
-  rows = ((data ?? []) as unknown as {
-    id: string;
-    reference: string;
-    kind: string;
     amount: number;
-    total_amount: number;
     status: string;
-    created_at: string;
-    circle_id: string | null;
-    user_id: string;
-    currency: string;
-  }[]).map((p) => ({
-    id: p.id,
-    reference: p.reference,
-    kind: p.kind,
-    amount: p.amount,
-    total: p.total_amount,
-    status: p.status,
-    createdAt: p.created_at,
-    circleId: p.circle_id,
-    circleName: p.circle_id ? nameById.get(p.circle_id) ?? 'Circle' : '—',
-    currency: p.currency || (p.circle_id ? currencyById.get(p.circle_id) ?? 'NGN' : 'NGN'),
-    mine: p.user_id === user.id,
-  }));
+    createdAt: string;
+    mine: boolean;
+  };
 
-  // Owner view: payments on owned circles where user is not the payer
+  let rows: Row[] = [];
+
   if (circleIds.length > 0) {
-    const { data: owned } = await supabase
-      .from('payments')
-      .select('id, reference, kind, amount, total_amount, status, created_at, circle_id, user_id, currency')
-      .in('circle_id', circleIds)
-      .order('created_at', { ascending: false })
-      .limit(100);
+    const supabase = createServerSupabaseClient();
 
-    const seen = new Set(rows.map((r) => r.id));
-    for (const p of (owned ?? []) as unknown as {
+    const [contribRes, payoutRes] = await Promise.all([
+      supabase
+        .from('contributions')
+        .select(
+          `id, status, reported_amount, expected_amount, receipt_code, created_at, member_id,
+           contribution_cycles!inner(circle_id, circles(name, currency))`
+        )
+        .in('contribution_cycles.circle_id', circleIds)
+        .order('created_at', { ascending: false })
+        .limit(100),
+      supabase
+        .from('payouts')
+        .select(
+          `id, status, expected_amount, actual_amount, created_at, recipient_member_id,
+           contribution_cycles!inner(circle_id, circles(name, currency))`
+        )
+        .in('contribution_cycles.circle_id', circleIds)
+        .order('created_at', { ascending: false })
+        .limit(100),
+    ]);
+
+    type ContribRow = {
       id: string;
-      reference: string;
-      kind: string;
-      amount: number;
-      total_amount: number;
       status: string;
+      reported_amount: number | null;
+      expected_amount: number;
+      receipt_code: string | null;
       created_at: string;
-      circle_id: string | null;
-      user_id: string;
-      currency: string;
-    }[]) {
-      if (seen.has(p.id)) continue;
-      seen.add(p.id);
-      rows.push({
-        id: p.id,
-        reference: p.reference,
-        kind: p.kind,
-        amount: p.amount,
-        total: p.total_amount,
-        status: p.status,
-        createdAt: p.created_at,
-        circleId: p.circle_id,
-        circleName: p.circle_id ? nameById.get(p.circle_id) ?? 'Circle' : '—',
-        currency: p.currency || 'NGN',
-        mine: p.user_id === user.id,
-      });
-    }
+      member_id: string;
+      contribution_cycles: {
+        circle_id: string;
+        circles: { name: string; currency: string } | null;
+      } | null;
+    };
+
+    type PayoutRow = {
+      id: string;
+      status: string;
+      expected_amount: number;
+      actual_amount: number | null;
+      created_at: string;
+      recipient_member_id: string;
+      contribution_cycles: {
+        circle_id: string;
+        circles: { name: string; currency: string } | null;
+      } | null;
+    };
+
+    const contributions = ((contribRes.data ?? []) as unknown as ContribRow[]).map(
+      (c) => ({
+        id: c.id,
+        kind: 'contribution' as const,
+        reference: c.receipt_code ?? null,
+        circleId: c.contribution_cycles?.circle_id ?? '',
+        circleName: c.contribution_cycles?.circles?.name ?? 'Circle',
+        currency: c.contribution_cycles?.circles?.currency ?? 'NGN',
+        amount: c.reported_amount ?? c.expected_amount,
+        status: c.status,
+        createdAt: c.created_at,
+        mine: myMemberIds.has(c.member_id),
+      })
+    );
+
+    const payouts = ((payoutRes.data ?? []) as unknown as PayoutRow[]).map((p) => ({
+      id: p.id,
+      kind: 'payout' as const,
+      reference: null,
+      circleId: p.contribution_cycles?.circle_id ?? '',
+      circleName: p.contribution_cycles?.circles?.name ?? 'Circle',
+      currency: p.contribution_cycles?.circles?.currency ?? 'NGN',
+      amount: p.actual_amount ?? p.expected_amount,
+      status: p.status,
+      createdAt: p.created_at,
+      mine: myMemberIds.has(p.recipient_member_id),
+    }));
+
+    rows = [...contributions, ...payouts]
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )
+      .slice(0, 200);
   }
 
   const totalIn = rows
-    .filter((r) => r.status === 'success' && r.kind === 'contribution')
+    .filter((r) => r.kind === 'contribution' && r.status === 'confirmed')
+    .reduce((s, r) => s + r.amount, 0);
+  const totalOut = rows
+    .filter((r) => r.kind === 'payout' && r.status === 'received')
     .reduce((s, r) => s + r.amount, 0);
 
   return (
@@ -119,7 +135,8 @@ export default async function PaymentsPage() {
             Payments
           </h1>
           <p className="text-muted mt-1">
-            Paystack transactions for your circles — contributions and payouts.
+            Contributions and payouts recorded for your circles. Money moves
+            directly between members — this page is the record of it.
           </p>
         </div>
         {rows.length > 0 && (
@@ -128,20 +145,18 @@ export default async function PaymentsPage() {
             headers={[
               'reference',
               'circle',
-              'kind',
+              'type',
               'status',
               'amount',
-              'total',
               'currency',
               'date',
             ]}
             rows={rows.map((r) => [
-              r.reference,
+              r.reference ?? '',
               r.circleName,
               r.kind,
               r.status,
               r.amount,
-              r.total,
               r.currency,
               r.createdAt,
             ])}
@@ -149,17 +164,28 @@ export default async function PaymentsPage() {
         )}
       </div>
 
-      <div className="card">
-        <p className="text-sm text-muted">Confirmed contributions (all time)</p>
-        <p className="font-display text-2xl font-bold text-forest mt-1">
-          {formatCurrency(totalIn)}
-        </p>
+      <div className="grid sm:grid-cols-2 gap-4">
+        <div className="card">
+          <p className="text-sm text-muted">Confirmed contributions (all time)</p>
+          <p className="font-display text-2xl font-bold text-forest mt-1">
+            {formatCurrency(totalIn)}
+          </p>
+        </div>
+        <div className="card">
+          <p className="text-sm text-muted">Payouts received (all time)</p>
+          <p className="font-display text-2xl font-bold text-forest mt-1">
+            {formatCurrency(totalOut)}
+          </p>
+        </div>
       </div>
 
       {rows.length === 0 ? (
         <div className="card text-center py-14">
-          <CreditCard className="w-8 h-8 text-muted mx-auto mb-3" />
-          <p className="text-muted">No payments yet.</p>
+          <ReceiptText className="w-8 h-8 text-muted mx-auto mb-3" />
+          <p className="text-muted mb-1">No payments recorded yet.</p>
+          <p className="text-sm text-muted">
+            Records appear once your circles start collecting and paying out.
+          </p>
         </div>
       ) : (
         <div className="card overflow-x-auto">
@@ -168,50 +194,46 @@ export default async function PaymentsPage() {
               <tr className="text-left text-muted border-b border-border">
                 <th className="py-2 pr-3 font-medium">Reference</th>
                 <th className="py-2 pr-3 font-medium">Circle</th>
-                <th className="py-2 pr-3 font-medium">Kind</th>
+                <th className="py-2 pr-3 font-medium">Type</th>
                 <th className="py-2 pr-3 font-medium">Date</th>
                 <th className="py-2 pr-3 font-medium">Amount</th>
-                <th className="py-2 pr-3 font-medium">Fees</th>
                 <th className="py-2 font-medium">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {rows.map((row) => (
-                <tr key={row.id}>
+                <tr key={`${row.kind}-${row.id}`}>
                   <td className="py-3 pr-3">
-                    <Link
-                      href={`/receipt/${row.reference}`}
-                      className="font-mono text-xs text-forest hover:text-primary"
-                    >
-                      {row.reference}
-                    </Link>
-                    {!row.mine && (
-                      <span className="ml-1.5 text-[10px] uppercase text-muted">
-                        member
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-3 pr-3">
-                    {row.circleId ? (
+                    {row.reference ? (
                       <Link
-                        href={`/dashboard/circles/${row.circleId}`}
-                        className="text-forest hover:text-primary font-medium"
+                        href={`/receipt/${encodeURIComponent(row.reference)}`}
+                        className="font-mono text-xs text-forest hover:text-primary"
                       >
-                        {row.circleName}
+                        {row.reference}
                       </Link>
                     ) : (
                       <span className="text-muted">—</span>
                     )}
+                    {!row.mine && (
+                      <span className="ml-1.5 text-[10px] uppercase text-muted">
+                        {row.kind === 'contribution' ? 'member' : 'to member'}
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-3 pr-3">
+                    <Link
+                      href={`/dashboard/circles/${row.circleId}`}
+                      className="text-forest hover:text-primary font-medium"
+                    >
+                      {row.circleName}
+                    </Link>
                   </td>
                   <td className="py-3 pr-3 text-muted capitalize">{row.kind}</td>
-                  <td className="py-3 pr-3 text-muted">{formatDate(row.createdAt)}</td>
+                  <td className="py-3 pr-3 text-muted">
+                    {formatDate(row.createdAt)}
+                  </td>
                   <td className="py-3 pr-3 text-forest">
                     {formatCurrency(row.amount, row.currency)}
-                  </td>
-                  <td className="py-3 pr-3 text-muted">
-                    {row.total > row.amount
-                      ? formatCurrency(row.total - row.amount, row.currency)
-                      : '—'}
                   </td>
                   <td className="py-3">
                     <StatusBadge status={row.status} />
@@ -222,6 +244,12 @@ export default async function PaymentsPage() {
           </table>
         </div>
       )}
+
+      <p className="text-xs text-muted">
+        Signed in as {user.email}. Contributions are reported by members and
+        confirmed by the circle admin; payouts are marked sent by the admin and
+        confirmed by the recipient.
+      </p>
     </div>
   );
 }

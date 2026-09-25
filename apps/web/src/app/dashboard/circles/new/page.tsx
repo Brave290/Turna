@@ -76,7 +76,7 @@ function suggestedTitle(startMonth: number | null, endMonth: number | null): str
 
 /**
  * Circle creation — month range, auto title, live amount math,
- * payout collection mode (rotating turn vs end-of-term), autopay or manual.
+ * payout collection mode (rotating turn vs end-of-term).
  */
 export default function NewCirclePage() {
   const [state, formAction] = useFormState(
@@ -91,7 +91,6 @@ export default function NewCirclePage() {
   const [memberLimit, setMemberLimit] = useState('10');
   const [amount, setAmount] = useState('');
   const [payoutMode, setPayoutMode] = useState<'rotating' | 'end_of_term'>('rotating');
-  const [paymentMode, setPaymentMode] = useState<'manual' | 'autopay'>('manual');
   const [nameTouched, setNameTouched] = useState(false);
   const [nameValue, setNameValue] = useState('');
 
@@ -385,46 +384,18 @@ export default function NewCirclePage() {
           </label>
         </fieldset>
 
-        {/* Autopay vs manual */}
-        <fieldset className="space-y-2">
-          <legend className="label mb-1">Contribution payments</legend>
-          <label className="flex items-start gap-2.5 p-3 rounded-xl border border-border cursor-pointer hover:border-primary/40 transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-            <input
-              type="radio"
-              name="payment_mode"
-              value="manual"
-              checked={paymentMode === 'manual'}
-              onChange={() => setPaymentMode('manual')}
-              className="mt-0.5 w-4 h-4 border-border text-primary focus:ring-primary/40"
-            />
-            <span className="text-sm">
-              <span className="font-medium text-forest block">Manual pay</span>
-              <span className="text-muted">
-                Members pay each period when due (card, transfer, or we mark cash).
-              </span>
-            </span>
-          </label>
-          <label className="flex items-start gap-2.5 p-3 rounded-xl border border-border cursor-pointer hover:border-primary/40 transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-            <input
-              type="radio"
-              name="payment_mode"
-              value="autopay"
-              checked={paymentMode === 'autopay'}
-              onChange={() => setPaymentMode('autopay')}
-              className="mt-0.5 w-4 h-4 border-border text-primary focus:ring-primary/40"
-            />
-            <span className="text-sm">
-              <span className="font-medium text-forest block">Autopay</span>
-              <span className="text-muted">
-                After the first online payment, Turna charges the same channel on each
-                due date automatically (with a reminder before).
-              </span>
-            </span>
-          </label>
-        </fieldset>
+        {/* How members pay */}
+        <div className="rounded-xl border border-border bg-cream px-4 py-3">
+          <p className="text-sm font-medium text-forest">How members pay</p>
+          <p className="text-xs text-muted mt-1">
+            Contributions are settled directly between members — bank transfer or
+            cash — then reported in Turna for the admin to confirm. No card is
+            charged.
+          </p>
+        </div>
 
         <input type="hidden" name="currency" value="NGN" />
-        {/* payout_mode + payment_mode come from the radio groups above */}
+        {/* payout_mode comes from the radio group above */}
         <input
           type="hidden"
           name="suggested_name"

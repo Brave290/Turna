@@ -467,3 +467,44 @@
     opacity: 1;
   }
 }
+
+/* ─── Print / save-as-PDF (branded receipts) ────────────────── */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: var(--forest) !important;
+    min-height: auto !important;
+    font-size: 11.5pt;
+  }
+
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .card,
+  .shadow-card {
+    box-shadow: none !important;
+    border-color: var(--border) !important;
+  }
+
+  .badge {
+    border: 1px solid currentColor;
+    print-color-adjust: exact;
+  }
+
+  img,
+  svg {
+    filter: none !important;
+    print-color-adjust: exact;
+  }
+
+  a[href]::after {
+    content: none !important;
+  }
+}

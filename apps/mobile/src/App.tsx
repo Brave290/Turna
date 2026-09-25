@@ -12,7 +12,6 @@ import { SoloLedgersScreen } from './screens/SoloLedgersScreen';
 import { SoloLedgerDetailScreen } from './screens/SoloLedgerDetailScreen';
 import { NotificationsScreen } from './screens/NotificationsScreen';
 import { InsightsScreen } from './screens/InsightsScreen';
-import { PaymentsScreen } from './screens/PaymentsScreen';
 import { AuditLogScreen } from './screens/AuditLogScreen';
 import { ContributionsScreen, PayoutsScreen } from './screens/ExtrasScreens';
 import { CircleDetailScreen, CircleMembersScreen, NewCircleScreen, HelpScreen } from './screens/CircleExtrasScreens';
@@ -39,7 +38,6 @@ type StackScreen =
   | { name: 'profile' }
   | { name: 'notifications' }
   | { name: 'insights' }
-  | { name: 'payments' }
   | { name: 'audit-log' }
   | { name: 'contributions' }
   | { name: 'payouts' }
@@ -130,8 +128,6 @@ function Gate() {
         return <NotificationsScreen onBack={pop} />;
       case 'insights':
         return <InsightsScreen onBack={pop} />;
-      case 'payments':
-        return <PaymentsScreen onBack={pop} onPush={push} />;
       case 'audit-log':
         return <AuditLogScreen onBack={pop} />;
       case 'contributions':

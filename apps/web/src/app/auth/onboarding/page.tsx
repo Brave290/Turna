@@ -10,7 +10,7 @@ import {
   Landmark,
   Sparkles,
   ArrowRight,
-  CreditCard,
+  Banknote,
 } from 'lucide-react';
 import { Logo } from '@/components/logo';
 
@@ -25,9 +25,9 @@ const SLIDES = [
   },
   {
     key: 'pay',
-    title: 'Pay in seconds',
-    body: 'Card or bank transfer via Paystack. Fees and network charges are transparent before you confirm.',
-    icon: CreditCard,
+    title: 'Pay directly',
+    body: 'Settle contributions with your circle by bank transfer or cash, then record it in Turna. The admin confirms — no card details required.',
+    icon: Banknote,
     accent: 'text-violet',
     bg: 'from-violet/20 via-violet/5 to-transparent',
   },
@@ -41,8 +41,8 @@ const SLIDES = [
   },
   {
     key: 'payout',
-    title: 'Payouts on autopilot',
-    body: 'Save your bank account once — verified with Paystack Resolve. When it is your turn, the pot ships to you.',
+    title: 'Payouts to your account',
+    body: 'Save your bank account once. When it is your turn, the circle admin sends the pot straight to you and records it here.',
     icon: Landmark,
     accent: 'text-primary',
     bg: 'from-primary/20 via-sky/5 to-transparent',

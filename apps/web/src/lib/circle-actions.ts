@@ -839,6 +839,140 @@ export async function decideContribution(
   return { success: `Contribution ${decision}` };
 }
 
+// ─── MANUAL PAYOUT RECORD ────────────────────────────────────
+
+/**
+ * Payouts are settled directly between the circle and the recipient
+ * (bank transfer or cash). This only records the outcome:
+ * - step "sent": owner marks the pot as handed over
+ * - step "received": recipient (or owner) confirms it landed
+ */
+export async function recordPayout(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const { supabase, user } = await requireUser();
+  const payoutId = String(formData.get('payout_id') ?? '');
+  const step = String(formData.get('step') ?? '');
+  const amountRaw = String(formData.get('amount_kobo') ?? '').trim();
+
+  if (!payoutId || (step !== 'sent' && step !== 'received')) {
+    return { error: { form: ['Invalid request'] } };
+  }
+
+  const { data: payout } = await supabase
+    .from('payouts')
+    .select(
+      `id, cycle_id, recipient_member_id, status, expected_amount, actual_amount,
+       contribution_cycles(circle_id, circles(owner_id, name))`
+    )
+    .eq('id', payoutId)
+    .maybeSingle();
+  if (!payout) return { error: { form: ['Payout not found'] } };
+
+  const cycleRel = (
+    payout as unknown as {
+      contribution_cycles: {
+        circle_id: string;
+        circles: { owner_id: string; name: string } | { owner_id: string; name: string }[];
+      } | null;
+    }
+  ).contribution_cycles;
+  const cycle = Array.isArray(cycleRel) ? cycleRel[0] : cycleRel;
+  const circleRel = cycle?.circles ?? null;
+  const circle = Array.isArray(circleRel) ? circleRel[0] : circleRel;
+  const circleId = cycle?.circle_id ?? '';
+  const circleName = circle?.name ?? 'your circle';
+  const isOwner = circle?.owner_id === user.id;
+
+  const { data: myMember } = await supabase
+    .from('circle_members')
+    .select('id, user_id')
+    .eq('circle_id', circleId)
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  const isRecipient = Boolean(
+    myMember && myMember.id === payout.recipient_member_id
+  );
+  if (!isOwner && !isRecipient) {
+    return { error: { form: ['Not authorized'] } };
+  }
+
+  const updates: Record<string, unknown> = {};
+  let notifyUserId: string | null = null;
+  let title = '';
+  let body = '';
+
+  if (step === 'sent') {
+    if (!isOwner) {
+      return { error: { form: ['Only the circle admin can mark a payout sent'] } };
+    }
+    if (payout.status !== 'pending' && payout.status !== 'initiated') {
+      return { error: { form: ['Payout is already recorded as sent'] } };
+    }
+    updates.status = 'sent';
+    updates.initiated_at = new Date().toISOString();
+    const amount = Number(amountRaw);
+    if (amountRaw && Number.isFinite(amount) && amount > 0) {
+      updates.actual_amount = Math.floor(amount);
+    }
+
+    const { data: recipient } = await supabase
+      .from('circle_members')
+      .select('user_id')
+      .eq('id', payout.recipient_member_id)
+      .maybeSingle();
+    notifyUserId = recipient?.user_id ?? null;
+    title = 'Payout sent';
+    body = `The pot for "${circleName}" was marked as sent. Confirm once it lands.`;
+  } else {
+    if (payout.status === 'received') {
+      return { error: { form: ['Payout already confirmed'] } };
+    }
+    updates.status = 'received';
+    updates.confirmed_at = new Date().toISOString();
+    updates.confirmed_by = user.id;
+
+    if (circle?.owner_id && circle.owner_id !== user.id) {
+      notifyUserId = circle.owner_id;
+      title = 'Payout receipt confirmed';
+      body = `The recipient confirmed the payout for "${circleName}".`;
+    }
+  }
+
+  const { error } = await supabase
+    .from('payouts')
+    .update(updates)
+    .eq('id', payoutId);
+  if (error) return { error: { form: ['Could not update payout'] } };
+
+  await ledger(
+    circleId,
+    user.id,
+    step === 'sent' ? 'PAYOUT_MARKED_SENT' : 'PAYOUT_RECEIPT_CONFIRMED',
+    'payout',
+    payoutId,
+    { amount: updates.actual_amount ?? payout.actual_amount ?? payout.expected_amount }
+  );
+
+  if (notifyUserId) {
+    await notify(supabase, {
+      userId: notifyUserId,
+      circleId,
+      title,
+      body,
+      data: { circle_id: circleId, event: step === 'sent' ? 'PAYOUT_MARKED_SENT' : 'PAYOUT_RECEIPT_CONFIRMED' },
+    });
+  }
+
+  revalidatePath(`/dashboard/circles/${circleId}`);
+  revalidatePath('/dashboard/payments');
+  return {
+    success: step === 'sent' ? 'Payout marked as sent' : 'Payout receipt confirmed',
+  };
+}
+
 // ─── TERMS GATE ──────────────────────────────────────────────
 
 export async function acceptTerms(): Promise<ActionState> {

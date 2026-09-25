@@ -823,7 +823,6 @@ export async function createCircle(
   const name = nameInput || suggestedName;
 
   const payoutModeRaw = String(formData.get('payout_mode') ?? 'rotating');
-  const paymentModeRaw = String(formData.get('payment_mode') ?? 'manual');
 
   const parsed = createCircleSchema.safeParse({
     name,
@@ -837,7 +836,6 @@ export async function createCircle(
     start_month: startMonth !== null && !Number.isNaN(startMonth) ? startMonth : undefined,
     end_month: endMonth !== null && !Number.isNaN(endMonth) ? endMonth : undefined,
     payout_mode: payoutModeRaw === 'end_of_term' ? 'end_of_term' : 'rotating',
-    payment_mode: paymentModeRaw === 'autopay' ? 'autopay' : 'manual',
   });
 
   if (!parsed.success) {

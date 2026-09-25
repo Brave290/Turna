@@ -136,7 +136,7 @@ function ToastViewport({
     <div
       aria-live="polite"
       aria-atomic="false"
-      className="fixed inset-0 z-[120] flex items-center justify-center p-4 pointer-events-none"
+      className="no-print fixed inset-0 z-[120] flex items-center justify-center p-4 pointer-events-none"
     >
       <AnimatePresence mode="popLayout">
         {toasts.map((t) => {

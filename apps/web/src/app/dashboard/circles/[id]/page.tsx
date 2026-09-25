@@ -18,8 +18,7 @@ import { StatusBadge } from '@/components/dashboard/status-badge';
 import { InviteForm } from '@/components/dashboard/invite-form';
 import { DeleteCircleButton } from '@/components/dashboard/delete-circle';
 import { CircleFeeForm } from '@/components/dashboard/circle-fee-form';
-import { PayContributionButton } from '@/components/dashboard/pay-contribution';
-import { SendPayoutButton } from '@/components/dashboard/send-payout';
+import { RecordPayoutButton } from '@/components/dashboard/record-payout-button';
 import { SwapPanel } from '@/components/dashboard/swap-panel';
 import { LifecycleControls, LeaveCircleButton } from '@/components/dashboard/lifecycle-controls';
 import { RemoveMemberButton } from '@/components/dashboard/remove-member';
@@ -186,10 +185,8 @@ export default async function CircleDetailPage({
                       ? 'Collects at end'
                       : 'Collects on turn'}
                   </span>
-                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-forest/10 text-forest capitalize">
-                    {(circle as { payment_mode?: string }).payment_mode === 'autopay'
-                      ? 'Autopay'
-                      : 'Manual pay'}
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-forest/10 text-forest">
+                    Manual pay
                   </span>
                 </div>
               </div>
@@ -248,50 +245,32 @@ export default async function CircleDetailPage({
         </div>
       </section>
 
-      {/* Pay contribution — members with collecting cycle */}
+      {/* Contribution due — settle directly, then report it */}
       {!isOwner && collectingCycle && myMembership && (
         <section className="card border-primary/30">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <p className="text-sm text-muted">Cycle {collectingCycle.cycle_number} contribution</p>
               <p className="font-display text-2xl font-bold text-forest">
-                {formatCurrency(
-                  collectingCycle.expected_amount +
-                    Math.floor(
-                      (collectingCycle.expected_amount *
-                        (Number(circle.fee_bps ?? 0) +
-                          Number(circle.network_charge_bps ?? 0))) /
-                        10000
-                    ),
-                  circle.currency
-                )}
-                <span className="text-sm font-normal text-muted ml-2">
-                  (incl. fees)
-                </span>
+                {formatCurrency(collectingCycle.expected_amount, circle.currency)}
               </p>
-              {(circle as { payment_mode?: string }).payment_mode === 'autopay' && (
-                <p className="text-xs text-primary mt-1">
-                  Autopay on — we charge your saved channel if a due date is missed
-                  (after your first successful payment).
-                </p>
-              )}
-              <p className="text-xs text-muted">
+              <p className="text-xs text-muted mt-1">
                 Due {formatDate(collectingCycle.due_date)}
                 {myContribution
                   ? ` · status: ${myContribution.status}`
-                  : ' · not paid yet'}
+                  : ' · not reported yet'}
+              </p>
+              <p className="text-xs text-muted mt-2 max-w-xl">
+                Send the amount to your circle admin by bank transfer or cash, then
+                report it below with the transfer reference. The admin confirms it —
+                Turna never charges your card.
               </p>
             </div>
             {(!myContribution || myContribution.status !== 'confirmed') && (
-              <PayContributionButton
-                circleId={circle.id}
-                cycleId={collectingCycle.id}
-                baseAmountKobo={Number(collectingCycle.expected_amount)}
-                currency={circle.currency}
-                feeBps={Number(circle.fee_bps ?? 0)}
-                networkBps={Number(circle.network_charge_bps ?? 0)}
-                feePayer={circle.fee_payer ?? 'member'}
-              />
+              <a href="#your-contributions" className="btn-primary btn-sm shrink-0">
+                <Send className="w-4 h-4" />
+                Report contribution
+              </a>
             )}
           </div>
         </section>
@@ -409,7 +388,7 @@ export default async function CircleDetailPage({
           })}
         />
 
-        <section className="card">
+        <section className="card" id="your-contributions">
           <div className="flex items-center justify-between gap-2 mb-4">
             <div className="flex items-center gap-2">
               <PiggyBank className="w-5 h-5 text-primary" />
@@ -669,7 +648,8 @@ export default async function CircleDetailPage({
         {visiblePayouts.length === 0 && isOwner && cycles.length > 0 ? (
           <div className="space-y-3">
             <p className="text-sm text-muted">
-              Ready cycles can pay out to the recipient&apos;s saved bank account.
+              Settle the pot with the recipient directly — arrange the bank transfer
+              with them. The payout record appears here so both sides can track it.
             </p>
             {cycles
               .filter(
@@ -691,7 +671,9 @@ export default async function CircleDetailPage({
                       <StatusBadge status={c.status} />
                     </p>
                   </div>
-                  <SendPayoutButton cycleId={c.id} />
+                  <span className="text-xs text-muted">
+                    Transfer arranged with the recipient
+                  </span>
                 </div>
               ))}
             {cycles.every(
@@ -712,7 +694,7 @@ export default async function CircleDetailPage({
                   <th className="py-2 pr-3 font-medium">Expected</th>
                   <th className="py-2 pr-3 font-medium">Actual</th>
                   <th className="py-2 font-medium">Status</th>
-                  {isOwner && <th className="py-2 font-medium">Action</th>}
+                  <th className="py-2 font-medium">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -740,16 +722,40 @@ export default async function CircleDetailPage({
                       <td className="py-3">
                         <StatusBadge status={p.status} />
                       </td>
-                      {isOwner && (
-                        <td className="py-3">
-                          {p.status !== 'received' && (
-                            <SendPayoutButton
-                              cycleId={p.cycle_id}
+                      <td className="py-3">
+                        {isOwner ? (
+                          isSelf ? (
+                            p.status !== 'received' && (
+                              <RecordPayoutButton
+                                payoutId={p.id}
+                                step="received"
+                                compact
+                              />
+                            )
+                          ) : p.status === 'pending' ||
+                            p.status === 'initiated' ? (
+                            <RecordPayoutButton
+                              payoutId={p.id}
+                              step="sent"
                               compact
                             />
-                          )}
-                        </td>
-                      )}
+                          ) : p.status === 'sent' ? (
+                            <span className="text-xs text-muted">
+                              Awaiting recipient
+                            </span>
+                          ) : (
+                            <span className="text-muted">—</span>
+                          )
+                        ) : isSelf && p.status !== 'received' ? (
+                          <RecordPayoutButton
+                            payoutId={p.id}
+                            step="received"
+                            compact
+                          />
+                        ) : (
+                          <span className="text-muted">—</span>
+                        )}
+                      </td>
                     </tr>
                   );
                 })}

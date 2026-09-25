@@ -53,9 +53,9 @@ export default function PrivacyPage() {
           <section>
             <h2 className="font-semibold text-white text-base mb-2">4. Sharing</h2>
             <p>
-              We share data only with service providers needed to run Turna (hosting, email,
-              payment processing such as Paystack) and when required by law. Payment providers
-              receive what is necessary to complete a transaction you initiate.
+              We share data only with service providers needed to run Turna (hosting and email)
+              and when required by law. We do not share your data with payment processors —
+              contributions and payouts are arranged directly between members.
             </p>
           </section>
 

@@ -37,8 +37,8 @@ export default function TermsPage() {
             <p>
               Turna helps groups manage rotating savings circles: contributions, schedules,
               payouts, and records. Turna is a tool — it does not hold or invest your money as a
-              bank. Circle funds move between members as defined by circle rules and supported
-              payment rails (e.g. Paystack).
+              bank. Circle funds move directly between members (bank transfer or cash) as defined
+              by circle rules; Turna records those movements and never charges a card or account.
             </p>
           </section>
 

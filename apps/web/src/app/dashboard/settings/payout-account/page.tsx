@@ -22,7 +22,7 @@ export default async function PayoutAccountPage() {
   return (
     <SettingsPanel
       title="Payout account"
-      description="Bank account where circle payouts are sent. Account name is verified with Paystack Resolve."
+      description="Bank account where circle payouts are sent. Transfers are arranged directly with the circle admin."
     >
       <BankAccountForm
         initialAccount={

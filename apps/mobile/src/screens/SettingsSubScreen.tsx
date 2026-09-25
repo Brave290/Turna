@@ -1455,6 +1455,9 @@ function PayoutSection({ ctx }: { ctx: Ctx }) {
   const [bankCode, setBankCode] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [resolvedName, setResolvedName] = useState('');
+  const [resolvedManually, setResolvedManually] = useState(false);
+  const [manualNeeded, setManualNeeded] = useState(false);
+  const [manualName, setManualName] = useState('');
   const [resolving, setResolving] = useState(false);
   const [saving, setSaving] = useState(false);
   const [locked, setLocked] = useState(false);
@@ -1547,6 +1550,9 @@ function PayoutSection({ ctx }: { ctx: Ctx }) {
     }
     setLocked(false);
     setResolvedName('');
+    setResolvedManually(false);
+    setManualNeeded(false);
+    setManualName('');
     setOtpStep('idle');
     setOtpMsg(null);
     ctx.toast('Bank details unlocked — you can edit now');
@@ -1556,24 +1562,59 @@ function PayoutSection({ ctx }: { ctx: Ctx }) {
     if (!canResolve) return;
     setResolving(true);
     setResolvedName('');
-    const res = await apiPost(
-      '/api/banks',
-      { account_number: accountNumber, bank_code: bankCode },
-      { networkError: 'Network error resolving account', failError: 'Could not verify account' }
-    );
-    setResolving(false);
-    if (!res.ok) {
-      ctx.toast(res.error ?? 'Could not verify account', 'error');
-      return;
+    setResolvedManually(false);
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      const res = await fetch(`${APP_API_URL}/api/banks`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          account_number: accountNumber,
+          bank_code: bankCode,
+          ...(manualNeeded && manualName.trim()
+            ? { account_name: manualName.trim() }
+            : {}),
+        }),
+      });
+      const json = (await res.json().catch(() => ({}))) as {
+        account?: { account_name?: string };
+        error?: string;
+        manual?: boolean;
+      };
+      if (res.ok) {
+        const name = String(json.account?.account_name ?? '').trim();
+        setResolving(false);
+        if (!name) {
+          ctx.toast('Could not verify account', 'error');
+          return;
+        }
+        setResolvedName(name);
+        setResolvedManually(Boolean(json.manual));
+        setManualNeeded(false);
+        ctx.toast(json.manual ? 'Account name confirmed' : 'Account name verified');
+        return;
+      }
+      setResolving(false);
+      if (res.status === 503 && json.manual) {
+        setManualNeeded(true);
+        ctx.toast('Enter the account name to continue', 'error');
+        return;
+      }
+      ctx.toast(json.error ?? 'Could not verify account', 'error');
+    } catch {
+      setResolving(false);
+      ctx.toast('Network error resolving account', 'error');
     }
-    setResolvedName(String(res.data?.account?.account_name ?? ''));
-    ctx.toast('Account name verified');
   }
 
   async function handleSave() {
     if (locked) return;
     if (!resolvedName) {
-      ctx.toast('Verify the account name first', 'error');
+      ctx.toast('Confirm the account name first', 'error');
       return;
     }
     setSaving(true);
@@ -1607,7 +1648,7 @@ function PayoutSection({ ctx }: { ctx: Ctx }) {
     return (
       <Panel
         title="Payout account"
-        description="Bank account where circle payouts are sent. Account name is verified with Paystack Resolve."
+        description="Bank account where circle payouts are sent. Transfers are arranged directly with the circle admin."
       >
         <LoadingRow />
       </Panel>
@@ -1618,7 +1659,7 @@ function PayoutSection({ ctx }: { ctx: Ctx }) {
     return (
       <Panel
         title="Payout account"
-        description="Bank account where circle payouts are sent. Account name is verified with Paystack Resolve."
+        description="Bank account where circle payouts are sent. Transfers are arranged directly with the circle admin."
       >
         <View style={s.lockBox}>
           <View style={s.lockIcon}>
@@ -1668,7 +1709,7 @@ function PayoutSection({ ctx }: { ctx: Ctx }) {
   return (
     <Panel
       title="Payout account"
-      description="Bank account where circle payouts are sent. Account name is verified with Paystack Resolve."
+      description="Bank account where circle payouts are sent. Transfers are arranged directly with the circle admin."
     >
       <AppSelect
         label="Bank"
@@ -1676,6 +1717,9 @@ function PayoutSection({ ctx }: { ctx: Ctx }) {
         onChange={(v) => {
           setBankCode(v);
           setResolvedName('');
+          setResolvedManually(false);
+          setManualNeeded(false);
+          setManualName('');
         }}
         options={
           banks.length > 0
@@ -1693,6 +1737,9 @@ function PayoutSection({ ctx }: { ctx: Ctx }) {
             onChangeText={(v: string) => {
               setAccountNumber(v.replace(/\D/g, '').slice(0, 10));
               setResolvedName('');
+              setResolvedManually(false);
+              setManualNeeded(false);
+              setManualName('');
             }}
             keyboardType="numeric"
             maxLength={10}
@@ -1700,15 +1747,30 @@ function PayoutSection({ ctx }: { ctx: Ctx }) {
             placeholderTextColor={colors.muted}
           />
           <Button
-            label="Verify"
+            label={manualNeeded ? 'Confirm' : 'Verify'}
             variant="outline"
             onPress={() => void handleResolve()}
             loading={resolving}
-            disabled={!canResolve || resolving}
+            disabled={
+              !canResolve || resolving || (manualNeeded && !manualName.trim())
+            }
             style={s.verifyBtn}
           />
         </View>
       </Field>
+
+      {manualNeeded && !resolvedName ? (
+        <Field label="Account name">
+          <TextInput
+            style={s.input}
+            value={manualName}
+            onChangeText={(v: string) => setManualName(v.slice(0, 120))}
+            placeholder="Name exactly as on your statement"
+            placeholderTextColor={colors.muted}
+            autoCapitalize="words"
+          />
+        </Field>
+      ) : null}
 
       {resolvedName ? (
         <View style={s.infoBox}>
@@ -1716,7 +1778,8 @@ function PayoutSection({ ctx }: { ctx: Ctx }) {
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={s.infoTitle}>{resolvedName}</Text>
             <Text style={s.infoMeta}>
-              {bankLabel} · {accountNumber} — verified via Paystack Resolve
+              {bankLabel} · {accountNumber}
+              {resolvedManually ? ' — confirmed by you' : ' — verified'}
             </Text>
           </View>
         </View>
@@ -1736,7 +1799,7 @@ function PayoutSection({ ctx }: { ctx: Ctx }) {
       />
       <Text style={s.hintSmall}>
         After saving, this account locks. You&apos;ll need an email code to change it later. We
-        only store bank code, number, and the verified name.
+        only store bank code, number, and the account name.
       </Text>
     </Panel>
   );

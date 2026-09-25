@@ -12,7 +12,6 @@ import {
   CircleDot,
   CreditCard,
   UserCheck,
-  Activity,
   Link2,
 } from 'lucide-react';
 
@@ -49,7 +48,7 @@ export default async function AdminPage() {
 
   const admin = createAdminSupabaseClient();
 
-  const [kycRes, payRes, circleRes, memberRes, userRes, healthCount, autopayRes] =
+  const [kycRes, payRes, circleRes, memberRes, userRes, healthCount] =
     await Promise.all([
       admin
         .from('kyc_records')
@@ -68,7 +67,7 @@ export default async function AdminPage() {
       admin
         .from('circles')
         .select(
-          'id, name, status, contribution_amount, currency, owner_id, payment_mode, created_at'
+          'id, name, status, contribution_amount, currency, owner_id, created_at'
         )
         .order('created_at', { ascending: false })
         .limit(30),
@@ -79,11 +78,6 @@ export default async function AdminPage() {
         .limit(30),
       admin.from('profiles').select('id', { count: 'exact', head: true }),
       admin.from('profiles').select('id').limit(1),
-      admin
-        .from('autopay_charges')
-        .select('id, status, created_at')
-        .order('created_at', { ascending: false })
-        .limit(20),
     ]);
 
   const kycRows = (kycRes.data ?? []) as unknown as {
@@ -117,13 +111,6 @@ export default async function AdminPage() {
     status: string;
     contribution_amount: number;
     currency: string;
-    payment_mode?: string;
-    created_at: string;
-  }[];
-
-  const autopayRows = (autopayRes.data ?? []) as unknown as {
-    id: string;
-    status: string;
     created_at: string;
   }[];
 
@@ -132,8 +119,6 @@ export default async function AdminPage() {
   const volume = successPay.reduce((s, p) => s + Number(p.amount || 0), 0);
   const totalCount = userRes.count ?? 0;
   const dbHealthy = !healthCount.error;
-  const autopayOk = autopayRows.filter((a) => a.status === 'success').length;
-  const autopayFail = autopayRows.filter((a) => a.status === 'failed').length;
   const base = (
     process.env.NEXT_PUBLIC_APP_URL || 'https://turnaapp.vercel.app'
   ).replace(/\/$/, '');
@@ -257,7 +242,6 @@ export default async function AdminPage() {
           {[
             { path: '/api/cron/db-ping', when: 'Daily (keep-alive)', must: true },
             { path: '/api/cron/reminders', when: 'Daily 09:00 UTC', must: false },
-            { path: '/api/cron/autopay', when: 'Daily 06:00 UTC', must: false },
             { path: '/api/cron/digest', when: 'Daily 20:00 UTC', must: false },
             {
               path: '/api/health',
@@ -288,12 +272,6 @@ export default async function AdminPage() {
             </li>
           ))}
         </ul>
-        <div className="mt-4 flex items-center gap-3 flex-wrap text-xs text-muted">
-          <span>
-            Autopay runs: {autopayOk} ok · {autopayFail} failed (recent)
-          </span>
-          <Activity className="w-3.5 h-3.5" />
-        </div>
       </section>
 
       <div className="grid lg:grid-cols-2 gap-6">
@@ -355,8 +333,8 @@ export default async function AdminPage() {
                     >
                       {c.name}
                     </Link>
-                    <p className="text-xs text-muted capitalize">
-                      {c.payment_mode ?? 'manual'} · {formatDate(c.created_at)}
+                    <p className="text-xs text-muted">
+                      {formatDate(c.created_at)}
                     </p>
                   </div>
                   <div className="text-right shrink-0">

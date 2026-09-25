@@ -305,7 +305,7 @@ export const emailTemplates = {
     reference: string,
     bankName?: string
   ) {
-    const receiptUrl = `${BASE_URL}/receipt/${encodeURIComponent(reference)}`;
+    const historyUrl = `${BASE_URL}/dashboard/payments`;
     return {
       subject: `Payout received — ${amount} · ${circleName}`,
       html: shell('Payout received', `
@@ -318,10 +318,10 @@ export const emailTemplates = {
         <p style="margin:0 0 20px;font-size:13px;color:${C.muted};line-height:1.5;">
           Reference: <code style="font-family:monospace;color:${C.forest};">${reference}</code>
         </p>
-        ${button(receiptUrl, 'View Receipt')}
+        ${button(historyUrl, 'View Payments history')}
         ${spamHint()}
       `),
-      text: `Payout of ${amount} received for ${circleName}.\n\nReceipt: ${receiptUrl}\nReference: ${reference}`,
+      text: `Payout of ${amount} received for ${circleName}.\n\nHistory: ${historyUrl}\nReference: ${reference}`,
     };
   },
 };
