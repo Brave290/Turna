@@ -27,7 +27,7 @@ type N = {
 
 // Same map as web StatusBadge (status-badge.tsx): badge tones by status.
 const STATUS_TONE: Record<string, BadgeTone> = {
-  draft: 'completed',
+  draft: 'muted',
   active: 'active',
   paused: 'pending',
   completed: 'completed',

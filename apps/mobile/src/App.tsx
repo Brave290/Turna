@@ -111,7 +111,7 @@ function Gate() {
       case 'insights':
         return <InsightsScreen onBack={pop} />;
       case 'payments':
-        return <PaymentsScreen onBack={pop} />;
+        return <PaymentsScreen onBack={pop} onPush={push} />;
       case 'audit-log':
         return <AuditLogScreen onBack={pop} />;
       case 'contributions':

@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
 const badgeTone = StyleSheet.create({
   active: { backgroundColor: 'rgba(0,122,101,0.10)' },
   pending: { backgroundColor: 'rgba(138,90,0,0.15)' },
-  muted: { backgroundColor: colors.cream },
+  muted: { backgroundColor: 'rgba(74,93,115,0.15)' },
   error: { backgroundColor: 'rgba(180,35,59,0.10)' },
   completed: { backgroundColor: 'rgba(10,22,40,0.10)' },
 });
