@@ -65,9 +65,10 @@ function Nav() {
             <Link href="/auth/login" className="hidden sm:inline-flex text-[13px] font-medium text-forest/70 hover:text-forest px-3 py-2 rounded-lg hover:bg-forest/5 transition-colors">
               Sign in
             </Link>
-            <Link href="/auth/signup" className="bg-primary hover:bg-primary-hover text-white text-[13px] font-semibold px-4 py-2 rounded-xl transition-all hover:shadow-glow">
-              Get started
-            </Link>
+            <AppDownloadModal
+              triggerLabel="Try for free"
+              triggerClassName="bg-primary hover:bg-primary-hover text-white text-[13px] font-semibold px-4 py-2 rounded-xl transition-all hover:shadow-glow inline-flex items-center gap-1.5 [&>svg]:w-3.5 [&>svg]:h-3.5"
+            />
           </div>
         </nav>
       </div>
@@ -217,16 +218,19 @@ function Hero() {
 
             <Reveal type="fade-up" delay={300}>
               <div className="flex flex-col sm:flex-row gap-4">
+                <AppDownloadModal
+                  triggerLabel="Try for free"
+                  triggerClassName="group bg-primary hover:bg-primary-hover text-white rounded-xl px-8 py-4 text-base font-semibold transition-all inline-flex items-center justify-center gap-2 hover:shadow-glow"
+                />
                 <Link
                   href="/auth/signup"
-                  className="group bg-primary hover:bg-primary-hover text-white rounded-xl px-8 py-4 text-base font-semibold transition-all inline-flex items-center justify-center gap-2 hover:shadow-glow"
+                  className="border border-white/15 hover:bg-white/5 text-white rounded-xl px-8 py-4 text-base font-semibold transition-colors inline-flex items-center justify-center gap-2 backdrop-blur-sm"
                 >
                   Start your circle
                   <svg viewBox="0 0 16 16" className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M3 8h10M9 4l4 4-4 4" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </Link>
-                <AppDownloadModal />
               </div>
             </Reveal>
 
@@ -447,15 +451,10 @@ function CTA() {
             Create an account, invite your people, and run your circle with a
             clear record from day one.
           </p>
-          <Link
-            href="/auth/signup"
-            className="group inline-flex items-center gap-2 bg-primary hover:bg-primary-hover text-white rounded-xl px-8 py-4 text-base font-semibold transition-all hover:shadow-glow"
-          >
-            Get started — free to use
-            <svg viewBox="0 0 16 16" className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M3 8h10M9 4l4 4-4 4" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </Link>
+          <AppDownloadModal
+            triggerLabel="Try for free"
+            triggerClassName="group inline-flex items-center gap-2 bg-primary hover:bg-primary-hover text-white rounded-xl px-8 py-4 text-base font-semibold transition-all hover:shadow-glow"
+          />
         </Reveal>
       </div>
     </section>
@@ -476,7 +475,7 @@ function Footer() {
         { label: "Features", href: "#features" },
         { label: "How it works", href: "#how" },
         { label: "Sign in", href: "/auth/login" },
-        { label: "Get started", href: "/auth/signup" },
+        { label: "Try for free", href: "download" },
       ],
     },
     {
@@ -515,7 +514,13 @@ function Footer() {
               <h3 className="text-white text-sm font-semibold mb-4">{col.title}</h3>
               <ul className="space-y-3 text-sm">
                 {col.links.map((link) => (
-                  <li key={link.label}>
+                <li key={link.label}>
+                  {link.href === "download" ? (
+                    <AppDownloadModal
+                      triggerLabel={link.label}
+                      triggerClassName="hover:text-white transition-colors text-left [&>svg]:hidden"
+                    />
+                  ) : (
                     <a
                       href={link.href}
                       className="hover:text-white transition-colors"
@@ -525,7 +530,8 @@ function Footer() {
                     >
                       {link.label}
                     </a>
-                  </li>
+                  )}
+                </li>
                 ))}
               </ul>
             </div>
