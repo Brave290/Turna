@@ -1,11 +1,21 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { Bell, CheckCheck } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import { formatRelativeTime } from '../lib/format';
 import { Button } from '../components/Button';
-import { Card, Badge } from '../components/Card';
+import { Card, Badge, type BadgeTone } from '../components/Card';
 import { Screen } from '../components/Screen';
-import { colors, spacing, typography } from '../theme';
+import { colors, radius, spacing } from '../theme';
 
 type N = {
   id: string;
@@ -15,17 +25,68 @@ type N = {
   created_at: string;
 };
 
-function rel(iso: string) {
-  try {
-    const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
-    if (m < 1) return 'just now';
-    if (m < 60) return `${m}m ago`;
-    const h = Math.floor(m / 60);
-    if (h < 24) return `${h}h ago`;
-    return new Date(iso).toLocaleDateString('en-NG', { day: 'numeric', month: 'short' });
-  } catch {
-    return iso;
-  }
+// Same map as web StatusBadge (status-badge.tsx): badge tones by status.
+const STATUS_TONE: Record<string, BadgeTone> = {
+  draft: 'completed',
+  active: 'active',
+  paused: 'pending',
+  completed: 'completed',
+  cancelled: 'error',
+  pending: 'pending',
+  collecting: 'active',
+  reported: 'pending',
+  confirmed: 'active',
+  rejected: 'error',
+  disputed: 'error',
+  refunded: 'pending',
+  initiated: 'pending',
+  sent: 'pending',
+  received: 'active',
+  accepted: 'active',
+  expired: 'error',
+  left: 'completed',
+  removed: 'error',
+  read: 'completed',
+  delivered: 'active',
+  failed: 'error',
+  payout_pending: 'pending',
+  payout_initiated: 'pending',
+  payout_confirmed: 'active',
+};
+
+function toneFor(status: string): BadgeTone {
+  return STATUS_TONE[status] ?? 'completed';
+}
+
+function MarkAllButton({
+  onPress,
+  busy,
+}: {
+  onPress: () => void;
+  busy: boolean;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ disabled: busy, busy }}
+      disabled={busy}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.markBtn,
+        pressed && styles.markBtnPressed,
+        busy && styles.markBtnBusy,
+      ]}
+    >
+      {busy ? (
+        <ActivityIndicator size="small" color={colors.forest} />
+      ) : (
+        <CheckCheck size={16} color={colors.forest} strokeWidth={2} />
+      )}
+      <Text style={styles.markBtnText}>
+        {busy ? 'Marking…' : 'Mark all as read'}
+      </Text>
+    </Pressable>
+  );
 }
 
 export function NotificationsScreen({ onBack }: { onBack?: () => void } = {}) {
@@ -33,6 +94,7 @@ export function NotificationsScreen({ onBack }: { onBack?: () => void } = {}) {
   const [rows, setRows] = useState<N[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [marking, setMarking] = useState(false);
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -58,27 +120,37 @@ export function NotificationsScreen({ onBack }: { onBack?: () => void } = {}) {
 
   async function markAll() {
     if (!user) return;
-    await supabase
-      .from('notifications')
-      .update({ status: 'read' })
-      .eq('user_id', user.id)
-      .neq('status', 'read');
-    await load();
+    setMarking(true);
+    try {
+      await supabase
+        .from('notifications')
+        .update({ status: 'read' })
+        .eq('user_id', user.id)
+        .neq('status', 'read');
+      await load();
+    } finally {
+      setMarking(false);
+    }
   }
 
   return (
     <Screen tone="cream">
       <View style={styles.header}>
-        <View style={styles.headRow}>
-          {onBack && <Button label="← Back" variant="ghost" onPress={onBack} style={{ alignSelf: 'flex-start' }} />}
-          <View style={{ flex: 1 }}>
-            <Text style={styles.title}>Notifications</Text>
-            <Text style={styles.sub}>Invites, contribution reminders, and payout updates.</Text>
-          </View>
-          {unread > 0 && (
-            <Button label="Mark all read" variant="outline" onPress={() => void markAll()} style={styles.markBtn} />
-          )}
-        </View>
+        {onBack && (
+          <Button
+            label="← Back"
+            variant="ghost"
+            onPress={onBack}
+            style={styles.backBtn}
+          />
+        )}
+        <Text style={styles.title}>Notifications</Text>
+        <Text style={styles.sub}>
+          Invites, contribution reminders, and payout updates.
+        </Text>
+        {unread > 0 && (
+          <MarkAllButton onPress={() => void markAll()} busy={marking} />
+        )}
       </View>
       {loading ? (
         <Text style={styles.loading}>Loading…</Text>
@@ -98,22 +170,30 @@ export function NotificationsScreen({ onBack }: { onBack?: () => void } = {}) {
             />
           }
           ListEmptyComponent={
-            <Card>
+            <Card style={styles.emptyCard}>
+              <Bell size={32} color={colors.muted} strokeWidth={2} />
               <Text style={styles.empty}>No notifications yet.</Text>
             </Card>
           }
           renderItem={({ item }) => (
             <Card style={styles.card}>
               <View style={styles.row}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.nTitle}>{item.title}</Text>
-                  <Text style={styles.nBody}>{item.body}</Text>
-                  <Text style={styles.nWhen}>{rel(item.created_at)}</Text>
+                <View style={styles.iconBox}>
+                  <Bell size={20} color={colors.primary} strokeWidth={2} />
                 </View>
-                <Badge
-                  label={item.status}
-                  tone={item.status === 'read' ? 'muted' : 'active'}
-                />
+                <View style={styles.content}>
+                  <View style={styles.titleRow}>
+                    <Text style={styles.nTitle}>{item.title}</Text>
+                    <Badge
+                      label={item.status.replace(/_/g, ' ')}
+                      tone={toneFor(item.status)}
+                    />
+                  </View>
+                  <Text style={styles.nBody}>{item.body}</Text>
+                  <Text style={styles.nWhen}>
+                    {formatRelativeTime(item.created_at)}
+                  </Text>
+                </View>
               </View>
             </Card>
           )}
@@ -127,27 +207,50 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  headRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    marginBottom: spacing.lg,
     gap: spacing.sm,
   },
-  markBtn: {
+  backBtn: {
+    alignSelf: 'flex-start',
     minHeight: 36,
-    paddingHorizontal: spacing.md,
+    marginLeft: -8,
   },
   title: {
-    fontSize: typography.title,
+    fontSize: 30,
     fontWeight: '700',
     color: colors.forest,
-    letterSpacing: -0.4,
+    letterSpacing: -0.75,
+    marginTop: spacing.xs,
   },
   sub: {
-    fontSize: typography.body,
+    fontSize: 16,
     color: colors.muted,
-    marginTop: 4,
+    marginTop: -spacing.xs,
+  },
+  markBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.white,
+    borderRadius: radius.md,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    minHeight: 36,
+    alignSelf: 'flex-start',
+  },
+  markBtnPressed: {
+    backgroundColor: colors.cream,
+  },
+  markBtnBusy: {
+    opacity: 0.6,
+  },
+  markBtnText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.forest,
   },
   loading: {
     color: colors.muted,
@@ -157,35 +260,60 @@ const styles = StyleSheet.create({
   list: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xxl,
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   card: {
     marginBottom: 0,
   },
   row: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: spacing.lg,
     alignItems: 'flex-start',
   },
+  iconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    backgroundColor: 'rgba(0,122,101,0.10)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  content: {
+    flex: 1,
+    minWidth: 0,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
   nTitle: {
-    fontSize: typography.body,
-    fontWeight: '600',
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '500',
     color: colors.forest,
   },
   nBody: {
-    fontSize: typography.caption,
+    fontSize: 14,
     color: colors.muted,
     marginTop: 4,
-    lineHeight: 18,
+    lineHeight: 20,
   },
   nWhen: {
-    fontSize: 11,
+    fontSize: 12,
     color: colors.muted,
-    marginTop: 6,
+    marginTop: 8,
+  },
+  emptyCard: {
+    marginBottom: 0,
+    paddingVertical: 56,
+    alignItems: 'center',
   },
   empty: {
     color: colors.muted,
     textAlign: 'center',
-    fontSize: typography.body,
+    fontSize: 15,
+    marginTop: 12,
   },
 });

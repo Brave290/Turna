@@ -12,7 +12,7 @@ export function Card({
   return <View style={[styles.card, style]}>{children}</View>;
 }
 
-export type BadgeTone = 'active' | 'pending' | 'muted' | 'error';
+export type BadgeTone = 'active' | 'pending' | 'muted' | 'error' | 'completed';
 
 export function Badge({
   label,
@@ -68,13 +68,13 @@ const styles = StyleSheet.create({
   },
   badge: {
     alignSelf: 'flex-start',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 2,
     borderRadius: radius.full,
   },
   badgeText: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '500',
     textTransform: 'capitalize',
   },
   stat: {
@@ -122,10 +122,11 @@ const styles = StyleSheet.create({
 });
 
 const badgeTone = StyleSheet.create({
-  active: { backgroundColor: 'rgba(0,122,101,0.12)' },
-  pending: { backgroundColor: 'rgba(138,90,0,0.12)' },
+  active: { backgroundColor: 'rgba(0,122,101,0.10)' },
+  pending: { backgroundColor: 'rgba(138,90,0,0.15)' },
   muted: { backgroundColor: colors.cream },
-  error: { backgroundColor: 'rgba(180,35,59,0.12)' },
+  error: { backgroundColor: 'rgba(180,35,59,0.10)' },
+  completed: { backgroundColor: 'rgba(10,22,40,0.10)' },
 });
 
 const badgeTextTone = StyleSheet.create({
@@ -133,4 +134,5 @@ const badgeTextTone = StyleSheet.create({
   pending: { color: colors.warning },
   muted: { color: colors.muted },
   error: { color: colors.error },
+  completed: { color: colors.forest },
 });
