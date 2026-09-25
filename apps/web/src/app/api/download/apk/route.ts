@@ -45,9 +45,10 @@ function ghHeaders(): HeadersInit {
 function pickApk(assets: GhAsset[]): GhAsset | null {
   if (!assets.length) return null;
   return (
-    // Versioned names first: 1.0.260925.1430-turna.apk
-    assets.find((a) => a.name.endsWith('-turna.apk')) ??
+    // Fixed short name first: turna.apk
     assets.find((a) => a.name === 'turna.apk') ??
+    // Legacy versioned names: 1.0.260925.1430-turna.apk
+    assets.find((a) => a.name.endsWith('-turna.apk')) ??
     assets.find(
       (a) => a.name.endsWith('.apk') && !a.name.includes('debug')
     ) ??

@@ -97,7 +97,7 @@ export function UpdatePrompt({
       // First-party silent download (no GitHub in the address bar path for long)
       const a = document.createElement('a');
       a.href = info.downloadUrl;
-      a.download = `${info.versionName}-turna.apk`;
+      a.download = `turna.apk`;
       a.rel = 'noopener';
       document.body.appendChild(a);
       a.click();

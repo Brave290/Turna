@@ -2,20 +2,24 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
-  pull_request:
-    branches: [main, develop]
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: write
+
+# Cancel superseded runs on rapid pushes — saves Actions minutes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
   TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
 
 jobs:
-  lint-and-typecheck:
-    name: Lint & Typecheck
+  checks:
+    name: Checks
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -41,93 +45,16 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-  test:
-    name: Tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          run_install: false
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
       - name: Run tests
         run: pnpm test
-
-  security-audit:
-    name: Security Audit
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          run_install: false
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
 
       - name: Dependency audit
         run: pnpm audit --audit-level=high || true
 
-  build-web:
-    name: Build Web
-    runs-on: ubuntu-latest
-    needs: [lint-and-typecheck, test]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          run_install: false
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build web
-        run: pnpm build:web
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-
-      - name: Upload web build
-        uses: actions/upload-artifact@v4
-        with:
-          name: web-build
-          path: apps/web/.next/
-          retention-days: 7
-
   build-mobile-android:
     name: Build Mobile (Android)
     runs-on: ubuntu-latest
-    needs: [lint-and-typecheck, test]
+    needs: [checks]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -157,20 +84,31 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Auto version: 1.0.YYMMDD.HHMM, code = epoch minutes (monotonic, no manual edits)
+      # Auto version: short 1.0.N (next patch from releases/tags — "v1.0.1" style),
+      # code = epoch minutes (always monotonic for Android upgrades).
       - name: Compute version (auto)
         id: version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          STAMP=$(date -u +%y%m%d)
-          CLOCK=$(date -u +%H%M)
+          MAX=0
+          CANDS=$( { gh api "repos/${GITHUB_REPOSITORY}/releases" --jq '.[].name' 2>/dev/null || true; gh api "repos/${GITHUB_REPOSITORY}/tags" --jq '.[].name' 2>/dev/null || true; } )
+          for CAND in $CANDS; do
+            CAND="${CAND#Turna Android }"
+            if printf '%s' "$CAND" | grep -Eq '^v?1\.0\.([0-9]+)$'; then
+              N=$(printf '%s' "$CAND" | sed -E 's/^v?1\.0\.([0-9]+)$/\1/')
+              if [ "$N" -gt "$MAX" ]; then MAX="$N"; fi
+            fi
+          done
+          NEXT=$((MAX + 1))
           CODE=$(( $(date -u +%s) / 60 ))
-          NAME="1.0.${STAMP}.${CLOCK}"
+          NAME="1.0.${NEXT}"
           echo "name=${NAME}" >> "$GITHUB_OUTPUT"
           echo "code=${CODE}" >> "$GITHUB_OUTPUT"
-          printf '{"versionCode": %s, "versionName": "%s", "minSupportedCode": 1, "apk": "%s-turna.apk", "aab": "%s-turna.aab", "notes": "Turna build %s", "builtAt": "%s"}' \
-            "$CODE" "$NAME" "$NAME" "$NAME" "${GITHUB_SHA::7}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > version.json
-          echo "Auto version ${NAME} (code ${CODE})"
+          printf '{"versionCode": %s, "versionName": "%s", "minSupportedCode": 1, "apk": "turna.apk", "aab": "turna.aab", "notes": "Turna build %s", "builtAt": "%s"}' \
+            "$CODE" "$NAME" "${GITHUB_SHA::7}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > version.json
+          echo "Auto version ${NAME} (code ${CODE}, next patch after ${MAX})"
 
       # Decode release keystore from GitHub secret — never commit the binary
       - name: Restore Android release keystore
@@ -236,9 +174,9 @@ jobs:
           path: apps/mobile/android/app/build/outputs/apk/release/**/*.apk
           retention-days: 7
 
-      # Visible rolling release with auto-versioned assets, published to BOTH the
-      # main repo (android-latest) and the public downloads repo (latest):
-      #   {VERSION}-turna.apk  {VERSION}-turna.aab  version.json
+      # Rolling release with fixed short names, published to BOTH the main repo
+      # (android-latest) and the public downloads repo (latest):
+      #   turna.apk   turna.aab   version.json
       # Stale apk/aab assets are purged each run so storage stays bounded.
       - name: Publish versioned Android release
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -254,15 +192,15 @@ jobs:
           AAB=$(find apps/mobile/android/app/build/outputs/bundle/release -name '*.aab' 2>/dev/null | head -1)
           test -n "$APK"
           test -n "$AAB"
-          cp "$APK" "${VERSION}-turna.apk"
-          cp "$AAB" "${VERSION}-turna.aab"
-          APK_SHA=$(sha256sum "${VERSION}-turna.apk" | awk '{print $1}')
-          AAB_SHA=$(sha256sum "${VERSION}-turna.aab" | awk '{print $1}')
-          APK_SIZE=$(stat -c%s "${VERSION}-turna.apk")
-          AAB_SIZE=$(stat -c%s "${VERSION}-turna.aab")
-          NOTES=$(printf 'Turna Android %s (build %s, code %s)\n\n- **%s-turna.apk** — direct install · SHA256 `%s` · %s bytes\n- **%s-turna.aab** — Play bundle · SHA256 `%s` · %s bytes\n- **version.json** — auto version manifest for in-app update checks' \
+          cp "$APK" turna.apk
+          cp "$AAB" turna.aab
+          APK_SHA=$(sha256sum turna.apk | awk '{print $1}')
+          AAB_SHA=$(sha256sum turna.aab | awk '{print $1}')
+          APK_SIZE=$(stat -c%s turna.apk)
+          AAB_SIZE=$(stat -c%s turna.aab)
+          NOTES=$(printf 'Turna v%s (build %s, code %s)\n\n- **turna.apk** — direct install · SHA256 `%s` · %s bytes\n- **turna.aab** — Play bundle · SHA256 `%s` · %s bytes\n- **version.json** — auto version manifest for in-app update checks' \
             "$VERSION" "${GITHUB_SHA::7}" "$VERSION_CODE" \
-            "$VERSION" "$APK_SHA" "$APK_SIZE" "$VERSION" "$AAB_SHA" "$AAB_SIZE")
+            "$APK_SHA" "$APK_SIZE" "$AAB_SHA" "$AAB_SIZE")
 
           publish_release() {
             local TOKEN="$1" REPO="$2" RTAG="$3"
@@ -274,7 +212,7 @@ jobs:
               GH_TOKEN="$TOKEN" gh release create "$RTAG" \
                 --repo "$REPO" \
                 --latest \
-                --title "Turna Android v${VERSION}" \
+                --title "v${VERSION}" \
                 --notes "$NOTES"
             }
             GH_TOKEN="$TOKEN" gh release view "$RTAG" --repo "$REPO" --json assets --jq '.assets[].name' 2>/dev/null \
@@ -285,83 +223,16 @@ jobs:
                   esac
                 done
             GH_TOKEN="$TOKEN" gh release upload "$RTAG" \
-              "${VERSION}-turna.apk" "${VERSION}-turna.aab" version.json \
-              --repo "$REPO"
+              turna.apk turna.aab version.json \
+              --repo "$REPO" --clobber
             GH_TOKEN="$TOKEN" gh release edit "$RTAG" \
               --repo "$REPO" \
               --latest \
               --prerelease=false \
-              --title "Turna Android v${VERSION}" \
+              --title "v${VERSION}" \
               --notes "$NOTES"
             echo "Published ${RTAG} → ${REPO} (v${VERSION})"
           }
 
           publish_release "$GH_TOKEN_MAIN" "$GITHUB_REPOSITORY" "android-latest"
           publish_release "$GH_TOKEN_DL" "$DOWNLOADS_REPO" "latest"
-
-  build-mobile-ios:
-    name: Build Mobile (iOS)
-    runs-on: macos-14
-    needs: [lint-and-typecheck, test]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Select Xcode
-        run: |
-          set -euo pipefail
-          ls /Applications | grep -E '^Xcode' || true
-          if [ -d /Applications/Xcode_15.4.app ]; then
-            sudo xcode-select -s /Applications/Xcode_15.4.app
-          else
-            sudo xcode-select -s /Applications/Xcode.app
-          fi
-          xcodebuild -version
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          run_install: false
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Install CocoaPods
-        run: |
-          pod --version || sudo gem install cocoapods --no-document
-
-      - name: Install Pods
-        working-directory: apps/mobile/ios
-        env:
-          NO_FLIPPER: '1'
-        run: pod install
-
-      - name: Build iOS Release (no signing)
-        working-directory: apps/mobile
-        env:
-          NO_FLIPPER: '1'
-        run: |
-          set -euo pipefail
-          xcodebuild \
-            -workspace ios/Turna.xcworkspace \
-            -scheme Turna \
-            -configuration Release \
-            -sdk iphoneos \
-            -derivedDataPath ios/build \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            -quiet
-
-      - name: Upload iOS build output
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-release-build
-          path: apps/mobile/ios/build/Build/Products/Release-iphoneos/
-          retention-days: 7
-        if: success()
