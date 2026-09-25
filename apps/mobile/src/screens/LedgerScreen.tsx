@@ -2,7 +2,9 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Pressable,
   RefreshControl,
+  Share,
   StyleSheet,
   Text,
   View,
@@ -39,12 +41,10 @@ const MEMBER_HIDDEN = new Set([
 
 function when(iso: string) {
   try {
-    return new Date(iso).toLocaleString('en-NG', {
-      day: 'numeric',
-      month: 'short',
+    return new Date(iso).toLocaleDateString('en-NG', {
       year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+      month: 'short',
+      day: 'numeric',
     });
   } catch {
     return iso;
@@ -64,7 +64,11 @@ export function LedgerScreen({ onPush }: { onPush?: (screen: any) => void } = {}
     setError(null);
     try {
       const [owned, feed] = await Promise.all([
-        supabase.from('circles').select('id').limit(50),
+        supabase
+          .from('circles')
+          .select('id')
+          .eq('owner_id', user.id)
+          .limit(50),
         supabase
           .from('ledger_events')
           .select('id, event_type, entity_type, created_at, circles(id, name)')
@@ -91,6 +95,25 @@ export function LedgerScreen({ onPush }: { onPush?: (screen: any) => void } = {}
     void load();
   }, [load]);
 
+  const exportCsv = () => {
+    const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
+    const rows = [
+      ['timestamp', 'circle', 'event', 'entity', 'event_id'],
+      ...events.map((e) => [
+        e.created_at,
+        e.circles?.name ?? '',
+        e.event_type,
+        e.entity_type,
+        e.id,
+      ]),
+    ];
+    const csv = rows.map((r) => r.map(esc).join(',')).join('\n');
+    void Share.share({
+      message: csv,
+      title: `turna-ledger-${new Date().toISOString().slice(0, 10)}.csv`,
+    });
+  };
+
   const sub = isAdmin
     ? 'Append-only history for circles you own (admin view).'
     : "General activity only. Contribution and payout events for other members are hidden to protect privacy.";
@@ -102,6 +125,14 @@ export function LedgerScreen({ onPush }: { onPush?: (screen: any) => void } = {}
         <Text style={styles.sub}>{sub}</Text>
         <View style={styles.badgeWrap}>
           <Badge label={isAdmin ? 'Admin view' : 'Privacy mode'} tone={isAdmin ? 'active' : 'muted'} />
+          {events.length > 0 && (
+            <Pressable onPress={exportCsv} style={styles.linkBtn}>
+              <Text style={styles.linkText}>Export CSV</Text>
+            </Pressable>
+          )}
+          <Pressable onPress={() => onPush?.({ name: 'audit-log' })} style={styles.linkBtn}>
+            <Text style={styles.linkText}>Audit log</Text>
+          </Pressable>
         </View>
       </View>
 
@@ -185,6 +216,22 @@ const styles = StyleSheet.create({
   badgeWrap: {
     marginTop: spacing.sm,
     flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flexWrap: 'wrap',
+  },
+  linkBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: spacing.sm,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.white,
+  },
+  linkText: {
+    fontSize: 12,
+    color: colors.primary,
+    fontWeight: '600',
   },
   list: {
     paddingHorizontal: spacing.lg,

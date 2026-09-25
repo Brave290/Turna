@@ -24,17 +24,10 @@ import {
   type SoloLedger,
 } from '../lib/solo-store';
 import { supabase } from '../lib/supabase';
+import { formatCurrency } from '../lib/format';
 
 function money(n: number, currency = 'NGN') {
-  try {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency,
-      maximumFractionDigits: 0,
-    }).format(n / 100);
-  } catch {
-    return `₦${Math.round(n / 100)}`;
-  }
+  return formatCurrency(n, currency);
 }
 
 export function SoloLedgersScreen({ onOpen, onPush }: { onOpen?: (id: string) => void; onPush?: (screen: any) => void } = {}) {

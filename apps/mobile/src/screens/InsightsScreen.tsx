@@ -6,13 +6,10 @@ import { Card, Badge, Stat } from '../components/Card';
 import { Button } from '../components/Button';
 import { Screen } from '../components/Screen';
 import { colors, spacing, typography } from '../theme';
+import { formatCurrency } from '../lib/format';
 
 function money(n: number, c = 'NGN') {
-  try {
-    return new Intl.NumberFormat('en-NG', { style: 'currency', currency: c, maximumFractionDigits: 0 }).format(n);
-  } catch {
-    return `${c} ${n}`;
-  }
+  return formatCurrency(n, c);
 }
 
 type Circle = {

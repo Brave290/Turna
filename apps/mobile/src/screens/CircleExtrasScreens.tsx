@@ -14,6 +14,7 @@ import { Button } from '../components/Button';
 import { Card, Badge } from '../components/Card';
 import { Screen } from '../components/Screen';
 import { colors, spacing, typography } from '../theme';
+import { formatCurrency } from '../lib/format';
 
 type Circle = {
   id: string;
@@ -37,11 +38,7 @@ type Member = {
 };
 
 function money(n: number, c = 'NGN') {
-  try {
-    return new Intl.NumberFormat('en-NG', { style: 'currency', currency: c, maximumFractionDigits: 0 }).format(n);
-  } catch {
-    return `${c} ${n}`;
-  }
+  return formatCurrency(n, c);
 }
 
 export function CircleDetailScreen({
