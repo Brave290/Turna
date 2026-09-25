@@ -145,6 +145,12 @@ afterEvaluate {
     tasks.named("preBuild").configure { dependsOn("generateVersionFile") }
 }
 
+// The Hermes bundle task reads all of apps/mobile (including the generated
+// version file) — declare the dependency explicitly or Gradle validation fails.
+tasks.matching { it.name.startsWith("createBundle") && it.name.endsWith("JsAndAssets") }.configureEach {
+    dependsOn("generateVersionFile")
+}
+
 dependencies {
     implementation("com.facebook.react:react-android")
 
