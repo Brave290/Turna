@@ -1,16 +1,19 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, radius, spacing } from '../theme';
+import { Home, Users, FileText, NotebookPen, User } from 'lucide-react-native';
+import { colors, spacing } from '../theme';
 
 type TabKey = 'home' | 'circles' | 'ledger' | 'solo' | 'profile';
 
-/** Same order/labels as web bottomNav in nav.tsx: Home, Circles, Ledger, Solo, Profile */
-const TABS: { key: TabKey; label: string; glyph: string }[] = [
-  { key: 'home', label: 'Home', glyph: '⌂' },
-  { key: 'circles', label: 'Circles', glyph: '◎' },
-  { key: 'ledger', label: 'Ledger', glyph: '☰' },
-  { key: 'solo', label: 'Solo', glyph: '✎' },
-  { key: 'profile', label: 'Profile', glyph: '●' },
+type TabIcon = React.ComponentType<any>;
+
+/** Same order/icons as web bottomNav in dashboard/nav.tsx: Home, Circles, Ledger, Solo, Profile */
+const TABS: { key: TabKey; label: string; icon: TabIcon }[] = [
+  { key: 'home', label: 'Home', icon: Home },
+  { key: 'circles', label: 'Circles', icon: Users },
+  { key: 'ledger', label: 'Ledger', icon: FileText },
+  { key: 'solo', label: 'Solo', icon: NotebookPen },
+  { key: 'profile', label: 'Profile', icon: User },
 ];
 
 export function TabBar({
@@ -24,6 +27,7 @@ export function TabBar({
     <View style={styles.bar} accessibilityRole="tablist">
       {TABS.map((t) => {
         const on = t.key === active;
+        const Icon = t.icon;
         return (
           <Pressable
             key={t.key}
@@ -33,7 +37,11 @@ export function TabBar({
             style={styles.tab}
           >
             {on && <View style={styles.indicator} accessibilityElementsHidden />}
-            <Text style={[styles.glyph, on && styles.glyphOn]}>{t.glyph}</Text>
+            <Icon
+              size={20}
+              strokeWidth={on ? 2.25 : 1.75}
+              color={on ? colors.primary : colors.muted}
+            />
             <Text style={[styles.label, on && styles.labelOn]}>{t.label}</Text>
           </Pressable>
         );
@@ -49,34 +57,27 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
     paddingBottom: spacing.sm,
-    paddingTop: spacing.xs,
   },
   tab: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: spacing.sm,
+    paddingTop: 10,
+    paddingBottom: 10,
+    gap: 4,
   },
   indicator: {
     position: 'absolute',
     top: 4,
     height: 4,
     width: 32,
+    left: '50%',
+    marginLeft: -16,
     borderRadius: 2,
     backgroundColor: colors.primary,
-  },
-  glyph: {
-    fontSize: 16,
-    color: colors.muted,
-    lineHeight: 20,
-  },
-  glyphOn: {
-    color: colors.primary,
-    fontWeight: '700',
   },
   label: {
     fontSize: 11,
     color: colors.muted,
-    marginTop: 2,
     fontWeight: '500',
   },
   labelOn: {
