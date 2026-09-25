@@ -40,15 +40,15 @@ export function CookieConsent() {
           role="dialog"
           aria-label="Cookie consent"
         >
-          <div className="mx-auto max-w-3xl card bg-forest text-white border-white/10 shadow-card">
+          <div className="mx-auto max-w-3xl rounded-[18px] bg-forest text-white border border-white/10 shadow-card p-5 sm:p-6">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <div className="flex items-start gap-3 flex-1">
-                <Cookie className="w-5 h-5 text-primary shrink-0 mt-0.5" aria-hidden />
+                <Cookie className="w-5 h-5 text-primary-light shrink-0 mt-0.5" aria-hidden />
                 <div>
                   <p className="text-sm font-semibold text-white mb-1">
                     We use cookies
                   </p>
-                  <p className="text-sm text-white/70 leading-relaxed">
+                  <p className="text-sm text-white/80 leading-relaxed">
                     Essential cookies keep you signed in. We also use analytics cookies to
                     improve Turna.{" "}
                     <Link href="/legal/cookies" className="text-primary-light hover:underline">
@@ -61,7 +61,7 @@ export function CookieConsent() {
                 <button
                   type="button"
                   onClick={decline}
-                  className="btn-ghost btn-sm text-white/60 hover:text-white flex-1 sm:flex-none"
+                  className="btn-sm text-white/80 hover:text-white bg-white/10 hover:bg-white/20 border border-white/25 hover:border-white/40 flex-1 sm:flex-none rounded-xl px-4 py-2 font-semibold transition-all"
                 >
                   Essential only
                 </button>

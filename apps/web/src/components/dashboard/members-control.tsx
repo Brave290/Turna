@@ -19,7 +19,7 @@ import {
   type FeatureActionState,
 } from '@/lib/circle-features-actions';
 import { useToast } from '@/components/toast';
-import { useConfirm } from '@/components/ui';
+import { useConfirm, BrandSelect } from '@/components/ui';
 import { Spinner } from '@/components/spinner';
 import { StatusBadge } from '@/components/dashboard/status-badge';
 import { formatCurrency } from '@/lib/utils';
@@ -311,16 +311,17 @@ function RolePicker({
 }) {
   if (value === 'owner') return null;
   return (
-    <select
-      className="input w-auto text-xs py-1.5 px-2 rounded-lg"
+    <BrandSelect
+      className="w-auto"
       value={value}
       disabled={disabled}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={onChange}
       aria-label={`Role for ${name}`}
-    >
-      <option value="treasurer">Treasurer</option>
-      <option value="member">Member</option>
-      <option value="observer">Observer</option>
-    </select>
+      options={[
+        { value: 'treasurer', label: 'Treasurer' },
+        { value: 'member', label: 'Member' },
+        { value: 'observer', label: 'Observer' },
+      ]}
+    />
   );
 }

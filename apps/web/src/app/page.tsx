@@ -42,7 +42,7 @@ function Nav() {
   return (
     <header className="fixed top-0 inset-x-0 z-50">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 mt-4">
-        <nav className="flex items-center justify-between h-14 px-5 rounded-2xl bg-white/70 backdrop-blur-xl border border-white/40 shadow-glass">
+        <nav className="landing-nav flex items-center justify-between h-14 px-5 rounded-2xl backdrop-blur-xl border shadow-glass">
           <Link href="/" className="flex items-center">
             <Image
               src="/turna-logo-enhanced-trimmed.png"
@@ -54,15 +54,15 @@ function Nav() {
             />
           </Link>
 
-          <div className="hidden md:flex items-center gap-7 text-[13px] font-medium text-forest/60">
-            <a href="#features" className="hover:text-forest transition-colors">Features</a>
-            <a href="#how" className="hover:text-forest transition-colors">How it works</a>
-            <a href="#savings" className="hover:text-forest transition-colors">Savings</a>
+          <div className="hidden md:flex items-center gap-7 text-[13px] font-medium">
+            <a href="#features" className="nav-link transition-colors">Features</a>
+            <a href="#how" className="nav-link transition-colors">How it works</a>
+            <a href="#savings" className="nav-link transition-colors">Savings</a>
           </div>
 
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <Link href="/auth/login" className="hidden sm:inline-flex text-[13px] font-medium text-forest/70 hover:text-forest px-3 py-2 rounded-lg hover:bg-forest/5 transition-colors">
+            <Link href="/auth/login" className="hidden sm:inline-flex nav-link text-[13px] font-medium px-3 py-2 rounded-lg hover:bg-forest/5 transition-colors">
               Sign in
             </Link>
             <AppDownloadModal

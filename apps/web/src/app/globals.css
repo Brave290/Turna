@@ -285,6 +285,53 @@
   filter: brightness(0) invert(1);
 }
 
+/* Landing glass nav — theme-aware (white glass in light, forest glass in dark) */
+.landing-nav {
+  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.landing-nav .nav-link {
+  color: rgba(10, 22, 40, 0.62);
+}
+
+.landing-nav .nav-link:hover {
+  color: var(--forest);
+}
+
+[data-theme="dark"] .landing-nav {
+  background: rgba(16, 29, 45, 0.82);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .landing-nav .nav-link {
+  color: rgba(232, 247, 238, 0.72);
+}
+
+[data-theme="dark"] .landing-nav .nav-link:hover {
+  color: #e8f7ee;
+}
+
+[data-theme="dark"] .landing-nav .nav-link:hover,
+[data-theme="dark"] .landing-nav .nav-link:where(a):hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* Dashboard mobile topbar — white glass in light, forest glass in dark */
+.topbar-blur {
+  background: rgba(255, 255, 255, 0.95);
+}
+
+[data-theme="dark"] .topbar-blur {
+  background: rgba(16, 29, 45, 0.95);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .topbar-blur .text-forest,
+[data-theme="dark"] .topbar-blur .font-display {
+  color: #e8f7ee;
+}
+
 /* App-wide dark theme (dashboard, auth, join — not only landing) */
 [data-theme="dark"] body {
   background-color: #08111e;

@@ -18,6 +18,7 @@ interface BrandSelectProps {
   onChange?: (value: string) => void;
   id?: string;
   className?: string;
+  disabled?: boolean;
   'aria-label'?: string;
 }
 
@@ -32,6 +33,7 @@ export function BrandSelect({
   onChange,
   id,
   className = '',
+  disabled = false,
   'aria-label': ariaLabel,
 }: BrandSelectProps) {
   const [open, setOpen] = useState(false);
@@ -67,6 +69,7 @@ export function BrandSelect({
     options.find((o) => o.value === selected)?.label ?? '';
 
   function pick(v: string) {
+    if (disabled) return;
     setSelected(v);
     setOpen(false);
     onChange?.(v);
@@ -80,11 +83,12 @@ export function BrandSelect({
         ref={btnRef}
         id={id}
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => !disabled && setOpen((v) => !v)}
+        disabled={disabled}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={ariaLabel}
-        className="w-full flex items-center justify-between gap-2 rounded-xl border border-border bg-white px-4 py-3 text-left text-forest transition-all duration-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 hover:border-primary/40"
+        className="w-full flex items-center justify-between gap-2 rounded-xl border border-border bg-white px-4 py-3 text-left text-forest transition-all duration-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 hover:border-primary/40 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-border"
       >
         <span className="truncate text-sm">{selectedLabel}</span>
         <ChevronDown

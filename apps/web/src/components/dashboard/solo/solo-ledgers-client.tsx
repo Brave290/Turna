@@ -6,6 +6,7 @@ import { useFormState } from 'react-dom';
 import { Plus, Trash2, NotebookPen } from 'lucide-react';
 import { createSoloLedger, deleteSoloLedger, type SoloActionState } from '@/lib/solo-actions';
 import { useToast } from '@/components/toast';
+import { BrandSelect } from '@/components/ui';
 import { formatCurrency } from '@/lib/utils';
 
 type Ledger = {
@@ -94,18 +95,19 @@ export function SoloLedgersClient({ ledgers }: { ledgers: Ledger[] }) {
               <label className="text-xs font-medium text-muted" htmlFor="solo-cur">
                 Currency
               </label>
-              <select
+              <BrandSelect
                 id="solo-cur"
                 name="currency"
+                className="mt-1 w-full"
                 value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-border px-3 py-2.5 text-sm text-forest"
-              >
-                <option value="NGN">NGN (₦)</option>
-                <option value="GHS">GHS (₵)</option>
-                <option value="KES">KES</option>
-                <option value="USD">USD ($)</option>
-              </select>
+                onChange={setCurrency}
+                options={[
+                  { value: 'NGN', label: 'NGN (₦)' },
+                  { value: 'GHS', label: 'GHS (₵)' },
+                  { value: 'KES', label: 'KES' },
+                  { value: 'USD', label: 'USD ($)' },
+                ]}
+              />
             </div>
             <div>
               <label className="text-xs font-medium text-muted" htmlFor="solo-amt">

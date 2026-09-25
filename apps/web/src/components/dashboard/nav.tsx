@@ -284,7 +284,7 @@ export function DashboardNav({
       </aside>
 
       {/* Mobile top header — Turna + bell + avatar */}
-      <header className="lg:hidden fixed top-0 inset-x-0 z-40 bg-white/95 backdrop-blur border-b border-border bottom-nav-stable">
+      <header className="lg:hidden fixed top-0 inset-x-0 z-40 topbar-blur backdrop-blur border-b border-border bottom-nav-stable">
         <div className="flex items-center justify-between px-4 h-14">
           <Link href="/" className="inline-flex items-center gap-2" prefetch>
             <Logo variant="default" size={24} />
