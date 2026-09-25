@@ -34,8 +34,8 @@ react {
 def enableProguardInReleaseBuilds = true
 def jscFlavor = 'org.webkit:android-jsc:+'
 
-def DEFAULT_VERSION_CODE = 2
-def DEFAULT_VERSION_NAME = "1.0.1"
+def DEFAULT_VERSION_CODE = (System.getenv("VERSION_CODE") ?: "2").toInteger()
+def DEFAULT_VERSION_NAME = System.getenv("VERSION_NAME") ?: "1.0.1"
 
 android {
     namespace "com.hx.turna"
@@ -129,6 +129,20 @@ android {
             "**/*.kotlin_builtins"
         ]
     }
+}
+
+def versionFile = file("${project.projectDir}/../../src/generated/version.ts")
+
+tasks.register("generateVersionFile") {
+    outputs.file(versionFile)
+    doLast {
+        versionFile.parentFile.mkdirs()
+        versionFile.text = "export const LOCAL_VERSION_CODE = ${DEFAULT_VERSION_CODE};\nexport const LOCAL_VERSION_NAME = \"${DEFAULT_VERSION_NAME}\";\n"
+    }
+}
+
+afterEvaluate {
+    tasks.named("preBuild").configure { dependsOn("generateVersionFile") }
 }
 
 dependencies {

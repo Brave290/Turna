@@ -157,6 +157,21 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Auto version: 1.0.YYMMDD.HHMM, code = epoch minutes (monotonic, no manual edits)
+      - name: Compute version (auto)
+        id: version
+        run: |
+          set -euo pipefail
+          STAMP=$(date -u +%y%m%d)
+          CLOCK=$(date -u +%H%M)
+          CODE=$(( $(date -u +%s) / 60 ))
+          NAME="1.0.${STAMP}.${CLOCK}"
+          echo "name=${NAME}" >> "$GITHUB_OUTPUT"
+          echo "code=${CODE}" >> "$GITHUB_OUTPUT"
+          printf '{"versionCode": %s, "versionName": "%s", "minSupportedCode": 1, "apk": "%s-turna.apk", "aab": "%s-turna.aab", "notes": "Turna build %s", "builtAt": "%s"}' \
+            "$CODE" "$NAME" "$NAME" "$NAME" "${GITHUB_SHA::7}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > version.json
+          echo "Auto version ${NAME} (code ${CODE})"
+
       # Decode release keystore from GitHub secret — never commit the binary
       - name: Restore Android release keystore
         env:
@@ -189,6 +204,8 @@ jobs:
         run: ./gradlew bundleRelease --no-daemon
         working-directory: apps/mobile/android
         env:
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+          VERSION_CODE: ${{ steps.version.outputs.code }}
           SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }}
           SIGNING_STORE_PASSWORD: ${{ secrets.ANDROID_SIGNING_STORE_PASSWORD }}
@@ -198,6 +215,8 @@ jobs:
         run: ./gradlew assembleRelease --no-daemon
         working-directory: apps/mobile/android
         env:
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+          VERSION_CODE: ${{ steps.version.outputs.code }}
           SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }}
           SIGNING_STORE_PASSWORD: ${{ secrets.ANDROID_SIGNING_STORE_PASSWORD }}
@@ -217,64 +236,68 @@ jobs:
           path: apps/mobile/android/app/build/outputs/apk/release/**/*.apk
           retention-days: 7
 
-      # Direct .apk download (GitHub Actions artifacts always come as .zip)
-      - name: Publish rolling APK release
+      # Visible rolling release with auto-versioned assets, published to BOTH the
+      # main repo (android-latest) and the public downloads repo (latest):
+      #   {VERSION}-turna.apk  {VERSION}-turna.aab  version.json
+      # Stale apk/aab assets are purged each run so storage stays bounded.
+      - name: Publish versioned Android release
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          APK=$(find apps/mobile/android/app/build/outputs/apk/release -name '*.apk' 2>/dev/null | head -1)
-          test -n "$APK"
-          cp "$APK" turna-latest.apk
-          SHA=$(sha256sum turna-latest.apk | awk '{print $1}')
-          SIZE=$(stat -c%s turna-latest.apk)
-          NOTES="Latest release APK from \`${GITHUB_SHA::7}\` — direct install, no zip.\\n\\nSHA256: \`${SHA}\`\\nSize: $((SIZE / 1024 / 1024)) MB"
-          gh release view android-latest --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || {
-            gh release create android-latest \
-              --repo "$GITHUB_REPOSITORY" \
-              --prerelease \
-              --title "Turna Android (latest)" \
-              --notes "$NOTES"
-          }
-          gh release upload android-latest turna-latest.apk --repo "$GITHUB_REPOSITORY" --clobber
-          gh release edit android-latest --repo "$GITHUB_REPOSITORY" --prerelease --title "Turna Android (latest)" --notes "$NOTES"
-
-      # Mirror the rolling APK to the public downloads repo — stable unauthenticated URL:
-      # https://github.com/Brave290/Turna-Downloads/releases/latest/download/turna.apk
-      - name: Mirror APK to public downloads repo
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        env:
-          GH_TOKEN: ${{ secrets.DOWNLOADS_REPO_TOKEN }}
+          GH_TOKEN_MAIN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN_DL: ${{ secrets.DOWNLOADS_REPO_TOKEN }}
           DOWNLOADS_REPO: ${{ vars.DOWNLOADS_REPO || 'Brave290/Turna-Downloads' }}
+          VERSION: ${{ steps.version.outputs.name }}
+          VERSION_CODE: ${{ steps.version.outputs.code }}
         run: |
           set -euo pipefail
-          if [ -z "${GH_TOKEN:-}" ]; then
-            echo "DOWNLOADS_REPO_TOKEN not set — skipping public mirror."
-            exit 0
-          fi
           APK=$(find apps/mobile/android/app/build/outputs/apk/release -name '*.apk' 2>/dev/null | head -1)
-          test -n "$APK"
-          cp "$APK" turna.apk
-          FILES="turna.apk"
           AAB=$(find apps/mobile/android/app/build/outputs/bundle/release -name '*.aab' 2>/dev/null | head -1)
-          if [ -n "$AAB" ]; then
-            cp "$AAB" turna.aab
-            FILES="turna.apk turna.aab"
-          fi
-          SHA=$(sha256sum turna.apk | awk '{print $1}')
-          SIZE=$(stat -c%s turna.apk)
-          NOTES="Latest Turna Android build from \`${GITHUB_SHA::7}\`.\\n\\nSHA256: \`${SHA}\`\\nSize: $((SIZE / 1024 / 1024)) MB"
-          gh release view latest --repo "$DOWNLOADS_REPO" >/dev/null 2>&1 || {
-            gh release create latest \
-              --repo "$DOWNLOADS_REPO" \
-              --title "Turna Android (latest)" \
+          test -n "$APK"
+          test -n "$AAB"
+          cp "$APK" "${VERSION}-turna.apk"
+          cp "$AAB" "${VERSION}-turna.aab"
+          APK_SHA=$(sha256sum "${VERSION}-turna.apk" | awk '{print $1}')
+          AAB_SHA=$(sha256sum "${VERSION}-turna.aab" | awk '{print $1}')
+          APK_SIZE=$(stat -c%s "${VERSION}-turna.apk")
+          AAB_SIZE=$(stat -c%s "${VERSION}-turna.aab")
+          NOTES=$(printf 'Turna Android %s (build %s, code %s)\n\n- **%s-turna.apk** — direct install · SHA256 `%s` · %s bytes\n- **%s-turna.aab** — Play bundle · SHA256 `%s` · %s bytes\n- **version.json** — auto version manifest for in-app update checks' \
+            "$VERSION" "${GITHUB_SHA::7}" "$VERSION_CODE" \
+            "$VERSION" "$APK_SHA" "$APK_SIZE" "$VERSION" "$AAB_SHA" "$AAB_SIZE")
+
+          publish_release() {
+            local TOKEN="$1" REPO="$2" RTAG="$3"
+            if [ -z "$TOKEN" ]; then
+              echo "No token for $REPO — skipping."
+              return 0
+            fi
+            GH_TOKEN="$TOKEN" gh release view "$RTAG" --repo "$REPO" >/dev/null 2>&1 || {
+              GH_TOKEN="$TOKEN" gh release create "$RTAG" \
+                --repo "$REPO" \
+                --latest \
+                --title "Turna Android v${VERSION}" \
+                --notes "$NOTES"
+            }
+            GH_TOKEN="$TOKEN" gh release view "$RTAG" --repo "$REPO" --json assets --jq '.assets[].name' 2>/dev/null \
+              | while read -r OLD; do
+                  case "$OLD" in
+                    *.apk|*.aab|version.json)
+                      GH_TOKEN="$TOKEN" gh release delete-asset "$RTAG" "$OLD" --repo "$REPO" --yes ;;
+                  esac
+                done
+            GH_TOKEN="$TOKEN" gh release upload "$RTAG" \
+              "${VERSION}-turna.apk" "${VERSION}-turna.aab" version.json \
+              --repo "$REPO"
+            GH_TOKEN="$TOKEN" gh release edit "$RTAG" \
+              --repo "$REPO" \
+              --latest \
+              --prerelease=false \
+              --title "Turna Android v${VERSION}" \
               --notes "$NOTES"
+            echo "Published ${RTAG} → ${REPO} (v${VERSION})"
           }
-          # shellcheck disable=SC2086
-          gh release upload latest $FILES --repo "$DOWNLOADS_REPO" --clobber
-          gh release edit latest --repo "$DOWNLOADS_REPO" --latest --notes "$NOTES"
-          echo "Mirrored to $DOWNLOADS_REPO release 'latest'"
+
+          publish_release "$GH_TOKEN_MAIN" "$GITHUB_REPOSITORY" "android-latest"
+          publish_release "$GH_TOKEN_DL" "$DOWNLOADS_REPO" "latest"
 
   build-mobile-ios:
     name: Build Mobile (iOS)

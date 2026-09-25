@@ -40,9 +40,11 @@ jobs:
         id: version
         run: |
           VERSION=${GITHUB_REF#refs/tags/v}
+          CODE=$(( $(date -u +%s) / 60 ))
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "code=$CODE" >> $GITHUB_OUTPUT
           echo "tag=v$VERSION" >> $GITHUB_OUTPUT
-          echo "release_name=Turna $VERSION" >> $GITHUB_OUTPUT
+          echo "release_name=Turna Android v$VERSION" >> $GITHUB_OUTPUT
 
       - name: Setup JDK 17
         uses: actions/setup-java@v4
@@ -86,6 +88,8 @@ jobs:
         run: ./gradlew bundleRelease
         working-directory: apps/mobile/android
         env:
+          VERSION_NAME: ${{ steps.version.outputs.version }}
+          VERSION_CODE: ${{ steps.version.outputs.code }}
           SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }}
           SIGNING_STORE_PASSWORD: ${{ secrets.ANDROID_SIGNING_STORE_PASSWORD }}
@@ -95,6 +99,8 @@ jobs:
         run: ./gradlew assembleRelease
         working-directory: apps/mobile/android
         env:
+          VERSION_NAME: ${{ steps.version.outputs.version }}
+          VERSION_CODE: ${{ steps.version.outputs.code }}
           SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }}
           SIGNING_STORE_PASSWORD: ${{ secrets.ANDROID_SIGNING_STORE_PASSWORD }}
@@ -103,33 +109,38 @@ jobs:
       - name: Prepare release artifacts
         run: |
           VERSION=${{ steps.version.outputs.version }}
+          CODE=${{ steps.version.outputs.code }}
           APP_NAME=${{ env.APP_NAME }}
           
           mkdir -p release-artifacts
           
           cp apps/mobile/android/app/build/outputs/bundle/release/app-release.aab \
-            release-artifacts/${APP_NAME}-${VERSION}.aab
+            release-artifacts/${VERSION}-${APP_NAME}.aab
           
           cp apps/mobile/android/app/build/outputs/apk/release/app-release.apk \
-            release-artifacts/${APP_NAME}-${VERSION}.apk
+            release-artifacts/${VERSION}-${APP_NAME}.apk
           
-          git archive --format=tar.gz --prefix=${APP_NAME}-${VERSION}/ \
-            -o release-artifacts/${APP_NAME}-${VERSION}-source.tar.gz \
+          git archive --format=tar.gz --prefix=${VERSION}-${APP_NAME}/ \
+            -o release-artifacts/${VERSION}-${APP_NAME}-source.tar.gz \
             HEAD
           
+          printf '{"versionCode": %s, "versionName": "%s", "minSupportedCode": 1, "apk": "%s-%s.apk", "aab": "%s-%s.aab", "notes": "Turna build %s", "builtAt": "%s"}' \
+            "$CODE" "$VERSION" "$VERSION" "$APP_NAME" "$VERSION" "$APP_NAME" "${GITHUB_SHA::7}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            > release-artifacts/version.json
+          
           cd release-artifacts
-          sha256sum ${APP_NAME}-${VERSION}.aab > ${APP_NAME}-${VERSION}.aab.sha256
-          sha256sum ${APP_NAME}-${VERSION}.apk > ${APP_NAME}-${VERSION}.apk.sha256
-          sha256sum ${APP_NAME}-${VERSION}-source.tar.gz > ${APP_NAME}-${VERSION}-source.tar.gz.sha256
+          sha256sum ${VERSION}-${APP_NAME}.aab > ${VERSION}-${APP_NAME}.aab.sha256
+          sha256sum ${VERSION}-${APP_NAME}.apk > ${VERSION}-${APP_NAME}.apk.sha256
+          sha256sum ${VERSION}-${APP_NAME}-source.tar.gz > ${VERSION}-${APP_NAME}-source.tar.gz.sha256
           # Full release bundle: APK + AAB + source + all checksums
-          zip -9 ${APP_NAME}-${VERSION}-bundle.zip \
-            ${APP_NAME}-${VERSION}.aab \
-            ${APP_NAME}-${VERSION}.apk \
-            ${APP_NAME}-${VERSION}-source.tar.gz \
-            ${APP_NAME}-${VERSION}.aab.sha256 \
-            ${APP_NAME}-${VERSION}.apk.sha256 \
-            ${APP_NAME}-${VERSION}-source.tar.gz.sha256
-          sha256sum ${APP_NAME}-${VERSION}-bundle.zip > ${APP_NAME}-${VERSION}-bundle.zip.sha256
+          zip -9 ${VERSION}-${APP_NAME}-bundle.zip \
+            ${VERSION}-${APP_NAME}.aab \
+            ${VERSION}-${APP_NAME}.apk \
+            ${VERSION}-${APP_NAME}-source.tar.gz \
+            ${VERSION}-${APP_NAME}.aab.sha256 \
+            ${VERSION}-${APP_NAME}.apk.sha256 \
+            ${VERSION}-${APP_NAME}-source.tar.gz.sha256
+          sha256sum ${VERSION}-${APP_NAME}-bundle.zip > ${VERSION}-${APP_NAME}-bundle.zip.sha256
           cd ..
 
       - name: Generate changelog
@@ -157,10 +168,10 @@ jobs:
             ${{ steps.changelog.outputs.changelog }}
             
             ### Downloads
-            - **Android App Bundle (for Play Store)**: `turna-${{ steps.version.outputs.version }}.aab`
-            - **Android APK (for direct install)**: `turna-${{ steps.version.outputs.version }}.apk`
-            - **Full release bundle (APK + AAB + source + checksums)**: `turna-${{ steps.version.outputs.version }}-bundle.zip`
-            - **Source Code**: `turna-${{ steps.version.outputs.version }}-source.tar.gz`
+            - **Android APK (direct install)**: `${{ steps.version.outputs.version }}-turna.apk`
+            - **Android App Bundle (Play Store)**: `${{ steps.version.outputs.version }}-turna.aab`
+            - **Full release bundle (APK + AAB + source + checksums)**: `${{ steps.version.outputs.version }}-turna-bundle.zip`
+            - **Source Code**: `${{ steps.version.outputs.version }}-turna-source.tar.gz`
             
             ### Verification
             All artifacts include SHA256 checksums (`.sha256` files).
@@ -168,25 +179,23 @@ jobs:
             ### Built by
             Akanji Mus'ab • Brave hx Technology • Founda Technologies
           files: |
-            release-artifacts/turna-${{ steps.version.outputs.version }}.aab
-            release-artifacts/turna-${{ steps.version.outputs.version }}.apk
-            release-artifacts/turna-${{ steps.version.outputs.version }}-source.tar.gz
-            release-artifacts/turna-${{ steps.version.outputs.version }}-bundle.zip
-            release-artifacts/turna-${{ steps.version.outputs.version }}-bundle.zip.sha256
-            release-artifacts/turna-${{ steps.version.outputs.version }}.aab.sha256
-            release-artifacts/turna-${{ steps.version.outputs.version }}.apk.sha256
-            release-artifacts/turna-${{ steps.version.outputs.version }}-source.tar.gz.sha256
+            release-artifacts/${{ steps.version.outputs.version }}-turna.aab
+            release-artifacts/${{ steps.version.outputs.version }}-turna.apk
+            release-artifacts/${{ steps.version.outputs.version }}-turna-source.tar.gz
+            release-artifacts/${{ steps.version.outputs.version }}-turna-bundle.zip
+            release-artifacts/${{ steps.version.outputs.version }}-turna-bundle.zip.sha256
+            release-artifacts/${{ steps.version.outputs.version }}-turna.aab.sha256
+            release-artifacts/${{ steps.version.outputs.version }}-turna.apk.sha256
+            release-artifacts/${{ steps.version.outputs.version }}-turna-source.tar.gz.sha256
+            release-artifacts/version.json
           draft: false
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Mirror APK + full bundle to the public downloads-only repo (no source-only extract).
-      # Requires secret DOWNLOADS_REPO_TOKEN (fine-grained PAT: contents:write on Brave290/Turna-Downloads)
-      # and DOWNLOADS_REPO (e.g. Brave290/Turna-Downloads).
-      # Stable URLs:
-      #   https://github.com/Brave290/Turna-Downloads/releases/latest/download/turna.apk
-      #   https://github.com/Brave290/Turna-Downloads/releases/latest/download/turna-bundle.zip
+      # Mirror versioned artifacts to the public downloads-only repo.
+      # Requires secret DOWNLOADS_REPO_TOKEN (contents:write on Brave290/Turna-Downloads).
+      # Assets: {VERSION}-turna.apk / {VERSION}-turna.aab / version.json (+ bundle).
       - name: Check downloads token
         id: check-downloads
         env:
@@ -198,39 +207,36 @@ jobs:
             echo "available=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Publish APK + bundle to public downloads repo
+      - name: Publish versioned release to public downloads repo
         if: steps.check-downloads.outputs.available == 'true'
         env:
           GH_TOKEN: ${{ secrets.DOWNLOADS_REPO_TOKEN }}
           DOWNLOADS_REPO: ${{ vars.DOWNLOADS_REPO || 'Brave290/Turna-Downloads' }}
           VERSION: ${{ steps.version.outputs.version }}
           TAG: ${{ steps.version.outputs.tag }}
-          APK_PATH: release-artifacts/turna-${{ steps.version.outputs.version }}.apk
-          AAB_PATH: release-artifacts/turna-${{ steps.version.outputs.version }}.aab
-          BUNDLE_PATH: release-artifacts/turna-${{ steps.version.outputs.version }}-bundle.zip
+          APK_PATH: release-artifacts/${{ steps.version.outputs.version }}-turna.apk
+          AAB_PATH: release-artifacts/${{ steps.version.outputs.version }}-turna.aab
+          BUNDLE_PATH: release-artifacts/${{ steps.version.outputs.version }}-turna-bundle.zip
         run: |
           set -euo pipefail
           gh release view "$TAG" --repo "$DOWNLOADS_REPO" >/dev/null 2>&1 || {
             gh release create "$TAG" \
               --repo "$DOWNLOADS_REPO" \
-              --title "Turna $VERSION" \
-              --notes "Turna $VERSION — APK, full release bundle (APK + AAB + source + checksums)." \
-              --latest
+              --latest \
+              --title "Turna Android v${VERSION}" \
+              --notes "Turna Android v${VERSION} — ${VERSION}-turna.apk, ${VERSION}-turna.aab, full bundle + checksums."
           }
-          cp "$APK_PATH" turna.apk
-          cp "$AAB_PATH" turna.aab
-          cp "$BUNDLE_PATH" turna-bundle.zip
           gh release upload "$TAG" \
             --repo "$DOWNLOADS_REPO" \
-            turna.apk \
-            turna.aab \
-            turna-bundle.zip \
-            "release-artifacts/turna-${VERSION}.apk" \
-            "release-artifacts/turna-${VERSION}.apk.sha256" \
-            "release-artifacts/turna-${VERSION}.aab" \
-            "release-artifacts/turna-${VERSION}.bundle.zip.sha256" \
+            "$APK_PATH" \
+            "$AAB_PATH" \
+            "$BUNDLE_PATH" \
+            "release-artifacts/${VERSION}-turna.apk.sha256" \
+            "release-artifacts/${VERSION}-turna.aab.sha256" \
+            "release-artifacts/${VERSION}-turna-bundle.zip.sha256" \
+            "release-artifacts/version.json" \
             --clobber
-          gh release edit "$TAG" --repo "$DOWNLOADS_REPO" --latest
+          gh release edit "$TAG" --repo "$DOWNLOADS_REPO" --latest --title "Turna Android v${VERSION}"
 
       - name: Check Vercel token
         id: check-vercel

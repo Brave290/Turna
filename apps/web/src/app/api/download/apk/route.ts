@@ -5,21 +5,17 @@ export const dynamic = 'force-dynamic';
 /**
  * First-party APK download.
  *
- * Preferred: 302 to the public Turna-Downloads release URL (unauthenticated,
- * stable, works in the app and any browser).
+ * Resolves the latest `{version}-turna.apk` asset on the public Turna-Downloads
+ * repo via the GitHub API and 302-redirects to GitHub's browser download URL
+ * (GitHub then redirects to its CDN; APKs are ~50MB — never stream via Vercel).
+ * Falls back to the legacy static URL, then to the private repo's latest release.
  *
- * Fallback: if the public repo has no release yet, resolve the private repo's
- * android-latest release via the GitHub API and 302-redirect to GitHub's
- * pre-signed CDN URL (APKs are ~50MB+; never stream through Vercel).
- *
- * Requires env GITHUB_TOKEN only for the fallback path.
+ * GITHUB_TOKEN is only needed for the private-repo fallback.
  */
-const PUBLIC_APK_URL =
-  process.env.DOWNLOADS_APK_URL ||
-  'https://github.com/Brave290/Turna-Downloads/releases/latest/download/turna.apk';
-
-const GITHUB_API =
-  'https://api.github.com/repos/Brave290/Turna/releases/tags/android-latest';
+const DOWNLOADS_REPO =
+  process.env.DOWNLOADS_REPO || 'Brave290/Turna-Downloads';
+const PRIVATE_FALLBACK_REPO =
+  process.env.PRIVATE_FALLBACK_REPO || 'Brave290/Turna';
 
 type GhAsset = {
   id: number;
@@ -29,6 +25,9 @@ type GhAsset = {
   content_type?: string;
   size?: number;
 };
+
+let cached: { at: number; assets: GhAsset[] } | null = null;
+const CACHE_MS = 5 * 60_000;
 
 function ghHeaders(): HeadersInit {
   const token =
@@ -46,11 +45,38 @@ function ghHeaders(): HeadersInit {
 function pickApk(assets: GhAsset[]): GhAsset | null {
   if (!assets.length) return null;
   return (
-    assets.find((a) => a.name === 'turna-latest.apk') ??
+    // Versioned names first: 1.0.260925.1430-turna.apk
+    assets.find((a) => a.name.endsWith('-turna.apk')) ??
     assets.find((a) => a.name === 'turna.apk') ??
-    assets.find((a) => a.name.endsWith('.apk')) ??
+    assets.find(
+      (a) => a.name.endsWith('.apk') && !a.name.includes('debug')
+    ) ??
     null
   );
+}
+
+async function latestAssets(repo: string): Promise<GhAsset[]> {
+  if (cached && Date.now() - cached.at < CACHE_MS) return cached.assets;
+  const res = await fetch(
+    `https://api.github.com/repos/${repo}/releases/latest`,
+    {
+      headers: ghHeaders(),
+      cache: 'no-store',
+      signal: AbortSignal.timeout(8000),
+    }
+  );
+  if (!res.ok) return [];
+  const data = (await res.json()) as { assets?: GhAsset[] };
+  const assets = data.assets ?? [];
+  cached = { at: Date.now(), assets };
+  return assets;
+}
+
+function redirect(url: string, seconds = 600) {
+  return NextResponse.redirect(url, {
+    status: 302,
+    headers: { 'Cache-Control': `public, max-age=${seconds}` },
+  });
 }
 
 function unauthorized(message: string) {
@@ -61,23 +87,31 @@ function unauthorized(message: string) {
 }
 
 export async function GET() {
-  // 1. Preferred: public downloads repo — no auth, stable URL.
+  // 0. Manual override
+  const override = process.env.DOWNLOADS_APK_URL;
+  if (override) return redirect(override, 60);
+
+  // 1. Public downloads repo — auto-resolve the versioned asset name
   try {
-    const probe = await fetch(PUBLIC_APK_URL, {
+    const asset = pickApk(await latestAssets(DOWNLOADS_REPO));
+    if (asset) return redirect(asset.browser_download_url);
+  } catch {
+    /* fall through */
+  }
+
+  // 2. Legacy static URL (pre-versioning releases)
+  try {
+    const legacy = `https://github.com/${DOWNLOADS_REPO}/releases/latest/download/turna.apk`;
+    const probe = await fetch(legacy, {
       redirect: 'manual',
       cache: 'no-store',
       signal: AbortSignal.timeout(6000),
       headers: { 'User-Agent': 'TurnaAppDownloader/1.0' },
     });
     await probe.body?.cancel().catch(() => {});
-    if (probe.status >= 300 && probe.status < 400) {
-      return NextResponse.redirect(PUBLIC_APK_URL, {
-        status: 302,
-        headers: { 'Cache-Control': 'public, max-age=60' },
-      });
-    }
+    if (probe.status >= 300 && probe.status < 400) return redirect(legacy, 60);
   } catch {
-    /* fall through to private-repo fallback */
+    /* fall through */
   }
 
   const token =
@@ -87,31 +121,22 @@ export async function GET() {
 
   if (!token) {
     return unauthorized(
-      'APK download not available: public downloads repo unreachable and GITHUB_TOKEN not set.'
+      'APK download not available: downloads repo unreachable and GITHUB_TOKEN not set.'
     );
   }
 
-  // 2. Fallback: resolve android-latest rolling release assets
+  // 3. Private repo fallback: latest release → pre-signed CDN redirect
   let asset: GhAsset | null = null;
   try {
-    const rel = await fetch(GITHUB_API, {
-      headers: ghHeaders(),
-      cache: 'no-store',
-      signal: AbortSignal.timeout(8000),
-    });
-    if (rel.ok) {
-      const data = (await rel.json()) as { assets?: GhAsset[] };
-      asset = pickApk(data.assets ?? []);
-    }
+    asset = pickApk(await latestAssets(PRIVATE_FALLBACK_REPO));
   } catch {
     /* handled below */
   }
 
   if (!asset) {
-    return unauthorized('No APK asset found on android-latest release.');
+    return unauthorized('No APK asset found on the private repo releases.');
   }
 
-  // 3. Ask GitHub for a pre-signed CDN redirect (Accept: octet-stream)
   try {
     const assetRes = await fetch(asset.url, {
       headers: {

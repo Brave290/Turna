@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/Button';
 import { colors, spacing, typography } from '../theme';
 import { APP_API_URL } from '../lib/supabase';
+import { LOCAL_VERSION_CODE } from '../generated/version';
 
 type VersionInfo = {
   versionCode: number;
@@ -13,7 +14,6 @@ type VersionInfo = {
   notes: string;
 };
 
-const LOCAL_VERSION_CODE = 2;
 const DISMISS_KEY = 'turna.mobile.update.dismissals';
 const REMIND_MS = 1000 * 60 * 60 * 12;
 

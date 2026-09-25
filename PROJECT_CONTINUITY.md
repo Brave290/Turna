@@ -240,9 +240,9 @@ Get local keys from `supabase status` after `supabase start`.
 - **Audit log** page `/dashboard/audit-log` + CSV export; nav links
 - **Ledger/Payments CSV export** buttons
 - **Receipt share polish**: QR, email, copy, open receipt
-- **App update**: `GET /api/app/version` (build 2 / v1.0.1); `UpdatePrompt` web + `UpdatePopup` mobile — Later twice, force on 3rd
-- **Silent APK**: `GET /api/download/apk` streams from Turna-Downloads/repo releases; app-download-modal points here (no GitHub redirect)
-- CI: rolling `android-latest` prerelease with direct `turna-debug.apk` upload
+- **App update**: `GET /api/app/version` serves CI-generated `version.json` from the latest release (auto version, env fallback); `UpdatePrompt` web + `UpdatePopup` mobile — Later twice, force on 3rd; local code injected at build (`src/generated/version.ts`)
+- **Silent APK**: `GET /api/download/apk` auto-resolves the latest `{version}-turna.apk` asset via GitHub API (legacy static URL + private-repo fallback)
+- CI: auto version `1.0.YYMMDD.HHMM` (code = epoch minutes); rolling visible releases with `{version}-turna.apk` + `{version}-turna.aab` + `version.json` in main repo (`android-latest`) and Turna-Downloads (`latest`); stale apk/aab purged each run
 
 **Key paths**:
 - `apps/web/src/lib/solo-{actions,data,local}.ts`

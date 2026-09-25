@@ -79,7 +79,7 @@ export default async function DashboardLayout({
           </SwipeRouter>
         </div>
       </main>
-      <UpdatePrompt currentVersionCode={2} />
+      <UpdatePrompt currentVersionCode={Number.MAX_SAFE_INTEGER} />
     </div>
   );
 }
