@@ -15,6 +15,7 @@ import { PaymentsScreen } from './screens/PaymentsScreen';
 import { AuditLogScreen } from './screens/AuditLogScreen';
 import { ContributionsScreen, PayoutsScreen, AdminScreen } from './screens/ExtrasScreens';
 import { CircleDetailScreen, CircleMembersScreen, NewCircleScreen, HelpScreen } from './screens/CircleExtrasScreens';
+import { JoinCircleScreen } from './screens/JoinCircleScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { SettingsSubScreen } from './screens/SettingsSubScreen';
 import { TabBar } from './navigation/TabBar';
@@ -30,6 +31,7 @@ type StackScreen =
   | { name: 'circle-detail'; circleId: string }
   | { name: 'circle-members'; circleId: string }
   | { name: 'new-circle' }
+  | { name: 'join-circle' }
   | { name: 'ledger' }
   | { name: 'solo' }
   | { name: 'solo-detail'; ledgerId: string }
@@ -83,6 +85,16 @@ function Gate() {
         return <CircleMembersScreen circleId={current.circleId} onBack={pop} />;
       case 'new-circle':
         return <NewCircleScreen onDone={() => { pop(); goTab('circles'); }} />;
+      case 'join-circle':
+        return (
+          <JoinCircleScreen
+            onBack={pop}
+            onJoined={(circleId) => {
+              pop();
+              push({ name: 'circle-detail', circleId });
+            }}
+          />
+        );
       case 'ledger':
         return <LedgerScreen onPush={push} />;
       case 'solo':

@@ -304,7 +304,7 @@ export function HomeScreen({
               </Pressable>
               <Pressable
                 style={[styles.btn, styles.btnOutline]}
-                onPress={() => onNavigate?.('circles')}
+                onPress={() => onPush?.({ name: 'join-circle' })}
               >
                 <Text style={styles.btnOutlineText}>Join a Circle</Text>
               </Pressable>
@@ -366,7 +366,7 @@ export function HomeScreen({
                   </Pressable>
                   <Pressable
                     style={[styles.btn, styles.btnOutline]}
-                    onPress={() => onNavigate?.('circles')}
+                    onPress={() => onPush?.({ name: 'join-circle' })}
                   >
                     <Text style={styles.btnOutlineText}>Join a Circle</Text>
                   </Pressable>

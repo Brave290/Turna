@@ -1,17 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { Users } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Card, Badge } from '../components/Card';
 import { Screen } from '../components/Screen';
+import { formatCurrency } from '../lib/format';
 import { colors, spacing, typography } from '../theme';
 
 type Circle = {
@@ -33,18 +27,6 @@ type Membership = {
   payout_position?: number | null;
   circles: Circle | null;
 };
-
-function money(n: number, currency: string) {
-  try {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency,
-      maximumFractionDigits: 0,
-    }).format(n);
-  } catch {
-    return `${currency} ${n}`;
-  }
-}
 
 export function CirclesScreen({ onPush, onNewCircle }: { onPush?: (screen: any) => void; onNewCircle?: () => void } = {}) {
   const { user } = useAuth();
@@ -84,7 +66,14 @@ export function CirclesScreen({ onPush, onNewCircle }: { onPush?: (screen: any) 
       );
       memberships.forEach((m) => {
         if (!m.circles) return;
-        if (!map.has(m.circle_id)) {
+        const existing = map.get(m.circle_id);
+        if (existing) {
+          map.set(m.circle_id, {
+            ...existing,
+            role: existing.role === 'owner' ? 'owner' : (m.role ?? 'member'),
+            payoutPosition: m.payout_position ?? null,
+          });
+        } else {
           map.set(m.circle_id, {
             ...m.circles,
             role: m.role ?? 'member',
@@ -121,7 +110,7 @@ export function CirclesScreen({ onPush, onNewCircle }: { onPush?: (screen: any) 
           </View>
         </View>
         <View style={styles.actionRow}>
-          <Pressable style={[styles.btn, styles.btnOutline]} onPress={() => onPush?.({ name: 'new-circle' })}>
+          <Pressable style={[styles.btn, styles.btnOutline]} onPress={() => onPush?.({ name: 'join-circle' })}>
             <Text style={styles.btnOutlineText}>Join</Text>
           </Pressable>
           <Pressable style={[styles.btn, styles.btnPrimary]} onPress={onNewCircle}>
@@ -148,11 +137,28 @@ export function CirclesScreen({ onPush, onNewCircle }: { onPush?: (screen: any) 
           }
           ListEmptyComponent={
             <Card style={styles.emptyCard}>
+              <View style={styles.emptyIcon}>
+                <Users size={28} color={colors.primary} strokeWidth={2} />
+              </View>
               <Text style={styles.emptyTitle}>No circles yet</Text>
               <Text style={styles.emptyBody}>
                 {error ??
                   'Create a circle, set contribution amount and schedule, then invite members by email — or join with a code.'}
               </Text>
+              <View style={styles.emptyActions}>
+                <Pressable
+                  style={[styles.btn, styles.btnPrimary]}
+                  onPress={() => onPush?.({ name: 'new-circle' })}
+                >
+                  <Text style={styles.btnPrimaryText}>Create a circle</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.btn, styles.btnOutline]}
+                  onPress={() => onPush?.({ name: 'join-circle' })}
+                >
+                  <Text style={styles.btnOutlineText}>Join with code</Text>
+                </Pressable>
+              </View>
             </Card>
           }
           renderItem={({ item }) => (
@@ -161,7 +167,7 @@ export function CirclesScreen({ onPush, onNewCircle }: { onPush?: (screen: any) 
                 <View style={styles.main}>
                   <Text style={styles.name}>{item.name}</Text>
                   <Text style={styles.meta}>
-                    <Text style={styles.amount}>{money(Number(item.contribution_amount || 0), item.currency)}</Text>
+                    <Text style={styles.amount}>{formatCurrency(Number(item.contribution_amount || 0), item.currency)}</Text>
                     <Text style={styles.metaNormal}> / {item.frequency}</Text>
                   </Text>
                 </View>
@@ -307,6 +313,21 @@ const styles = StyleSheet.create({
   emptyCard: {
     alignItems: 'center',
     paddingVertical: spacing.xl,
+  },
+  emptyIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0,122,101,0.10)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  emptyActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+    alignSelf: 'stretch',
   },
   emptyTitle: {
     fontSize: typography.heading,
