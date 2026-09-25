@@ -14,6 +14,8 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/Button';
 import { Logo } from '../components/Logo';
+import { Popup } from '../components/Popup';
+import { supabase } from '../lib/supabase';
 import { colors, radius, spacing, typography } from '../theme';
 import { Eye, EyeOff } from 'lucide-react-native';
 
@@ -52,6 +54,35 @@ export function AuthScreen({ onSwitch }: { onSwitch?: () => void }) {
   const [busy, setBusy] = useState(false);
   const [info, setInfo] = useState<string | null>(null);
   const [showPw, setShowPw] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+
+  async function sendReset() {
+    const target = resetEmail.trim();
+    if (!target || !target.includes('@')) {
+      setResetError('Enter a valid email address.');
+      return;
+    }
+    setResetBusy(true);
+    setResetError(null);
+    try {
+      const { error: e } = await supabase.auth.resetPasswordForEmail(target, {
+        redirectTo: 'https://turnaapp.vercel.app/auth/reset-password',
+      });
+      if (e) {
+        setResetError(e.message);
+        return;
+      }
+      setResetSent(true);
+    } catch {
+      setResetError('Could not send the reset email. Check your connection and try again.');
+    } finally {
+      setResetBusy(false);
+    }
+  }
 
   useEffect(() => {
     void readRemember().then((saved) => {
@@ -160,7 +191,12 @@ export function AuthScreen({ onSwitch }: { onSwitch?: () => void }) {
             {mode === 'login' && (
               <Text
                 style={styles.forgot}
-                onPress={() => setError('Password reset is available on the web at /auth/forgot-password.')}
+                onPress={() => {
+                  setResetEmail(email);
+                  setResetSent(false);
+                  setResetError(null);
+                  setResetOpen(true);
+                }}
               >
                 Forgot password?
               </Text>
@@ -246,6 +282,69 @@ export function AuthScreen({ onSwitch }: { onSwitch?: () => void }) {
         {onSwitch && (
           <Button label="Continue as guest view" variant="outline" onPress={onSwitch} style={styles.switch} />
         )}
+
+        <Popup
+          visible={resetOpen}
+          onClose={() => {
+            setResetOpen(false);
+            setResetSent(false);
+          }}
+          title="Reset password"
+          subtitle={
+            resetSent
+              ? undefined
+              : 'Enter your email and we’ll send you a reset link.'
+          }
+          footer={
+            resetSent ? (
+              <Button
+                label="Back to sign in"
+                onPress={() => {
+                  setResetOpen(false);
+                  setResetSent(false);
+                }}
+              />
+            ) : (
+              <View style={{ gap: spacing.sm }}>
+                <Button
+                  label="Send reset link"
+                  onPress={() => void sendReset()}
+                  loading={resetBusy}
+                />
+                <Button
+                  label="Cancel"
+                  variant="ghost"
+                  onPress={() => setResetOpen(false)}
+                />
+              </View>
+            )
+          }
+        >
+          {resetSent ? (
+            <Text style={styles.resetDone}>
+              Check your inbox — open the link in the email to set a new
+              password. The email can take a minute to arrive.
+            </Text>
+          ) : (
+            <>
+              <Text style={styles.resetLabel}>Email</Text>
+              <TextInput
+                style={styles.resetInput}
+                value={resetEmail}
+                onChangeText={(v: string) => {
+                  setResetEmail(v);
+                  setResetError(null);
+                }}
+                placeholder="you@example.com"
+                placeholderTextColor={colors.muted}
+                autoCapitalize="none"
+                autoComplete="email"
+                keyboardType="email-address"
+              />
+              {resetError ? <Text style={styles.resetError}>{resetError}</Text> : null}
+            </>
+          )}
+        </Popup>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -359,6 +458,32 @@ const styles = StyleSheet.create({
     fontSize: typography.caption,
     fontWeight: '600',
     marginBottom: 6,
+  },
+  resetLabel: {
+    fontSize: typography.caption,
+    fontWeight: '600',
+    color: colors.muted,
+    marginBottom: 6,
+  },
+  resetInput: {
+    minHeight: 48,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.lg,
+    fontSize: typography.body,
+    color: colors.forest,
+    backgroundColor: colors.white,
+  },
+  resetError: {
+    color: colors.error,
+    fontSize: typography.caption,
+    marginTop: 6,
+  },
+  resetDone: {
+    color: colors.muted,
+    fontSize: typography.body,
+    lineHeight: 22,
   },
   label: {
     color: 'rgba(255,255,255,0.8)',

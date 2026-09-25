@@ -358,7 +358,8 @@ export function HelpScreen({ onBack }: { onBack: () => void }) {
           <Text style={styles.section}>Common</Text>
           <Text style={styles.hint}>
             · Invite not received? Check Spam/Junk for mail from support.turna@gmail.com.{'\n'}
-            · Contribution proof: upload on the web circle Contributions tab.{'\n'}
+            · Contribution proof: paste the transfer note when you report a paid
+            contribution.{'\n'}
             · Solo Ledger works offline and syncs when you're back online.
           </Text>
         </Card>
