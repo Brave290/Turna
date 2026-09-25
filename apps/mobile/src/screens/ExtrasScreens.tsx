@@ -245,66 +245,6 @@ export function PayoutsScreen({ onBack }: { onBack?: () => void } = {}) {
   );
 }
 
-export function AdminScreen({ onBack }: { onBack?: () => void } = {}) {
-  const [users, setUsers] = useState(0);
-  const [circles, setCircles] = useState(0);
-  const [kyc, setKyc] = useState(0);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    void (async () => {
-      try {
-        const [u, c, k] = await Promise.all([
-          supabase.from('profiles').select('id', { count: 'exact', head: true }),
-          supabase.from('circles').select('id', { count: 'exact', head: true }),
-          supabase.from('kyc_submissions' as never).select('id' as never, { count: 'exact', head: true } as never),
-        ]);
-        setUsers(u.count ?? 0);
-        setCircles(c.count ?? 0);
-        setKyc((k as { count?: number | null }).count ?? 0);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
-
-  return (
-    <Screen tone="cream">
-      <View style={styles.header}>
-        <View style={styles.headRow}>
-          {onBack && <Button label="← Back" variant="ghost" onPress={onBack} style={{ alignSelf: 'flex-start' }} />}
-          <View style={{ flex: 1 }}>
-            <Text style={styles.title}>Admin</Text>
-            <Text style={styles.sub}>Ops overview for ADMIN_EMAILS accounts.</Text>
-          </View>
-        </View>
-      </View>
-      <View style={styles.list}>
-        <Card>
-          <Text style={styles.section}>Platform</Text>
-          <View style={styles.row}>
-            <Text style={styles.meta}>Users</Text>
-            <Text style={styles.name}>{loading ? '…' : users}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.meta}>Circles</Text>
-            <Text style={styles.name}>{loading ? '…' : circles}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.meta}>KYC queue</Text>
-            <Text style={styles.name}>{loading ? '…' : kyc}</Text>
-          </View>
-        </Card>
-        <Card>
-          <Text style={styles.hint}>
-            Full KYC review, volume, and member tables live on the web dashboard under Admin.
-          </Text>
-        </Card>
-      </View>
-    </Screen>
-  );
-}
-
 const styles = StyleSheet.create({
   header: {
     paddingHorizontal: spacing.lg,

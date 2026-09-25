@@ -15,6 +15,7 @@ import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/Button';
 import { Logo } from '../components/Logo';
 import { colors, radius, spacing, typography } from '../theme';
+import { Eye, EyeOff } from 'lucide-react-native';
 
 const REMEMBER_KEY = 'turna_remember_email';
 
@@ -50,6 +51,7 @@ export function AuthScreen({ onSwitch }: { onSwitch?: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [info, setInfo] = useState<string | null>(null);
+  const [showPw, setShowPw] = useState(false);
 
   useEffect(() => {
     void readRemember().then((saved) => {
@@ -164,15 +166,30 @@ export function AuthScreen({ onSwitch }: { onSwitch?: () => void }) {
               </Text>
             )}
           </View>
-          <TextInput
-            style={styles.input}
-            value={password}
-            onChangeText={setPassword}
-            placeholder={mode === 'login' ? 'Enter your password' : 'At least 8 characters'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            secureTextEntry
-            autoComplete="password"
-          />
+          <View style={styles.pwWrap}>
+            <TextInput
+              style={[styles.input, styles.pwInput]}
+              value={password}
+              onChangeText={setPassword}
+              placeholder={mode === 'login' ? 'Enter your password' : 'At least 8 characters'}
+              placeholderTextColor="rgba(255,255,255,0.4)"
+              secureTextEntry={!showPw}
+              autoComplete="password"
+            />
+            <Pressable
+              style={styles.eyeBtn}
+              onPress={() => setShowPw((v) => !v)}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel={showPw ? 'Hide password' : 'Show password'}
+            >
+              {showPw ? (
+                <EyeOff size={18} color="rgba(255,255,255,0.55)" />
+              ) : (
+                <Eye size={18} color="rgba(255,255,255,0.55)" />
+              )}
+            </Pressable>
+          </View>
         </View>
 
         <View style={styles.checkRow}>
@@ -323,6 +340,15 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   field: { marginBottom: spacing.md },
+  pwWrap: { position: 'relative' },
+  pwInput: { paddingRight: 52 },
+  eyeBtn: {
+    position: 'absolute',
+    right: 14,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+  },
   passwordHead: {
     flexDirection: 'row',
     justifyContent: 'space-between',

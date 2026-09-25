@@ -275,17 +275,20 @@ export async function pushSoloToServer(): Promise<number> {
     }
     if (L.pendingContributors.length) {
       for (const c of L.pendingContributors) {
-        const { error } = await supabase.from('solo_contributors').insert({
-          id: c.id.startsWith('local-') ? undefined : c.id,
-          ledger_id: L.id,
-          user_id: userId,
-          name: c.name,
-          phone: c.phone,
-          note: c.note,
-          expected_amount: c.expected_amount,
-          sort_order: c.sort_order,
-          local_updated_at: c.local_updated_at,
-        });
+        const { error } = await supabase.from('solo_contributors').upsert(
+          {
+            id: c.id.startsWith('local-') ? undefined : c.id,
+            ledger_id: L.id,
+            user_id: userId,
+            name: c.name,
+            phone: c.phone,
+            note: c.note,
+            expected_amount: c.expected_amount,
+            sort_order: c.sort_order,
+            local_updated_at: c.local_updated_at,
+          },
+          { onConflict: 'id' }
+        );
         if (!error) {
           await clearPending(L.id, [], [c.id]);
           synced += 1;

@@ -1,0 +1,26 @@
+name: Daily DB ping
+
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase via keep-alive endpoint
+        run: |
+          code=$(curl -sS -o /tmp/ping.json -w '%{http_code}' \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            --max-time 60 \
+            https://turnaapp.vercel.app/api/cron/db-ping)
+          cat /tmp/ping.json
+          echo
+          if [ "$code" != "200" ]; then
+            echo "db-ping returned HTTP $code"
+            exit 1
+          fi

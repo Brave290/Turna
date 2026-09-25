@@ -1,9 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
+  Alert,
   FlatList,
+  Modal,
   Pressable,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -13,7 +15,9 @@ import { useAuth } from '../context/AuthContext';
 import { Screen } from '../components/Screen';
 import { Card, Badge } from '../components/Card';
 import { Button } from '../components/Button';
+import { LoadingOverlay } from '../components/Loading';
 import { colors, spacing, typography } from '../theme';
+import { Trash2 } from 'lucide-react-native';
 import {
   getSoloLedgers,
   putSoloLedger,
@@ -21,6 +25,9 @@ import {
   pullSoloFromServer,
   pushSoloToServer,
   offlineUuid,
+  shiftPeriod,
+  periodKey,
+  formatPeriodLabel,
   type SoloLedger,
 } from '../lib/solo-store';
 import { supabase } from '../lib/supabase';
@@ -36,9 +43,8 @@ export function SoloLedgersScreen({ onOpen, onPush }: { onOpen?: (id: string) =>
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [name, setName] = useState('');
+  const [month, setMonth] = useState(periodKey());
   const [amount, setAmount] = useState('5000');
-  const [description, setDescription] = useState('');
 
   const load = useCallback(async () => {
     const local = await getSoloLedgers();
@@ -60,15 +66,16 @@ export function SoloLedgersScreen({ onOpen, onPush }: { onOpen?: (id: string) =>
   }, [load]);
 
   async function create() {
-    if (!name.trim() || !user) return;
+    if (!user) return;
     const id = offlineUuid();
+    const sheetName = formatPeriodLabel(month);
     const defaultAmount = Math.round(Number(amount.replace(/[^\d.]/g, '') || '0') * 100);
     await putSoloLedger({
       id,
-      name: name.trim(),
+      name: sheetName,
       currency: 'NGN',
       default_amount: defaultAmount,
-      description: description.trim() || null,
+      description: null,
       contributors: [],
       entries: [],
       pendingEntries: [],
@@ -79,28 +86,37 @@ export function SoloLedgersScreen({ onOpen, onPush }: { onOpen?: (id: string) =>
       const { error } = await supabase.from('solo_ledgers').insert({
         id,
         user_id: user.id,
-        name: name.trim(),
+        name: sheetName,
         currency: 'NGN',
         default_amount: defaultAmount,
-        description: description.trim() || null,
+        description: null,
         local_updated_at: new Date().toISOString(),
       });
       if (error) throw error;
     } catch {
       /* will sync later — local already saved */
     }
-    setName('');
     setAmount('5000');
-    setDescription('');
+    setMonth(periodKey());
     setCreating(false);
     await load();
     onOpen?.(id);
   }
 
-  async function remove(id: string, ledgerName: string) {
-    await deleteSoloLedger(id);
-    await load();
-    void ledgerName;
+  function remove(id: string, ledgerName: string) {
+    Alert.alert('Delete ledger?', `${ledgerName} and its records will be removed.`, [
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          void (async () => {
+            await deleteSoloLedger(id);
+            await load();
+          })();
+        },
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   }
 
   return (
@@ -123,42 +139,71 @@ export function SoloLedgersScreen({ onOpen, onPush }: { onOpen?: (id: string) =>
         />
       </View>
 
-      {creating && (
-        <Card style={[styles.createCard, { borderColor: colors.primary }]}>
-          <Text style={styles.label}>Ledger name *</Text>
-          <TextInput
-            style={styles.input}
-            value={name}
-            onChangeText={setName}
-            placeholder="Shop ajo / Family savings"
-            placeholderTextColor={colors.muted}
-          />
-          <Text style={styles.label}>Default monthly amount</Text>
-          <TextInput
-            style={styles.input}
-            value={amount}
-            onChangeText={setAmount}
-            keyboardType="numeric"
-            placeholder="5000"
-            placeholderTextColor={colors.muted}
-          />
-          <Text style={styles.label}>Note (optional)</Text>
-          <TextInput
-            style={styles.input}
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Collects every month on the 5th"
-            placeholderTextColor={colors.muted}
-          />
-          <View style={styles.createActions}>
-            <Button label="Create ledger" onPress={create} disabled={!name.trim()} style={{ flex: 1 }} />
-            <Button label="Cancel" variant="ghost" onPress={() => setCreating(false)} style={{ flex: 1 }} />
-          </View>
-        </Card>
-      )}
+      <Modal
+        visible={creating}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setCreating(false)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setCreating(false)}>
+          <Pressable style={styles.modalCard} onPress={() => undefined}>
+            <Text style={styles.modalTitle}>New solo sheet</Text>
+            <Text style={styles.modalSub}>
+              Pick the month — the sheet is named after it.
+            </Text>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.monthChips}
+            >
+              {Array.from({ length: 15 }, (_, i) => shiftPeriod(periodKey(), i - 1)).map(
+                (m) => {
+                  const on = m === month;
+                  return (
+                    <Pressable
+                      key={m}
+                      onPress={() => setMonth(m)}
+                      style={[styles.monthChip, on && styles.monthChipOn]}
+                    >
+                      <Text style={[styles.monthChipText, on && styles.monthChipTextOn]}>
+                        {formatPeriodLabel(m)}
+                      </Text>
+                    </Pressable>
+                  );
+                }
+              )}
+            </ScrollView>
+
+            <Text style={styles.label}>Default monthly amount</Text>
+            <TextInput
+              style={styles.input}
+              value={amount}
+              onChangeText={setAmount}
+              keyboardType="numeric"
+              placeholder="5000"
+              placeholderTextColor={colors.muted}
+            />
+
+            <View style={styles.createActions}>
+              <Button
+                label="Create sheet"
+                onPress={create}
+                style={{ flex: 1 }}
+              />
+              <Button
+                label="Cancel"
+                variant="ghost"
+                onPress={() => setCreating(false)}
+                style={{ flex: 1 }}
+              />
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {loading ? (
-        <ActivityIndicator color={colors.primary} size="large" style={{ marginTop: spacing.xl }} />
+        <LoadingOverlay label="Loading ledgers…" />
       ) : (
         <FlatList
           data={rows}
@@ -195,43 +240,43 @@ export function SoloLedgersScreen({ onOpen, onPush }: { onOpen?: (id: string) =>
             </Card>
           }
           renderItem={({ item }) => (
-            <Card style={styles.card}>
-              <Pressable onPress={() => onOpen?.(item.id)}>
-                <Text style={styles.name}>{item.name}</Text>
-                {item.description ? (
-                  <Text style={styles.desc} numberOfLines={2}>
-                    {item.description}
-                  </Text>
-                ) : null}
-                <Text style={styles.meta}>
-                  Default {money(item.default_amount, item.currency)} · updated{' '}
-                  {new Date(item.updated_at).toLocaleDateString('en-NG')}
-                </Text>
-              </Pressable>
-              <View style={styles.cardActions}>
-                <Badge
-                  label={
-                    item.pendingEntries.length + item.pendingContributors.length > 0
-                      ? 'pending'
-                      : 'synced'
-                  }
-                  tone={
-                    item.pendingEntries.length + item.pendingContributors.length > 0
-                      ? 'pending'
-                      : 'active'
-                  }
-                />
-                <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                  <Button label="Open" variant="outline" onPress={() => onOpen?.(item.id)} style={styles.smallBtn} />
-                  <Button
-                    label="Delete"
-                    variant="ghost"
+            <Pressable onPress={() => onOpen?.(item.id)}>
+              <Card style={styles.card}>
+                <View style={styles.cardTop}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.name}>{item.name}</Text>
+                    <Text style={styles.meta}>
+                      Default {money(item.default_amount, item.currency)} · updated{' '}
+                      {new Date(item.updated_at).toLocaleDateString('en-NG')}
+                    </Text>
+                  </View>
+                  <Pressable
                     onPress={() => void remove(item.id, item.name)}
-                    style={styles.smallBtn}
-                  />
+                    hitSlop={10}
+                    style={styles.trash}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Delete ${item.name}`}
+                  >
+                    <Trash2 size={16} color={colors.muted} />
+                  </Pressable>
                 </View>
-              </View>
-            </Card>
+                <View style={styles.cardFoot}>
+                  <Badge
+                    label={
+                      item.pendingEntries.length + item.pendingContributors.length > 0
+                        ? 'pending'
+                        : 'synced'
+                    }
+                    tone={
+                      item.pendingEntries.length + item.pendingContributors.length > 0
+                        ? 'pending'
+                        : 'active'
+                    }
+                  />
+                  <Text style={styles.openHint}>Tap to open ›</Text>
+                </View>
+              </Card>
+            </Pressable>
           )}
         />
       )}
@@ -263,6 +308,55 @@ const styles = StyleSheet.create({
   createCard: {
     marginHorizontal: spacing.lg,
     marginBottom: spacing.sm,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(10,22,40,0.5)',
+    justifyContent: 'center',
+    padding: spacing.lg,
+  },
+  modalCard: {
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+  },
+  modalTitle: {
+    fontSize: typography.heading,
+    fontWeight: '700',
+    color: colors.forest,
+  },
+  modalSub: {
+    fontSize: typography.caption,
+    color: colors.muted,
+    marginTop: 4,
+    marginBottom: spacing.md,
+  },
+  monthChips: {
+    gap: spacing.sm,
+    paddingVertical: 4,
+    paddingRight: spacing.md,
+  },
+  monthChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 9,
+    borderRadius: 11,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.cream,
+  },
+  monthChipOn: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  monthChipText: {
+    fontSize: typography.caption,
+    fontWeight: '600',
+    color: colors.forest,
+  },
+  monthChipTextOn: {
+    color: colors.white,
   },
   label: {
     fontSize: typography.caption,
@@ -297,11 +391,29 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.forest,
   },
-  desc: {
-    fontSize: typography.caption,
-    color: colors.muted,
-    marginTop: 4,
-    lineHeight: 18,
+  cardTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
+  cardFoot: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacing.md,
+  },
+  trash: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.cream,
+  },
+  openHint: {
+    fontSize: 12,
+    color: colors.primary,
+    fontWeight: '600',
   },
   meta: {
     fontSize: typography.caption,

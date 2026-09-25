@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { BackHandler, StyleSheet, Text, View } from 'react-native';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AuthScreen } from './screens/AuthScreen';
 import { OnboardingScreen } from './screens/OnboardingScreen';
@@ -13,7 +13,7 @@ import { NotificationsScreen } from './screens/NotificationsScreen';
 import { InsightsScreen } from './screens/InsightsScreen';
 import { PaymentsScreen } from './screens/PaymentsScreen';
 import { AuditLogScreen } from './screens/AuditLogScreen';
-import { ContributionsScreen, PayoutsScreen, AdminScreen } from './screens/ExtrasScreens';
+import { ContributionsScreen, PayoutsScreen } from './screens/ExtrasScreens';
 import { CircleDetailScreen, CircleMembersScreen, NewCircleScreen, HelpScreen } from './screens/CircleExtrasScreens';
 import { JoinCircleScreen } from './screens/JoinCircleScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
@@ -42,7 +42,6 @@ type StackScreen =
   | { name: 'audit-log' }
   | { name: 'contributions' }
   | { name: 'payouts' }
-  | { name: 'admin' }
   | { name: 'settings' }
   | { name: 'settings-sub'; route: string }
   | { name: 'help' };
@@ -60,6 +59,24 @@ function Gate() {
       setStack([{ name: 'home' }]);
     }
   }, [status]);
+
+  // Android back: step backwards through the stack; only exit at the root.
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (stack.length > 1) {
+        setStack((s) => s.slice(0, -1));
+        return true;
+      }
+      if (tab !== 'home') {
+        setSoloId(null);
+        setTab('home');
+        setStack([{ name: 'home' }]);
+        return true;
+      }
+      return false;
+    });
+    return () => sub.remove();
+  }, [stack, tab]);
 
   const current = stack[stack.length - 1];
 
@@ -118,8 +135,6 @@ function Gate() {
         return <ContributionsScreen onBack={pop} />;
       case 'payouts':
         return <PayoutsScreen onBack={pop} />;
-      case 'admin':
-        return <AdminScreen onBack={pop} />;
       case 'settings':
         return <SettingsScreen onNavigate={(r) => push({ name: 'settings-sub', route: r })} onBack={pop} />;
       case 'settings-sub':

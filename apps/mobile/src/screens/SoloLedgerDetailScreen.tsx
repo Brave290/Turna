@@ -1,6 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Alert,
   FlatList,
+  Keyboard,
+  PanResponder,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -8,33 +11,55 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useAuth } from '../context/AuthContext';
 import { Screen } from '../components/Screen';
-import { Card, Badge, Stat } from '../components/Card';
-import { Button } from '../components/Button';
+import { LoadingOverlay } from '../components/Loading';
 import { colors, spacing, typography } from '../theme';
+import { Check, ChevronLeft, ChevronRight, Plus } from 'lucide-react-native';
 import {
   getSoloLedger,
-  putSoloLedger,
   queueEntry,
   queueContributor,
-  takePending,
-  clearPending,
   pullSoloFromServer,
   pushSoloToServer,
   shiftPeriod,
   periodKey,
   formatPeriodLabel,
   offlineUuid,
+  type SoloContributor,
   type SoloLedger,
 } from '../lib/solo-store';
-import { supabase } from '../lib/supabase';
 import { formatCurrency } from '../lib/format';
 
 function money(n: number) {
   return formatCurrency(n);
 }
 
+const COL = { name: 0, amount: 92, paid: 52 };
+
+const MONTHS_FULL = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+/** Sheet names are derived from the starting month ("September 2026"). */
+function parseStartPeriod(name: string): string | null {
+  const m = name.match(/^([A-Za-z]+)\s+(\d{4})$/);
+  if (!m) return null;
+  const mi = MONTHS_FULL.findIndex((x) => x.toLowerCase() === m[1].toLowerCase());
+  if (mi < 0) return null;
+  return `${m[2]}-${String(mi + 1).padStart(2, '0')}`;
+}
+
+function monthsBetween(a: string, b: string): number {
+  const [ay, am] = a.split('-').map(Number);
+  const [by, bm] = b.split('-').map(Number);
+  return (by - ay) * 12 + (bm - am);
+}
+
+/**
+ * Solo ledger — spreadsheet view: one row per person, columns
+ * Name / Amount / Paid. Type, toggle, done. Month defaults to current.
+ */
 export function SoloLedgerDetailScreen({
   ledgerId,
   onBack,
@@ -42,15 +67,12 @@ export function SoloLedgerDetailScreen({
   ledgerId: string;
   onBack: () => void;
 }) {
-  const { user } = useAuth();
   const [ledger, setLedger] = useState<SoloLedger | null>(null);
   const [period, setPeriod] = useState(periodKey());
   const [refreshing, setRefreshing] = useState(false);
-  const [newName, setNewName] = useState('');
-  const [showAdd, setShowAdd] = useState(false);
-  const [sheet, setSheet] = useState<{ id: string; name: string } | null>(null);
-  const [amount, setAmount] = useState('');
-  const [newAmount, setNewAmount] = useState('');
+  const [addName, setAddName] = useState('');
+  const [addAmount, setAddAmount] = useState('');
+  const [addRef, setAddRef] = useState<{ focus?: () => void } | null>(null);
 
   const load = useCallback(async () => {
     const L = await getSoloLedger(ledgerId);
@@ -61,7 +83,7 @@ export function SoloLedgerDetailScreen({
         await pushSoloToServer();
         setLedger(await getSoloLedger(ledgerId));
       } catch {
-        /* offline */
+        /* offline ok */
       }
     }
   }, [ledgerId]);
@@ -69,36 +91,6 @@ export function SoloLedgerDetailScreen({
   useEffect(() => {
     void load();
   }, [load]);
-
-  async function sync() {
-    if (!ledger) return;
-    const pending = await takePending(ledger.id);
-    if (pending.entries.length) {
-      const uid = (await supabase.auth.getUser()).data.user?.id;
-      const rows = pending.entries.map((e) => ({
-        ledger_id: ledger.id,
-        contributor_id: e.contributor_id,
-        user_id: uid,
-        period: e.period,
-        status: e.status,
-        amount_paid: e.amount_paid,
-        paid_on: e.paid_on,
-        note: e.note,
-        local_updated_at: e.local_updated_at,
-        updated_at: new Date().toISOString(),
-      }));
-      const { error } = await supabase.from('solo_entries').upsert(rows, {
-        onConflict: 'contributor_id,period',
-      });
-      if (!error) {
-        await clearPending(
-          ledger.id,
-          rows.map((r) => `${r.contributor_id}|${r.period}`),
-          []
-        );
-      }
-    }
-  }
 
   const rows = useMemo(() => {
     if (!ledger) return [];
@@ -116,167 +108,227 @@ export function SoloLedgerDetailScreen({
 
   const stats = useMemo(() => {
     let collected = 0;
-    let expected = 0;
     let paid = 0;
-    rows.forEach(({ c, entry }) => {
-      expected += c.expected_amount || ledger?.default_amount || 0;
+    rows.forEach(({ entry }) => {
       if (entry && entry.status !== 'unpaid') {
         collected += entry.amount_paid;
         if (entry.status === 'paid') paid += 1;
       }
     });
-    return { collected, expected, paid };
-  }, [rows, ledger?.default_amount]);
+    return { collected, paid, total: rows.length };
+  }, [rows]);
 
-  async function markPaid(contributorId: string) {
-    if (!ledger) return;
-    const c = ledger.contributors.find((x) => x.id === contributorId);
-    const expected = c?.expected_amount || ledger.default_amount;
-    setSheet({ id: contributorId, name: c?.name ?? 'Contributor' });
-    setAmount(String(expected / 100));
+  // Rotation: row order = collection order, anchored to the sheet's month.
+  const rotation = useMemo(() => {
+    if (!ledger || rows.length === 0) return null;
+    const start = parseStartPeriod(ledger.name) ?? period;
+    const pick = (p: string) => {
+      const idx = ((monthsBetween(start, p) % rows.length) + rows.length) % rows.length;
+      return rows[idx]?.c ?? null;
+    };
+    const nextPeriod = shiftPeriod(period, 1);
+    return {
+      current: pick(period),
+      next: pick(nextPeriod),
+      nextLabel: formatPeriodLabel(nextPeriod),
+    };
+  }, [ledger, rows, period]);
+
+  // Auto-advance: when the live month is fully collected, roll to the next month.
+  useEffect(() => {
+    if (!ledger || rows.length === 0) return;
+    if (period !== periodKey()) return;
+    const allPaid = rows.every(
+      ({ entry }) => entry != null && entry.status !== 'unpaid'
+    );
+    if (allPaid) setPeriod(shiftPeriod(period, 1));
+  }, [ledger, rows, period]);
+
+  // Swipe left/right on the month frame to move between months.
+  const monthSwipe = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_e, g) =>
+        Math.abs(g.dx) > 14 && Math.abs(g.dx) > Math.abs(g.dy) * 1.4,
+      onPanResponderRelease: (_e, g) => {
+        if (g.dx < -40) setPeriod((p) => shiftPeriod(p, 1));
+        else if (g.dx > 40) setPeriod((p) => shiftPeriod(p, -1));
+      },
+    })
+  ).current;
+
+  async function mutate(next: SoloLedger) {
+    setLedger(next);
+    void pushSoloToServer();
   }
 
-  async function addPerson() {
-    if (!ledger || !newName.trim()) return;
-    const custom = Number(newAmount.replace(/[^\d.]/g, '') || '0');
-    const expected = custom > 0 ? Math.round(custom * 100) : ledger.default_amount;
-    const c = {
+  async function togglePaid(c: SoloContributor) {
+    if (!ledger) return;
+    const entry =
+      ledger.entries.find(
+        (e) => e.contributor_id === c.id && e.period === period
+      ) ?? null;
+    const isPaid = entry ? entry.status !== 'unpaid' : false;
+    const status = isPaid ? 'unpaid' : 'paid';
+    await queueEntry(ledger.id, {
+      contributor_id: c.id,
+      ledger_id: ledger.id,
+      period,
+      status,
+      amount_paid: isPaid
+        ? 0
+        : c.expected_amount || ledger.default_amount,
+      paid_on: isPaid ? null : new Date().toISOString().slice(0, 10),
+      note: null,
+      local_updated_at: new Date().toISOString(),
+    });
+    const next = await getSoloLedger(ledger.id);
+    if (next) void mutate(next);
+    Keyboard.dismiss();
+  }
+
+  async function saveName(c: SoloContributor, raw: string) {
+    if (!ledger) return;
+    const name = raw.trim();
+    if (!name || name === c.name) return;
+    await queueContributor(ledger.id, {
+      ...c,
+      name,
+      local_updated_at: new Date().toISOString(),
+    });
+    const next = await getSoloLedger(ledger.id);
+    if (next) void mutate(next);
+  }
+
+  async function saveAmount(c: SoloContributor, raw: string) {
+    if (!ledger) return;
+    const naira = Math.round(Number(raw.replace(/[^\d.]/g, '') || '0') * 100);
+    if (naira === c.expected_amount) return;
+    await queueContributor(ledger.id, {
+      ...c,
+      expected_amount: naira,
+      local_updated_at: new Date().toISOString(),
+    });
+    const entry = ledger.entries.find(
+      (e) => e.contributor_id === c.id && e.period === period
+    );
+    if (entry && entry.status !== 'unpaid') {
+      await queueEntry(ledger.id, {
+        ...entry,
+        amount_paid: naira,
+        local_updated_at: new Date().toISOString(),
+      });
+    }
+    const next = await getSoloLedger(ledger.id);
+    if (next) void mutate(next);
+  }
+
+  async function addRow() {
+    if (!ledger) return;
+    const name = addName.trim();
+    if (!name) return;
+    const custom = Math.round(Number(addAmount.replace(/[^\d.]/g, '') || '0') * 100);
+    const c: SoloContributor = {
       id: offlineUuid(),
       ledger_id: ledger.id,
-      name: newName.trim(),
+      name,
       phone: null,
       note: null,
-      expected_amount: expected,
-      sort_order: ledger.contributors.length + 1,
+      expected_amount: custom > 0 ? custom : ledger.default_amount,
+      sort_order: ledger.contributors.filter((x) => !x.archived).length + 1,
       archived: false,
       local_updated_at: new Date().toISOString(),
     };
     await queueContributor(ledger.id, c);
-    setLedger(await getSoloLedger(ledger.id));
-    setNewName('');
-    setNewAmount('');
-    setShowAdd(false);
-    try {
-      const uid = (await supabase.auth.getUser()).data.user?.id;
-      const { data } = await supabase
-        .from('solo_contributors')
-        .insert({
-          ledger_id: ledger.id,
-          user_id: uid,
-          name: c.name,
-          expected_amount: c.expected_amount,
-          sort_order: c.sort_order,
-          local_updated_at: c.local_updated_at,
-        })
-        .select('id')
-        .single();
-      if (data) {
-        // remap local id
-        const L = await getSoloLedger(ledger.id);
-        if (L) {
-          L.contributors = L.contributors.map((x) =>
-            x.id === c.id ? { ...x, id: data.id } : x
-          );
-          L.entries = L.entries.map((e) =>
-            e.contributor_id === c.id ? { ...e, contributor_id: data.id } : e
-          );
-          L.pendingContributors = L.pendingContributors.filter(
-            (x) => x.id !== c.id
-          );
-          await putSoloLedger(L);
-          setLedger(L);
-        }
-      }
-    } catch {
-      /* offline */
-    }
+    const next = await getSoloLedger(ledger.id);
+    if (next) void mutate(next);
+    setAddName('');
+    setAddAmount('');
+    addRef?.focus?.();
   }
 
-  async function savePartial(status: 'paid' | 'partial' | 'unpaid') {
-    if (!ledger || !sheet) return;
-    const paid = Number(amount.replace(/[^\d.]/g, '') || '0');
-    const entry = {
-      contributor_id: sheet.id,
-      ledger_id: ledger.id,
-      period,
-      status,
-      amount_paid:
-        status === 'unpaid' ? 0 : Math.round(paid * 100),
-      paid_on: status === 'unpaid' ? null : new Date().toISOString().slice(0, 10),
-      note: null,
-      local_updated_at: new Date().toISOString(),
-    };
-    await queueEntry(ledger.id, entry);
-    setLedger(await getSoloLedger(ledger.id));
-    await sync();
-    setSheet(null);
-    setAmount('');
+  function removePerson(c: SoloContributor) {
+    if (!ledger) return;
+    Alert.alert('Remove person?', `${c.name} will be removed from this sheet.`, [
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: () => {
+          void (async () => {
+            await queueContributor(ledger.id, {
+              ...c,
+              archived: true,
+              local_updated_at: new Date().toISOString(),
+            });
+            const next = await getSoloLedger(ledger.id);
+            if (next) void mutate(next);
+          })();
+        },
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   }
 
   if (!ledger) {
     return (
       <Screen tone="cream">
-        <View style={styles.header}>
-          <Button label="Back" variant="ghost" onPress={onBack} style={{ alignSelf: 'flex-start' }} />
-          <Text style={styles.title}>Loading…</Text>
-        </View>
+        <LoadingOverlay label="Loading ledger…" />
       </Screen>
     );
   }
 
+  const isCurrent = period === periodKey();
+
   return (
     <Screen tone="cream">
       <View style={styles.header}>
-        <Button label="← All solo ledgers" variant="ghost" onPress={onBack} style={{ alignSelf: 'flex-start' }} />
-        <View style={styles.periodRow}>
-          <Button label="‹" variant="outline" onPress={() => setPeriod(shiftPeriod(period, -1))} style={styles.periodBtn} />
+        <Pressable onPress={onBack} style={styles.back} hitSlop={8}>
+          <ChevronLeft size={16} color={colors.muted} />
+          <Text style={styles.backText}>Solo ledgers</Text>
+        </Pressable>
+
+        <Text style={styles.title}>{ledger.name}</Text>
+
+        <View style={styles.periodRow} {...monthSwipe.panHandlers}>
+          <Pressable
+            style={styles.periodBtn}
+            onPress={() => setPeriod(shiftPeriod(period, -1))}
+            hitSlop={8}
+          >
+            <ChevronLeft size={18} color={colors.forest} />
+          </Pressable>
           <View style={{ alignItems: 'center' }}>
             <Text style={styles.periodLabel}>{formatPeriodLabel(period)}</Text>
-            <Pressable onPress={() => setPeriod(periodKey())}>
-              <Text style={styles.thisMonth}>This month</Text>
-            </Pressable>
+            {!isCurrent && (
+              <Pressable onPress={() => setPeriod(periodKey())} hitSlop={6}>
+                <Text style={styles.thisMonth}>Jump to this month</Text>
+              </Pressable>
+            )}
           </View>
-          <Button label="›" variant="outline" onPress={() => setPeriod(shiftPeriod(period, 1))} style={styles.periodBtn} />
+          <Pressable
+            style={styles.periodBtn}
+            onPress={() => setPeriod(shiftPeriod(period, 1))}
+            hitSlop={8}
+          >
+            <ChevronRight size={18} color={colors.forest} />
+          </Pressable>
         </View>
-        <Text style={styles.ledgerName}>{ledger.name}</Text>
-        <Badge label="Solo" tone="active" style={{ marginTop: spacing.sm, alignSelf: 'flex-start' }} />
-        {ledger.description ? (
-          <Text style={styles.meta}>{ledger.description}</Text>
-        ) : null}
-        <Text style={styles.periodHint}>Current view: {formatPeriodLabel(period)}</Text>
-        <View style={styles.stats}>
-          <Stat label="Collected" value={money(stats.collected)} />
-          <View style={{ width: spacing.sm }} />
-          <Stat label="Paid" value={`${stats.paid}/${rows.length}`} />
-        </View>
-        <Button
-          label={showAdd ? 'Close' : 'Add person'}
-          variant={showAdd ? 'outline' : 'primary'}
-          onPress={() => setShowAdd((v) => !v)}
-          style={{ marginTop: spacing.md, alignSelf: 'flex-start' }}
-        />
-      </View>
 
-      {showAdd && (
-        <Card style={{ marginHorizontal: spacing.lg }}>
-          <TextInput
-            style={styles.input}
-            value={newName}
-            onChangeText={setNewName}
-            placeholder="Contributor name"
-            placeholderTextColor={colors.muted}
-          />
-          <TextInput
-            style={[styles.input, { marginTop: spacing.sm }]}
-            value={newAmount}
-            onChangeText={setNewAmount}
-            keyboardType="numeric"
-            placeholder={`Amount (₦) — default ${money(ledger.default_amount)}`}
-            placeholderTextColor={colors.muted}
-          />
-          <Button label="Add" onPress={addPerson} disabled={!newName.trim()} style={{ marginTop: spacing.sm }} />
-        </Card>
-      )}
+        <Text style={styles.stats}>
+          {money(stats.collected)} collected · {stats.paid}/{stats.total} paid
+        </Text>
+
+        {rotation?.current ? (
+          <Text style={styles.rotation}>
+            Collecting now: <Text style={styles.rotationName}>{rotation.current.name}</Text>
+            {rotation.next ? (
+              <>
+                {'  ·  Next ({rotation.nextLabel}): '}
+                <Text style={styles.rotationName}>{rotation.next.name}</Text>
+              </>
+            ) : null}
+          </Text>
+        ) : null}
+      </View>
 
       <FlatList
         data={rows}
@@ -293,76 +345,110 @@ export function SoloLedgerDetailScreen({
             tintColor={colors.primary}
           />
         }
-        ListEmptyComponent={
-          <Card>
-            <Text style={styles.emptyBody}>
-              No contributors yet. Add people who pay you each month.
+        ListHeaderComponent={
+          <View style={styles.colHeader}>
+            <Text style={[styles.colHeadText, { flex: 1 }]}>NAME</Text>
+            <Text style={[styles.colHeadText, { width: COL.amount, textAlign: 'right' }]}>
+              AMOUNT
             </Text>
-          </Card>
+            <Text style={[styles.colHeadText, { width: COL.paid, textAlign: 'center' }]}>
+              PAID
+            </Text>
+          </View>
         }
         renderItem={({ item }) => {
-          const status = item.entry?.status ?? 'unpaid';
+          const paid = item.entry ? item.entry.status !== 'unpaid' : false;
+          const expected = item.c.expected_amount || ledger.default_amount;
           return (
-            <Card style={styles.card}>
-              <View style={styles.rowTop}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.name}>{item.c.name}</Text>
-                  <Text style={styles.meta}>
-                    Due {money(item.c.expected_amount || ledger.default_amount)} ·{' '}
-                    paid {money(item.entry?.amount_paid ?? 0)}
-                  </Text>
-                </View>
-                <Badge
-                  label={status}
-                  tone={status === 'paid' ? 'active' : status === 'partial' ? 'pending' : 'muted'}
-                />
+            <View style={styles.row}>
+              <TextInput
+                style={styles.cellName}
+                defaultValue={item.c.name}
+                onEndEditing={(e: { nativeEvent: { text: string } }) =>
+                  void saveName(item.c, e.nativeEvent.text)
+                }
+                returnKeyType="done"
+                selectTextOnFocus
+              />
+              <TextInput
+                style={styles.cellAmount}
+                defaultValue={expected > 0 ? String(expected / 100) : ''}
+                onEndEditing={(e: { nativeEvent: { text: string } }) =>
+                  void saveAmount(item.c, e.nativeEvent.text)
+                }
+                keyboardType="numeric"
+                returnKeyType="done"
+                selectTextOnFocus
+                placeholder="0"
+                placeholderTextColor={colors.border}
+              />
+              <View style={styles.cellPaid}>
+                <Pressable
+                  onPress={() => void togglePaid(item.c)}
+                  onLongPress={() => removePerson(item.c)}
+                  style={[styles.check, paid && styles.checkOn]}
+                  hitSlop={6}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: paid }}
+                  accessibilityLabel={`Mark ${item.c.name} paid`}
+                >
+                  {paid && <Check size={15} color={colors.white} strokeWidth={3} />}
+                </Pressable>
               </View>
-              <View style={styles.actions}>
-                <Button
-                  label="Mark paid"
-                  onPress={() => void markPaid(item.c.id)}
-                  style={{ flex: 1 }}
-                />
-                <Button
-                  label="Details"
-                  variant="outline"
-                  onPress={() => {
-                    setSheet({ id: item.c.id, name: item.c.name });
-                    setAmount(String((item.entry?.amount_paid || item.c.expected_amount || ledger.default_amount) / 100));
-                  }}
-                  style={{ flex: 1 }}
-                />
-              </View>
-            </Card>
+            </View>
           );
         }}
+        ListFooterComponent={
+          <View style={styles.addRow}>
+            <TextInput
+              ref={setAddRef}
+              style={[styles.cellName, styles.addCell]}
+              value={addName}
+              onChangeText={setAddName}
+              placeholder="+ Add name"
+              placeholderTextColor={colors.muted}
+              returnKeyType="next"
+              onSubmitEditing={() => {
+                if (addAmount) void addRow();
+                else addRef?.focus?.();
+              }}
+              blurOnSubmit={false}
+              autoCapitalize="words"
+            />
+            <TextInput
+              style={[styles.cellAmount, styles.addCell]}
+              value={addAmount}
+              onChangeText={setAddAmount}
+              placeholder="Amount"
+              placeholderTextColor={colors.border}
+              keyboardType="numeric"
+              returnKeyType="done"
+              onSubmitEditing={() => void addRow()}
+            />
+            <View style={styles.cellPaid}>
+              <Pressable
+                onPress={() => void addRow()}
+                disabled={!addName.trim()}
+                style={[styles.addBtn, !addName.trim() && styles.addBtnOff]}
+              >
+                <Plus size={16} color={addName.trim() ? colors.white : colors.muted} />
+              </Pressable>
+            </View>
+          </View>
+        }
+        ListEmptyComponent={
+          <View style={styles.empty}>
+            <Text style={styles.emptyText}>
+              No names yet — type a name and amount below to start the sheet.
+            </Text>
+          </View>
+        }
       />
 
-      {sheet && (
-        <View style={styles.overlay}>
-          <Card style={styles.sheet}>
-            <Text style={styles.sheetTitle}>{sheet.name}</Text>
-            <Text style={styles.meta}>{formatPeriodLabel(period)}</Text>
-            <Text style={styles.meta}>
-              Due: {money(rows.find((r) => r.c.id === sheet.id)?.c.expected_amount || ledger.default_amount)}
-            </Text>
-            <TextInput
-              style={[styles.input, { marginTop: spacing.sm }]}
-              value={amount}
-              onChangeText={setAmount}
-              keyboardType="numeric"
-              placeholder="Amount paid (₦)"
-              placeholderTextColor={colors.muted}
-            />
-            <View style={{ gap: spacing.sm, marginTop: spacing.md }}>
-              <Button label="Mark paid" onPress={() => void savePartial('paid')} />
-              <Button label="Partial" variant="outline" onPress={() => void savePartial('partial')} />
-              <Button label="Unpaid" variant="ghost" onPress={() => void savePartial('unpaid')} />
-              <Button label="Cancel" variant="outline" onPress={() => setSheet(null)} />
-            </View>
-          </Card>
-        </View>
-      )}
+      <Text style={styles.hint}>
+        Tap the box to toggle paid · swipe the month bar to change months ·
+        long-press a row to remove it. Edits save as you go.
+      </Text>
     </Screen>
   );
 }
@@ -371,30 +457,45 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
-    marginBottom: spacing.sm,
+    paddingBottom: spacing.sm,
+  },
+  back: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+  },
+  backText: {
+    fontSize: 14,
+    color: colors.muted,
+    fontWeight: '500',
   },
   title: {
     fontSize: typography.title,
     fontWeight: '700',
     color: colors.forest,
+    letterSpacing: -0.4,
     marginTop: spacing.sm,
-  },
-  ledgerName: {
-    fontSize: typography.heading,
-    fontWeight: '700',
-    color: colors.forest,
-    marginTop: spacing.md,
   },
   periodRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: spacing.sm,
-    gap: spacing.sm,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
   },
   periodBtn: {
-    minWidth: 48,
-    paddingHorizontal: spacing.sm,
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.cream,
   },
   periodLabel: {
     fontSize: typography.body,
@@ -402,77 +503,144 @@ const styles = StyleSheet.create({
     color: colors.forest,
   },
   thisMonth: {
-    fontSize: 12,
+    fontSize: 11,
     color: colors.primary,
     fontWeight: '600',
-    marginTop: 2,
-  },
-  periodHint: {
-    fontSize: 12,
-    color: colors.muted,
-    marginTop: 6,
+    marginTop: 1,
   },
   stats: {
-    flexDirection: 'row',
-    marginTop: spacing.md,
+    fontSize: typography.caption,
+    color: colors.muted,
+    fontWeight: '600',
+    marginTop: spacing.sm,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 12,
+  rotation: {
+    fontSize: typography.caption,
+    color: colors.muted,
+    marginTop: 4,
+  },
+  rotationName: {
     color: colors.forest,
-    fontSize: typography.body,
-    backgroundColor: colors.white,
+    fontWeight: '700',
   },
   list: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xxl,
-    gap: spacing.sm,
   },
-  card: { marginBottom: 0 },
-  rowTop: {
+  colHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: colors.cream,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderBottomWidth: 0,
+    borderTopLeftRadius: 14,
+    borderTopRightRadius: 14,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
     gap: spacing.sm,
-    marginBottom: spacing.sm,
   },
-  name: {
-    fontSize: typography.body,
-    fontWeight: '600',
-    color: colors.forest,
-  },
-  meta: {
-    fontSize: typography.caption,
+  colHeadText: {
+    fontSize: 10,
+    fontWeight: '700',
     color: colors.muted,
-    marginTop: 2,
+    letterSpacing: 0.8,
   },
-  actions: {
+  row: {
     flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderBottomWidth: 0,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
     gap: spacing.sm,
+    minHeight: 48,
   },
-  emptyBody: {
+  cellName: {
+    flex: 1,
+    fontSize: typography.body,
+    color: colors.forest,
+    fontWeight: '500',
+    paddingVertical: 6,
+  },
+  cellAmount: {
+    width: COL.amount,
+    fontSize: typography.body,
+    color: colors.forest,
+    textAlign: 'right',
+    fontWeight: '600',
+    paddingVertical: 6,
+  },
+  cellPaid: {
+    width: COL.paid,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  check: {
+    width: 26,
+    height: 26,
+    borderRadius: 7,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.white,
+  },
+  checkOn: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  addRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.cream,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderTopWidth: 0,
+    borderBottomLeftRadius: 14,
+    borderBottomRightRadius: 14,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    gap: spacing.sm,
+    minHeight: 48,
+  },
+  addCell: {
+    fontWeight: '400',
+  },
+  addBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 7,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addBtnOff: {
+    backgroundColor: colors.white,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+  },
+  empty: {
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderTopWidth: 0,
+    padding: spacing.lg,
+  },
+  emptyText: {
     fontSize: typography.caption,
     color: colors.muted,
     lineHeight: 20,
+    textAlign: 'center',
   },
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(10,22,40,0.45)',
-    justifyContent: 'center',
-    padding: spacing.lg,
-  },
-  sheet: {
-    margin: 0,
-  },
-  sheetTitle: {
-    fontSize: typography.heading,
-    fontWeight: '700',
-    color: colors.forest,
+  hint: {
+    fontSize: 11,
+    color: colors.muted,
+    lineHeight: 16,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+    textAlign: 'center',
   },
 });
