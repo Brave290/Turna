@@ -30,11 +30,29 @@ export function Badge({
   );
 }
 
-export function Stat({ label, value }: { label: string; value: string }) {
+export function Stat({
+  label,
+  value,
+  sub,
+  icon: Icon,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  icon?: React.ComponentType<any>;
+}) {
   return (
     <View style={styles.stat}>
-      <Text style={styles.statLabel}>{label}</Text>
+      <View style={styles.statHead}>
+        <Text style={styles.statLabel}>{label}</Text>
+        {Icon ? (
+          <View style={styles.statIcon}>
+            <Icon size={16} color={colors.primary} strokeWidth={2} />
+          </View>
+        ) : null}
+      </View>
       <Text style={styles.statValue}>{value}</Text>
+      {sub ? <Text style={styles.statSub}>{sub}</Text> : null}
     </View>
   );
 }
@@ -79,6 +97,27 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontSize: 13,
     fontWeight: '500',
+    flex: 1,
+  },
+  statHead: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  statIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0,122,101,0.10)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statSub: {
+    color: colors.muted,
+    fontSize: 12,
+    marginTop: 2,
   },
 });
 

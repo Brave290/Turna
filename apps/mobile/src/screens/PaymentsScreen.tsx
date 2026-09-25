@@ -145,6 +145,11 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     marginBottom: spacing.sm,
   },
+  headRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
   title: {
     fontSize: typography.title,
     fontWeight: '700',

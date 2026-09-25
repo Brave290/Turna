@@ -102,6 +102,7 @@ export function CircleDetailScreen({
       <FlatList
         data={[] as never[]}
         keyExtractor={() => 'x'}
+        renderItem={() => null}
         contentContainerStyle={styles.list}
         refreshControl={
           <RefreshControl

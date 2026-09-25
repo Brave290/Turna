@@ -37,7 +37,7 @@ function money(n: number, currency = 'NGN') {
   }
 }
 
-export function SoloLedgersScreen({ onOpen, onPush }: { onOpen: (id: string) => void; onPush?: (screen: any) => void } = {}) {
+export function SoloLedgersScreen({ onOpen, onPush }: { onOpen?: (id: string) => void; onPush?: (screen: any) => void } = {}) {
   const { user } = useAuth();
   const [rows, setRows] = useState<SoloLedger[]>([]);
   const [loading, setLoading] = useState(true);
@@ -101,7 +101,7 @@ export function SoloLedgersScreen({ onOpen, onPush }: { onOpen: (id: string) => 
     setDescription('');
     setCreating(false);
     await load();
-    onOpen(id);
+    onOpen?.(id);
   }
 
   async function remove(id: string, ledgerName: string) {
@@ -203,7 +203,7 @@ export function SoloLedgersScreen({ onOpen, onPush }: { onOpen: (id: string) => 
           }
           renderItem={({ item }) => (
             <Card style={styles.card}>
-              <Pressable onPress={() => onOpen(item.id)}>
+              <Pressable onPress={() => onOpen?.(item.id)}>
                 <Text style={styles.name}>{item.name}</Text>
                 {item.description ? (
                   <Text style={styles.desc} numberOfLines={2}>
@@ -229,7 +229,7 @@ export function SoloLedgersScreen({ onOpen, onPush }: { onOpen: (id: string) => 
                   }
                 />
                 <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                  <Button label="Open" variant="outline" onPress={() => onOpen(item.id)} style={styles.smallBtn} />
+                  <Button label="Open" variant="outline" onPress={() => onOpen?.(item.id)} style={styles.smallBtn} />
                   <Button
                     label="Delete"
                     variant="ghost"

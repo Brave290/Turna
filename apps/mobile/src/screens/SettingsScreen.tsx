@@ -3,6 +3,7 @@ import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'rea
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Card, Badge } from '../components/Card';
+import { Button } from '../components/Button';
 import { Screen } from '../components/Screen';
 import { colors, spacing, typography } from '../theme';
 

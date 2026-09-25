@@ -269,7 +269,7 @@ function VerifyGate({ email, onBack }: { email: string; onBack: () => void }) {
           <TextInput
             style={[styles.input, styles.codeInput]}
             value={code}
-            onChangeText={(t) => setCode(t.replace(/\D/g, '').slice(0, 6))}
+            onChangeText={(t: string) => setCode(t.replace(/\D/g, '').slice(0, 6))}
             placeholder="000000"
             placeholderTextColor="rgba(255,255,255,0.4)"
             keyboardType="number-pad"

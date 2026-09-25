@@ -8,11 +8,26 @@ import {
   Text,
   View,
 } from 'react-native';
+import {
+  Users,
+  UserPlus,
+  TrendingUp,
+  ArrowUpRight,
+  ArrowLeftRight,
+  Bell,
+  CalendarDays,
+  ChevronRight,
+  Home as HomeIcon,
+  PiggyBank,
+  Clock,
+  FileText,
+} from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Card, Badge, Stat } from '../components/Card';
 import { Screen } from '../components/Screen';
 import { colors, spacing, typography } from '../theme';
+import { formatCurrency, formatRelativeTime } from '../lib/format';
 
 type CircleRow = {
   id: string;
@@ -24,6 +39,7 @@ type CircleRow = {
   description?: string | null;
   current_cycle?: string | null;
   member_count?: number | null;
+  owner_id?: string;
 };
 
 type NotificationRow = {
@@ -34,39 +50,31 @@ type NotificationRow = {
   created_at: string;
 };
 
+type MembershipRow = {
+  id: string;
+  circle_id: string;
+  payout_position?: number | null;
+  circles: CircleRow | null;
+};
+
 type WalletRow = {
   circle_id: string;
   paid_amount: number;
   expected_amount: number;
 };
 
-function formatMoney(n: number, currency = 'NGN') {
-  try {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency,
-      maximumFractionDigits: 0,
-    }).format(n);
-  } catch {
-    return `${currency} ${n}`;
-  }
-}
+type ContributionRow = {
+  id: string;
+  status: string;
+  reported_amount?: number | null;
+  expected_amount?: number | null;
+  member_id: string;
+};
 
-function formatRelative(iso: string) {
-  try {
-    const diff = Date.now() - new Date(iso).getTime();
-    const m = Math.floor(diff / 60000);
-    if (m < 1) return 'just now';
-    if (m < 60) return `${m}m ago`;
-    const h = Math.floor(m / 60);
-    if (h < 24) return `${h}h ago`;
-    const d = Math.floor(h / 24);
-    if (d < 7) return `${d}d ago`;
-    return new Date(iso).toLocaleDateString('en-NG', { day: 'numeric', month: 'short' });
-  } catch {
-    return iso;
-  }
-}
+type PayoutRow = {
+  id: string;
+  status: string;
+};
 
 function greeting(name: string) {
   const h = new Date().getHours();
@@ -75,14 +83,31 @@ function greeting(name: string) {
   return `Good evening, ${name}`;
 }
 
-export function HomeScreen({ onNavigate, onPush }: { onNavigate?: (tab: string) => void; onPush?: (screen: any) => void } = {}) {
+function toneFor(status: string): 'active' | 'pending' | 'muted' {
+  if (status === 'active') return 'active';
+  if (status === 'paused' || status === 'pending') return 'pending';
+  return 'muted';
+}
+
+export function HomeScreen({
+  onNavigate,
+  onPush,
+}: {
+  onNavigate?: (tab: string) => void;
+  onPush?: (screen: any) => void;
+} = {}) {
   const { displayName, user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [circles, setCircles] = useState<CircleRow[]>([]);
-  const [memberships, setMemberships] = useState<CircleRow[]>([]);
+  const [memberships, setMemberships] = useState<MembershipRow[]>([]);
   const [notifications, setNotifications] = useState<NotificationRow[]>([]);
   const [wallets, setWallets] = useState<WalletRow[]>([]);
+  const [stats, setStats] = useState({
+    pendingContributions: 0,
+    pendingPayouts: 0,
+    totalContributed: 0,
+  });
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -92,37 +117,82 @@ export function HomeScreen({ onNavigate, onPush }: { onNavigate?: (tab: string) 
       const [cRes, mRes, nRes, wRes] = await Promise.all([
         supabase
           .from('circles')
-          .select('id, name, status, contribution_amount, currency, frequency, description, current_cycle, member_count')
+          .select('*')
           .order('created_at', { ascending: false })
           .limit(50),
         supabase
           .from('circle_members')
-          .select(
-            'circle_id, circles(id, name, status, contribution_amount, currency, frequency, description, current_cycle, member_count)'
-          )
+          .select('*, circles(*)')
           .eq('user_id', user.id)
           .eq('status', 'active')
           .limit(50),
         supabase
           .from('notifications')
-          .select('id, title, body, status, created_at')
+          .select('*')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
-          .limit(10),
+          .limit(20),
         supabase
-          .from('wallets' as never)
-          .select('*' as never)
-          .limit(100),
+          .from('wallet_balances' as never)
+          .select(
+            'circle_id, paid_amount, expected_amount, circles(name, currency)' as never
+          )
+          .eq('user_id' as never, user.id as never)
+          .limit(50),
       ]);
-      setCircles((cRes.data ?? []) as CircleRow[]);
-      const m = (mRes.data ?? []) as unknown as { circles: CircleRow | null }[];
-      setMemberships(m.map((x) => x.circles).filter(Boolean) as CircleRow[]);
+
+      const circleList = (cRes.data ?? []) as CircleRow[];
+      const memberList = (mRes.data ?? []) as unknown as MembershipRow[];
+      setCircles(circleList);
+      setMemberships(memberList);
       setNotifications((nRes.data ?? []) as NotificationRow[]);
-      const w = (wRes.data ?? []) as unknown as WalletRow[] | null;
+      const w = wRes.data as unknown as WalletRow[] | null;
       setWallets(Array.isArray(w) ? w : []);
-      if (cRes.error && cRes.error.code !== 'PGRST116') setError(cRes.error.message);
-      if (wRes.error) {
-        /* wallets optional — ignore missing table */
+      if (cRes.error && cRes.error.code !== 'PGRST116') {
+        setError(cRes.error.message);
+      }
+
+      // Stats — same queries/semantics as web getDashboardData()
+      if (circleList.length > 0) {
+        const ids = circleList.map((c) => c.id);
+        const myMemberIds = new Set(memberList.map((m) => m.id));
+        const [contribRes, payoutRes] = await Promise.all([
+          supabase
+            .from('contributions')
+            .select(
+              'id, status, reported_amount, expected_amount, cycle_id, member_id, contribution_cycles!inner(circle_id)'
+            )
+            .in('contribution_cycles.circle_id', ids)
+            .limit(200),
+          supabase
+            .from('payouts')
+            .select('id, status, expected_amount, actual_amount, cycle_id, contribution_cycles!inner(circle_id)')
+            .in('contribution_cycles.circle_id', ids)
+            .limit(200),
+        ]);
+        const contributions = (contribRes.data ?? []) as unknown as ContributionRow[];
+        const payouts = (payoutRes.data ?? []) as unknown as PayoutRow[];
+        setStats({
+          pendingContributions: contributions.filter(
+            (c) =>
+              myMemberIds.has(c.member_id) &&
+              (c.status === 'pending' || c.status === 'reported')
+          ).length,
+          pendingPayouts: payouts.filter(
+            (p) =>
+              p.status === 'pending' ||
+              p.status === 'initiated' ||
+              p.status === 'sent'
+          ).length,
+          totalContributed: contributions
+            .filter((c) => c.status === 'confirmed' && myMemberIds.has(c.member_id))
+            .reduce(
+              (sum, c) => sum + Number(c.reported_amount ?? c.expected_amount ?? 0),
+              0
+            ),
+        });
+      } else {
+        setStats({ pendingContributions: 0, pendingPayouts: 0, totalContributed: 0 });
       }
     } catch {
       setError('Could not load dashboard. Pull to retry.');
@@ -136,16 +206,35 @@ export function HomeScreen({ onNavigate, onPush }: { onNavigate?: (tab: string) 
     void load();
   }, [load]);
 
-  const all = [...circles, ...memberships.filter((m) => !circles.find((c) => c.id === m.id))];
+  const all = [
+    ...circles,
+    ...memberships
+      .map((m) => m.circles)
+      .filter((c): c is CircleRow => !!c && !circles.find((x) => x.id === c.id)),
+  ];
   const name = displayName || 'there';
   const firstName = name.split(/\s+/)[0];
   const hasCircles = all.length > 0;
 
   const totalPaid = wallets.reduce((s, w) => s + Number(w.paid_amount || 0), 0);
-  const totalExpected = wallets.reduce((s, w) => s + Number(w.expected_amount || 0), 0);
+  const totalExpected = wallets.reduce(
+    (s, w) => s + Number(w.expected_amount || 0),
+    0
+  );
   const settlePct =
-    totalExpected > 0 ? Math.min(100, Math.round((totalPaid / totalExpected) * 100)) : 0;
-  const pendingActions = notifications.filter((n) => n.status !== 'read').length;
+    totalExpected > 0
+      ? Math.min(100, Math.round((totalPaid / totalExpected) * 100))
+      : 0;
+  const pendingActions = stats.pendingContributions + stats.pendingPayouts;
+  const dueHint =
+    stats.pendingContributions > 0
+      ? `You have ${stats.pendingContributions} contribution${
+          stats.pendingContributions === 1 ? '' : 's'
+        } awaiting action.`
+      : null;
+
+  const recentActivity = notifications.slice(0, 6);
+  const recentCircles = all.slice(0, 4);
 
   return (
     <Screen tone="cream">
@@ -164,7 +253,9 @@ export function HomeScreen({ onNavigate, onPush }: { onNavigate?: (tab: string) 
       >
         <View style={styles.greetBlock}>
           <Text style={styles.greeting}>{greeting(firstName)}</Text>
-          <Text style={styles.sub}>Here's what's happening with your savings circles.</Text>
+          <Text style={styles.sub}>
+            Here's what's happening with your savings circles.
+          </Text>
         </View>
 
         {loading ? (
@@ -181,28 +272,40 @@ export function HomeScreen({ onNavigate, onPush }: { onNavigate?: (tab: string) 
 
             <View style={styles.hero}>
               <Text style={styles.heroLabel}>Total savings</Text>
-              <Text style={styles.heroValue}>{formatMoney(totalPaid)}</Text>
+              <Text style={styles.heroValue}>{formatCurrency(totalPaid)}</Text>
               <View style={styles.heroFoot}>
                 <View style={{ flex: 1 }}>
                   {hasCircles ? (
-                    <Text style={styles.heroMint}>{settlePct}% settled this cycle</Text>
+                    <Text style={styles.heroMint}>
+                      {settlePct}% settled this cycle
+                    </Text>
                   ) : (
-                    <Text style={styles.heroDim}>Start your first savings circle</Text>
+                    <Text style={styles.heroDim}>
+                      Start your first savings circle
+                    </Text>
                   )}
                   <Text style={styles.heroTiny}>Confirmed contributions</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
                   <Text style={styles.heroTiny}>Expected</Text>
-                  <Text style={styles.heroExpected}>{formatMoney(totalExpected)}</Text>
+                  <Text style={styles.heroExpected}>
+                    {formatCurrency(totalExpected)}
+                  </Text>
                 </View>
               </View>
             </View>
 
             <View style={styles.actions}>
-              <Pressable style={[styles.btn, styles.btnPrimary]} onPress={() => onNavigate?.('circles')}>
+              <Pressable
+                style={[styles.btn, styles.btnPrimary]}
+                onPress={() => onPush?.({ name: 'new-circle' })}
+              >
                 <Text style={styles.btnPrimaryText}>Create a Circle</Text>
               </Pressable>
-              <Pressable style={[styles.btn, styles.btnOutline]} onPress={() => onNavigate?.('circles')}>
+              <Pressable
+                style={[styles.btn, styles.btnOutline]}
+                onPress={() => onNavigate?.('circles')}
+              >
                 <Text style={styles.btnOutlineText}>Join a Circle</Text>
               </Pressable>
             </View>
@@ -210,111 +313,251 @@ export function HomeScreen({ onNavigate, onPush }: { onNavigate?: (tab: string) 
             {hasCircles && (
               <View style={styles.statGrid}>
                 <Card style={styles.statCard}>
-                  <Stat label="My Circles" value={String(all.filter((c) => c.status === 'active').length)} />
+                  <Stat
+                    icon={Users}
+                    label="My Circles"
+                    value={String(all.filter((c) => c.status === 'active').length)}
+                    sub="Active circles"
+                  />
                 </Card>
                 <Card style={styles.statCard}>
-                  <Stat label="This Cycle" value={formatMoney(totalPaid)} />
+                  <Stat
+                    icon={PiggyBank}
+                    label="This Cycle"
+                    value={formatCurrency(stats.totalContributed)}
+                    sub="Total contributed"
+                  />
                 </Card>
                 <Card style={styles.statCard}>
-                  <Stat label="Total Payouts" value={formatMoney(totalPaid)} />
+                  <Stat
+                    icon={ArrowLeftRight}
+                    label="Total Payouts"
+                    value={formatCurrency(totalPaid)}
+                    sub="Received"
+                  />
                 </Card>
                 <Card style={styles.statCard}>
-                  <Stat label="Pending Actions" value={String(pendingActions)} />
+                  <Stat
+                    icon={Bell}
+                    label="Pending Actions"
+                    value={String(pendingActions)}
+                    sub={pendingActions > 0 ? 'Needs attention' : 'All clear'}
+                  />
                 </Card>
               </View>
             )}
 
             {!hasCircles && (
               <Card style={styles.emptyCard}>
+                <View style={styles.emptyIcon}>
+                  <HomeIcon size={24} color={colors.primary} strokeWidth={2} />
+                </View>
                 <Text style={styles.emptyTitle}>Your savings circles</Text>
                 <Text style={styles.emptyBody}>
-                  You haven't joined a savings circle yet. Start a circle with your friends,
-                  family, colleagues or community.
+                  You haven't joined a savings circle yet. Start a circle with your
+                  friends, family, colleagues or community.
                 </Text>
                 <View style={[styles.actions, { marginTop: spacing.lg }]}>
-                  <Pressable style={[styles.btn, styles.btnPrimary]} onPress={() => onNavigate?.('circles')}>
+                  <Pressable
+                    style={[styles.btn, styles.btnPrimary]}
+                    onPress={() => onPush?.({ name: 'new-circle' })}
+                  >
                     <Text style={styles.btnPrimaryText}>Create a Circle</Text>
                   </Pressable>
-                  <Pressable style={[styles.btn, styles.btnOutline]} onPress={() => onNavigate?.('circles')}>
+                  <Pressable
+                    style={[styles.btn, styles.btnOutline]}
+                    onPress={() => onNavigate?.('circles')}
+                  >
                     <Text style={styles.btnOutlineText}>Join a Circle</Text>
                   </Pressable>
                 </View>
               </Card>
             )}
 
+            {dueHint && (
+              <Pressable
+                style={styles.dueCard}
+                onPress={() => onPush?.({ name: 'contributions' })}
+              >
+                <View style={styles.dueIcon}>
+                  <CalendarDays size={18} color={colors.warning} strokeWidth={2} />
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={styles.dueTitle}>You have contributions waiting</Text>
+                  <Text style={styles.dueBody}>{dueHint}</Text>
+                </View>
+                <ChevronRight size={16} color={colors.muted} strokeWidth={2} />
+              </Pressable>
+            )}
+
             {hasCircles && (
               <>
                 <View style={styles.sectionHead}>
                   <Text style={styles.sectionTitle}>My Circles</Text>
-                  <Text style={styles.viewAll} onPress={() => onNavigate?.('circles')}>
+                  <Text
+                    style={styles.viewAll}
+                    onPress={() => onNavigate?.('circles')}
+                  >
                     View all ›
                   </Text>
                 </View>
-                {all.slice(0, 4).map((c) => (
-                  <Card key={c.id} style={styles.circleCard}>
-                    <Pressable onPress={() => onNavigate?.('circles')}>
-                      <View style={styles.circleRow}>
-                        <View style={styles.circleMain}>
-                          <Text style={styles.circleName}>{c.name}</Text>
-                          <Text style={styles.circleMeta}>
-                            {formatMoney(Number(c.contribution_amount || 0), c.currency)} /{' '}
-                            {c.frequency}
-                          </Text>
+                {recentCircles.map((c) => {
+                  const wallet = wallets.find((w) => w.circle_id === c.id);
+                  const paid = Number(wallet?.paid_amount || 0);
+                  const expected = Number(wallet?.expected_amount || 0);
+                  const progress =
+                    expected > 0
+                      ? Math.min(100, Math.round((paid / expected) * 100))
+                      : 0;
+                  const membership = memberships.find(
+                    (m) => m.circle_id === c.id
+                  );
+                  return (
+                    <Card key={c.id} style={styles.circleCard}>
+                      <Pressable
+                        onPress={() =>
+                          onPush?.({ name: 'circle-detail', circleId: c.id })
+                        }
+                      >
+                        <View style={styles.circleRow}>
+                          <View style={styles.circleMain}>
+                            <Text style={styles.circleName}>{c.name}</Text>
+                            <Text style={styles.circleMeta}>
+                              {formatCurrency(
+                                Number(c.contribution_amount || 0),
+                                c.currency
+                              )}{' '}
+                              / {c.frequency}
+                            </Text>
+                          </View>
+                          <Badge label={c.status} tone={toneFor(c.status)} />
                         </View>
-                        <Badge
-                          label={c.status}
-                          tone={
-                            c.status === 'active' ? 'active' : c.status === 'paused' ? 'pending' : 'muted'
-                          }
-                        />
-                      </View>
-                      <Text style={styles.circleCycle}>
-                        Cycle {c.current_cycle || 0}
-                        {c.member_count != null ? ` · ${c.member_count} members` : ''}
-                      </Text>
-                    </Pressable>
-                  </Card>
-                ))}
+                        <View style={styles.circleMetaRow}>
+                          {c.member_count != null && (
+                            <View style={styles.metaItem}>
+                              <Users size={14} color={colors.muted} strokeWidth={1.75} />
+                              <Text style={styles.metaText}>
+                                {c.member_count} members
+                              </Text>
+                            </View>
+                          )}
+                          {membership?.payout_position != null && (
+                            <View style={styles.metaItem}>
+                              <Clock size={14} color={colors.muted} strokeWidth={1.75} />
+                              <Text style={styles.metaText}>
+                                Position {membership.payout_position}
+                              </Text>
+                            </View>
+                          )}
+                          <View style={styles.metaItem}>
+                            <FileText size={14} color={colors.muted} strokeWidth={1.75} />
+                            <Text style={styles.metaText}>
+                              Cycle {c.current_cycle || 0}
+                            </Text>
+                          </View>
+                        </View>
+                        {expected > 0 && (
+                          <View style={{ marginTop: spacing.sm }}>
+                            <View style={styles.progressTrack}>
+                              <View
+                                style={[
+                                  styles.progressFill,
+                                  { width: `${progress}%` },
+                                ]}
+                              />
+                            </View>
+                            <Text style={styles.progressLabel}>
+                              {formatCurrency(paid, c.currency)} of{' '}
+                              {formatCurrency(expected, c.currency)} settled
+                            </Text>
+                          </View>
+                        )}
+                      </Pressable>
+                    </Card>
+                  );
+                })}
               </>
             )}
 
-<View style={styles.sectionHead}>
-                  <Text style={styles.sectionTitle}>Recent Activity</Text>
-                  <Text style={styles.viewAll} onPress={() => onPush?.({ name: 'notifications' })}>
-                    View all ›
-                  </Text>
+            <View style={styles.sectionHead}>
+              <Text style={styles.sectionTitle}>Recent Activity</Text>
+              <Text
+                style={styles.viewAll}
+                onPress={() => onPush?.({ name: 'notifications' })}
+              >
+                View all ›
+              </Text>
+            </View>
+            <Card style={styles.activityCard}>
+              {recentActivity.length === 0 ? (
+                <View style={styles.activityEmpty}>
+                  <ArrowUpRight size={26} color={colors.muted} strokeWidth={1.75} />
+                  <Text style={styles.emptyBody}>No recent activity yet.</Text>
                 </View>
-            {notifications.length === 0 ? (
-              <Card>
-                <Text style={styles.emptyBody}>No recent activity yet.</Text>
-              </Card>
-            ) : (
-              notifications.slice(0, 6).map((n) => (
-                <Card key={n.id} style={styles.notifCard}>
-                  <View style={styles.notifRow}>
-                    <View style={styles.notifMain}>
-                      <Text style={styles.notifTitle}>{n.title}</Text>
-                      <Text style={styles.notifBody} numberOfLines={1}>
+              ) : (
+                recentActivity.map((n, i) => (
+                  <View
+                    key={n.id}
+                    style={[
+                      styles.activityRow,
+                      i > 0 && styles.activityRowBorder,
+                    ]}
+                  >
+                    <View style={styles.activityIcon}>
+                      <ArrowUpRight
+                        size={16}
+                        color={colors.primary}
+                        strokeWidth={2}
+                      />
+                    </View>
+                    <View style={styles.activityMain}>
+                      <Text style={styles.activityTitle} numberOfLines={1}>
+                        {n.title}
+                      </Text>
+                      <Text style={styles.activityBody} numberOfLines={1}>
                         {n.body}
                       </Text>
                     </View>
-                    <Text style={styles.notifWhen}>{formatRelative(n.created_at)}</Text>
+                    <Text style={styles.activityWhen}>
+                      {formatRelativeTime(n.created_at)}
+                    </Text>
                   </View>
-                </Card>
-              ))
-            )}
+                ))
+              )}
+            </Card>
 
             <View style={styles.strip}>
-              <Pressable style={[styles.stripItem, styles.stripCard]} onPress={() => onPush?.({ name: 'insights' })}>
+              <Pressable
+                style={styles.stripCard}
+                onPress={() => onNavigate?.('ledger')}
+              >
+                <FileText
+                  size={18}
+                  color={colors.primary}
+                  strokeWidth={2}
+                  style={{ marginBottom: spacing.sm }}
+                />
+                <Text style={styles.stripLabel}>Open ledger</Text>
+              </Pressable>
+              <Pressable
+                style={styles.stripCard}
+                onPress={() => onPush?.({ name: 'insights' })}
+              >
+                <TrendingUp
+                  size={18}
+                  color={colors.primary}
+                  strokeWidth={2}
+                  style={{ marginBottom: spacing.sm }}
+                />
                 <Text style={styles.stripLabel}>Insights</Text>
               </Pressable>
-              <Pressable style={[styles.stripItem, styles.stripCard]} onPress={() => onPush?.({ name: 'payments' })}>
-                <Text style={styles.stripLabel}>Payments</Text>
-              </Pressable>
-              <Pressable style={[styles.stripItem, styles.stripCard]} onPress={() => onNavigate?.('solo')}>
-                <Text style={styles.stripLabel}>Solo Ledger</Text>
-              </Pressable>
             </View>
+
+            {hasCircles && totalPaid === 0 && (
+              <Text style={styles.tip}>
+                Start contributing to build your total savings.
+              </Text>
+            )}
           </>
         )}
       </ScrollView>
@@ -400,7 +643,7 @@ const styles = StyleSheet.create({
   btn: {
     flex: 1,
     minHeight: 46,
-    borderRadius: radiusLg(),
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.md,
@@ -439,6 +682,15 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xl,
     marginBottom: spacing.md,
   },
+  emptyIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0,122,101,0.10)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
   emptyTitle: {
     fontSize: typography.heading,
     fontWeight: '600',
@@ -450,6 +702,36 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: spacing.sm,
     lineHeight: 22,
+  },
+  dueCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(138,90,0,0.4)',
+    backgroundColor: 'rgba(138,90,0,0.10)',
+    borderRadius: 18,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 14,
+    marginBottom: spacing.md,
+  },
+  dueIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: 'rgba(138,90,0,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dueTitle: {
+    fontSize: typography.body,
+    fontWeight: '500',
+    color: colors.forest,
+  },
+  dueBody: {
+    fontSize: 12,
+    color: colors.muted,
+    marginTop: 2,
   },
   sectionHead: {
     flexDirection: 'row',
@@ -477,6 +759,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.sm,
+    marginBottom: spacing.sm,
   },
   circleMain: {
     flex: 1,
@@ -492,37 +775,80 @@ const styles = StyleSheet.create({
     color: colors.muted,
     marginTop: 2,
   },
-  circleCycle: {
+  circleMetaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  metaText: {
     fontSize: 12,
     color: colors.muted,
-    marginTop: spacing.sm,
   },
-  notifCard: {
-    marginBottom: 0,
-    paddingVertical: spacing.md,
-    borderRadius: 0,
-    borderBottomWidth: 0,
+  progressTrack: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.border,
+    overflow: 'hidden',
   },
-  notifRow: {
-    flexDirection: 'row',
+  progressFill: {
+    height: '100%',
+    borderRadius: 3,
+    backgroundColor: colors.primary,
+  },
+  progressLabel: {
+    fontSize: 12,
+    color: colors.muted,
+    marginTop: 6,
+  },
+  activityCard: {
+    padding: 0,
+    overflow: 'hidden',
+  },
+  activityEmpty: {
+    alignItems: 'center',
+    paddingVertical: spacing.xl,
     gap: spacing.sm,
-    alignItems: 'flex-start',
   },
-  notifMain: {
+  activityRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 14,
+  },
+  activityRowBorder: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(208,219,232,0.7)',
+  },
+  activityIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0,122,101,0.10)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  activityMain: {
     flex: 1,
     minWidth: 0,
   },
-  notifTitle: {
+  activityTitle: {
     fontSize: typography.body,
     fontWeight: '500',
     color: colors.forest,
   },
-  notifBody: {
-    fontSize: typography.caption,
+  activityBody: {
+    fontSize: 12,
     color: colors.muted,
     marginTop: 2,
   },
-  notifWhen: {
+  activityWhen: {
     fontSize: 11,
     color: colors.muted,
   },
@@ -531,22 +857,26 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginTop: spacing.md,
   },
-  stripItem: {
-    flex: 1,
-  },
   stripCard: {
+    flex: 1,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 16,
+    borderRadius: 18,
     backgroundColor: colors.white,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
-    alignItems: 'flex-start',
   },
   stripLabel: {
     fontSize: typography.body,
     fontWeight: '500',
     color: colors.forest,
+  },
+  tip: {
+    fontSize: 12,
+    color: colors.muted,
+    textAlign: 'center',
+    marginTop: spacing.lg,
+    paddingBottom: spacing.sm,
   },
   errorCard: {
     borderColor: colors.error,
@@ -557,7 +887,3 @@ const styles = StyleSheet.create({
     fontSize: typography.caption,
   },
 });
-
-function radiusLg() {
-  return 16;
-}

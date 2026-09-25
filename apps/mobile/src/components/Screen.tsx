@@ -14,10 +14,7 @@ export function Screen({
   const forest = tone === 'forest';
   return (
     <SafeAreaView style={[styles.root, forest ? styles.forest : styles.cream, style]}>
-      <StatusBar
-        barStyle={forest ? 'light-content' : 'dark-content'}
-        backgroundColor={forest ? colors.forest : colors.cream}
-      />
+      <StatusBar barStyle={forest ? 'light-content' : 'dark-content'} />
       {children}
     </SafeAreaView>
   );
