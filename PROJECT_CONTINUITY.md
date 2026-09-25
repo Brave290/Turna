@@ -633,3 +633,24 @@ Each session should append:
 2. Set `ADMIN_EMAILS` on Vercel → open `/dashboard/admin`
 3. Next: mobile app fix (user-stated next step after Phase 42)
 
+
+### Session 2026-09-25 (Naming, parity, offline, payments removed)
+
+**Goal**: Short auto versions + fixed asset names; exact web↔mobile parity; no web-diverts; offline-first; strip payment gateway; branded selectors/popups/receipts; motion; cron keep-alive.
+
+**Completed**:
+- Releases auto `v1.0.N` (N+1 per release/tag, fallback 1) with fixed assets `turna.apk` / `turna.aab` / `version.json` (both repos); `/api/app/version` + `apkName: turna.apk`; Gradle codegens `src/generated/version.ts` (1.0.1/29839245 at last build); CI slimmed (checks job only, iOS + redundant web build dropped, concurrency auto-cancel). Commits `99f9322` → releases v1.0.1 verified.
+- **Repo was made PUBLIC for free unlimited Actions minutes** (secret history scan was clean first) — **flip back to PRIVATE with `gh repo edit Brave290/Turna --visibility private` when the user says everything is done**.
+- Landing: all CTAs "Try for free" open `AppDownloadModal` (`87d7524`).
+- Backend: `lib/supabase-request.ts` Bearer+cookie client wired into sensitive-otp/banks/bank-accounts/report; new `api/mobile/password` (`request|verify`, custom OTP) + `api/mobile/delete-account` (`fd7c65b`).
+- **Mobile**: Solo sheet → real spreadsheet (name/amount/PAID cells, month popup at create, sheet name = month, rotation auto-computed, swipe month bar via PanResponder, auto-advance when month fully paid); Android BackHandler stack; login eye icon; admin stripped (web `/dashboard/admin` is the admin); shared `Loading` veil+centered spinner; shared branded `Popup`/`useConfirm`/`AppSelect`/`Toast` — zero native `Alert` left; Screen entrance fade/slide + button press-scale.
+- **Offline-first**: `lib/offline.ts` read cache (home/circles/ledger/notifications hydrate first) + ordered mutation queue drained on sign-in and after every successful load; offline-safe circle create + profile save (toast "will sync"). Solo store already offline. Daily DB ping: `vercel.json` cron 03:00 + `.github/workflows/db-ping.yml` (17 03 UTC, `CRON_SECRET` GitHub secret set from Vercel).
+- **SettingsSubScreen fully ported** (19 routes, web-parity copy, branded components, API-backed password/delete/report/banks; avatar upload + dark theme + translations still pending deps/features).
+- **Payment gateway removed** (client decision: manual payments): deleted `lib/paystack`, `api/payments/*`, `api/cron/autopay` + vercel cron entry, `pay-contribution`/`send-payout`/`payment-success-banner`, mobile `PaymentsScreen`; new `lib/bank-lookup.ts` (bank list/name lookup only), `recordPayout` action + button; `/dashboard/payments` repurposed read-only history; onboarding/terms/privacy/copy rewritten manual-wording; receipt page branded + `window.print()` "Download PDF" + print CSS. Follow-up: set `BANK_LOOKUP_KEY` in Vercel for live name lookup.
+- Web: last native `<select>`s → `BrandSelect` (now with `disabled`), cookie banner contrast fixed (forest card, readable buttons, light icon), landing glass nav + dashboard topbar theme-aware in dark mode.
+- No web-divert strings left in mobile (grep `on the web|browser|lives on` = 0); in-app forgot-password popup sends reset link to `/auth/reset-password`.
+
+**Next Session**:
+1. Watch CI `c12b11f` → green; verify live: `/api/app/version`, receipt page print view, no gateway links.
+2. Screen tidy/button-reduction + deep-link audit pass (user asked; partially open).
+3. When user confirms done: flip repo back to private (step above) + note Actions minutes revert to free-2000/mo.
