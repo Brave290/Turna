@@ -8,7 +8,7 @@ export type ApiResult<T = unknown> = {
   offline?: boolean;
 };
 
-async function post<T = unknown>(
+export async function post<T = unknown>(
   path: string,
   body: Record<string, unknown>,
   opts?: { auth?: boolean }

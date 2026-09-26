@@ -9,6 +9,7 @@ import React, {
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { mobileAuth } from '../lib/api';
+import { isAdminEmail } from '../lib/config';
 
 type AuthStatus = 'loading' | 'signedOut' | 'signedIn' | 'needsVerify' | 'onboarding';
 
@@ -19,6 +20,7 @@ type AuthContextValue = {
   email: string | null;
   displayName: string | null;
   pendingEmail: string | null;
+  isAdmin: boolean;
   signIn: (email: string, password: string) => Promise<{ error?: string; needsVerify?: boolean }>;
   signUp: (
     email: string,
@@ -188,6 +190,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         session?.user?.email?.split('@')[0] ??
         null,
       pendingEmail,
+      isAdmin: isAdminEmail(session?.user?.email),
       signIn,
       signUp,
       verifyOtp,

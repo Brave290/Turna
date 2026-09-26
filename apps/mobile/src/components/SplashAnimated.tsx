@@ -7,8 +7,8 @@ const APP_ICON = require('../../assets/app-icon-192.png');
 
 /**
  * The one and only splash: continues the native app-icon splash on the same
- * cream background, then animates the icon (spring scale-in) and the Turna
- * wordmark (rise + fade, staggered behind the icon).
+ * cream background, then animates the icon (spring scale-in) and the
+ * "Animated Turna" wordmark (rise + fade, staggered behind the icon).
  */
 export function SplashAnimated() {
   const { reduceMotion } = useMotion();
@@ -40,7 +40,7 @@ export function SplashAnimated() {
       }),
     ]).start();
     Animated.sequence([
-      Animated.delay(160),
+      Animated.delay(80),
       Animated.parallel([
         Animated.timing(textY, {
           toValue: 0,
@@ -77,7 +77,7 @@ export function SplashAnimated() {
           },
         ]}
       >
-        Turna
+        Animated Turna
       </Animated.Text>
     </View>
   );

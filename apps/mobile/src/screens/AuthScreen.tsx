@@ -13,10 +13,12 @@ import {
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/Button';
+import { Enter } from '../components/Enter';
 import { Logo } from '../components/Logo';
 import { MicButton } from '../components/MicButton';
 import { Popup } from '../components/Popup';
-import { supabase } from '../lib/supabase';
+import { useClipboardOtp } from '../lib/otp-clipboard';
+import { post as apiPost } from '../lib/api';
 import { colors, radius, spacing, typography, type Palette } from '../theme';
 import { Eye, EyeOff } from 'lucide-react-native';
 import { usePaletteStyles } from '../context/ThemeContext';
@@ -72,11 +74,12 @@ export function AuthScreen() {
     setResetBusy(true);
     setResetError(null);
     try {
-      const { error: e } = await supabase.auth.resetPasswordForEmail(target, {
-        redirectTo: 'https://turnaapp.vercel.app/auth/reset-password',
-      });
-      if (e) {
-        setResetError(e.message);
+      const res = await apiPost<{ success?: string }>(
+        '/api/mobile/password-reset',
+        { email: target }
+      );
+      if (!res.ok) {
+        setResetError(res.error ?? 'Could not send reset email');
         return;
       }
       setResetSent(true);
@@ -139,154 +142,183 @@ export function AuthScreen() {
   }
 
   if (mode === 'verify-pending') {
-    return <VerifyGate email={email} onBack={() => setMode('login')} />;
+    return <VerifyGate key="verify" email={email} onBack={() => setMode('login')} />;
   }
 
   return (
     <KeyboardAvoidingView
+      key={mode}
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <View style={styles.logoWrap}>
-          <Logo variant="default" size={44} />
-        </View>
-        <Text style={styles.title}>
-          {mode === 'login' ? 'Welcome back' : 'Create your account'}
-        </Text>
-        <Text style={styles.sub}>
-          {mode === 'login'
-            ? 'Sign in to pick up where you left off.'
-            : 'Save together. Grow together.'}
-        </Text>
+        <Enter delay={0}>
+          <View style={styles.logoWrap}>
+            <Logo variant="default" size={44} />
+          </View>
+        </Enter>
+        <Enter delay={80}>
+          <Text style={styles.title}>
+            {mode === 'login' ? 'Welcome back' : 'Create your account'}
+          </Text>
+        </Enter>
+        <Enter delay={140}>
+          <Text style={styles.sub}>
+            {mode === 'login'
+              ? 'Sign in to pick up where you left off.'
+              : 'Save together. Grow together.'}
+          </Text>
+        </Enter>
 
         {mode === 'signup' && (
-          <View style={styles.field}>
-            <Text style={styles.label}>Full name</Text>
-            <TextInput
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              placeholder="Jane Okafor"
-              placeholderTextColor={p.textMuted}
-              autoCapitalize="words"
-            />
-          </View>
+          <Enter delay={200}>
+            <View style={styles.field}>
+              <Text style={styles.label}>Full name</Text>
+              <TextInput
+                style={styles.input}
+                value={name}
+                onChangeText={setName}
+                placeholder="Jane Okafor"
+                placeholderTextColor={p.textMuted}
+                autoCapitalize="words"
+              />
+            </View>
+          </Enter>
         )}
 
-        <View style={styles.field}>
-          <Text style={styles.label}>Email</Text>
-          <View style={styles.pwWrap}>
-            <TextInput
-              style={[styles.input, styles.inputMic]}
-              value={email}
-              onChangeText={setEmail}
-              placeholder="you@example.com"
-              placeholderTextColor={p.textMuted}
-              autoCapitalize="none"
-              autoComplete="email"
-              keyboardType="email-address"
-              textContentType="emailAddress"
-              importantForAutofill="yes"
-            />
-            <MicButton value={email} onChangeText={setEmail} />
+        <Enter delay={260}>
+          <View style={styles.field}>
+            <Text style={styles.label}>Email</Text>
+            <View style={styles.pwWrap}>
+              <TextInput
+                style={[styles.input, styles.inputMic]}
+                value={email}
+                onChangeText={setEmail}
+                placeholder="you@example.com"
+                placeholderTextColor={p.textMuted}
+                autoCapitalize="none"
+                autoComplete="email"
+                keyboardType="email-address"
+                textContentType="emailAddress"
+                importantForAutofill="yes"
+              />
+              <MicButton value={email} onChangeText={setEmail} />
+            </View>
           </View>
-        </View>
+        </Enter>
 
-        <View style={styles.field}>
-          <View style={styles.passwordHead}>
-            <Text style={styles.label}>Password</Text>
-            {mode === 'login' && (
-              <Text
-                style={styles.forgot}
-                onPress={() => {
-                  setResetEmail(email);
-                  setResetSent(false);
-                  setResetError(null);
-                  setResetOpen(true);
-                }}
-              >
-                Forgot password?
-              </Text>
-            )}
-          </View>
-          <View style={styles.pwWrap}>
-            <TextInput
-              style={[styles.input, styles.pwInput]}
-              value={password}
-              onChangeText={setPassword}
-              placeholder={mode === 'login' ? 'Enter your password' : 'At least 8 characters'}
-              placeholderTextColor={p.textMuted}
-              secureTextEntry={!showPw}
-              autoComplete="password"
-            />
-            <Pressable
-              style={styles.eyeBtn}
-              onPress={() => setShowPw((v) => !v)}
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel={showPw ? 'Hide password' : 'Show password'}
-            >
-              {showPw ? (
-                <EyeOff size={18} color={p.textMuted} />
-              ) : (
-                <Eye size={18} color={p.textMuted} />
+        <Enter delay={320}>
+          <View style={styles.field}>
+            <View style={styles.passwordHead}>
+              <Text style={styles.label}>Password</Text>
+              {mode === 'login' && (
+                <Text
+                  style={styles.forgot}
+                  onPress={() => {
+                    setResetEmail(email);
+                    setResetSent(false);
+                    setResetError(null);
+                    setResetOpen(true);
+                  }}
+                >
+                  Forgot password?
+                </Text>
               )}
-            </Pressable>
+            </View>
+            <View style={styles.pwWrap}>
+              <TextInput
+                style={[styles.input, styles.pwInput]}
+                value={password}
+                onChangeText={setPassword}
+                placeholder={mode === 'login' ? 'Enter your password' : 'At least 8 characters'}
+                placeholderTextColor={p.textMuted}
+                secureTextEntry={!showPw}
+                autoComplete="password"
+              />
+              <Pressable
+                style={styles.eyeBtn}
+                onPress={() => setShowPw((v) => !v)}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel={showPw ? 'Hide password' : 'Show password'}
+              >
+                {showPw ? (
+                  <EyeOff size={18} color={p.textMuted} />
+                ) : (
+                  <Eye size={18} color={p.textMuted} />
+                )}
+              </Pressable>
+            </View>
           </View>
-        </View>
+        </Enter>
 
-        <View style={styles.checkRow}>
-          <Switch
-            value={remember}
-            onValueChange={setRemember}
-            trackColor={{ false: p.border, true: p.primarySolid }}
-            thumbColor={colors.white}
-          />
-          <Text style={styles.checkLabel}>Remember my email</Text>
-        </View>
-
-        <Pressable style={styles.checkRow} onPress={() => setAgreed((v) => !v)}>
-          <View style={[styles.checkbox, agreed && styles.checkboxOn]}>
-            {agreed ? <Text style={styles.checkMark}>✓</Text> : null}
+        <Enter delay={380}>
+          <View style={styles.checkRow}>
+            <Switch
+              value={remember}
+              onValueChange={setRemember}
+              trackColor={{ false: p.border, true: p.primarySolid }}
+              thumbColor={colors.white}
+            />
+            <Text style={styles.checkLabel}>Remember my email</Text>
           </View>
-          <Text style={styles.checkLabel}>
-            I agree to the{' '}
-            <Text style={styles.link} onPress={() => void Linking.openURL('https://turnaapp.vercel.app/terms')}>
-              Terms
-            </Text>{' '}
-            and{' '}
-            <Text style={styles.link} onPress={() => void Linking.openURL('https://turnaapp.vercel.app/privacy')}>
-              Privacy Policy
+        </Enter>
+
+        <Enter delay={420}>
+          <Pressable style={styles.checkRow} onPress={() => setAgreed((v) => !v)}>
+            <View style={[styles.checkbox, agreed && styles.checkboxOn]}>
+              {agreed ? <Text style={styles.checkMark}>✓</Text> : null}
+            </View>
+            <Text style={styles.checkLabel}>
+              I agree to the{' '}
+              <Text style={styles.link} onPress={() => void Linking.openURL('https://turnaapp.vercel.app/terms')}>
+                Terms
+              </Text>{' '}
+              and{' '}
+              <Text style={styles.link} onPress={() => void Linking.openURL('https://turnaapp.vercel.app/privacy')}>
+                Privacy Policy
+              </Text>
+              .
             </Text>
-            .
+          </Pressable>
+        </Enter>
+
+        {error && (
+          <Enter delay={460}>
+            <Text style={styles.error}>{error}</Text>
+          </Enter>
+        )}
+        {info && (
+          <Enter delay={460}>
+            <Text style={styles.info}>{info}</Text>
+          </Enter>
+        )}
+
+        <Enter delay={480}>
+          <Button
+            label={mode === 'login' ? 'Sign In' : 'Create account'}
+            onPress={submit}
+            loading={busy}
+            disabled={!agreed}
+            style={styles.cta}
+          />
+        </Enter>
+
+        <Enter delay={540}>
+          <Text style={styles.switchText}>
+            {mode === 'login' ? 'No account yet? ' : 'Have an account? '}
+            <Text
+              style={styles.link}
+              onPress={() => {
+                setMode(mode === 'login' ? 'signup' : 'login');
+                setError(null);
+                setInfo(null);
+              }}
+            >
+              {mode === 'login' ? 'Create one' : 'Sign in'}
+            </Text>
           </Text>
-        </Pressable>
-
-        {error && <Text style={styles.error}>{error}</Text>}
-        {info && <Text style={styles.info}>{info}</Text>}
-
-        <Button
-          label={mode === 'login' ? 'Sign In' : 'Create account'}
-          onPress={submit}
-          loading={busy}
-          disabled={!agreed}
-          style={styles.cta}
-        />
-
-        <Text style={styles.switchText}>
-          {mode === 'login' ? 'No account yet? ' : 'Have an account? '}
-          <Text
-            style={styles.link}
-            onPress={() => {
-              setMode(mode === 'login' ? 'signup' : 'login');
-              setError(null);
-              setInfo(null);
-            }}
-          >
-            {mode === 'login' ? 'Create one' : 'Sign in'}
-          </Text>
-        </Text>
+        </Enter>
 
         <Popup
           visible={resetOpen}
@@ -298,7 +330,7 @@ export function AuthScreen() {
           subtitle={
             resetSent
               ? undefined
-              : 'Enter your email and we’ll send you a reset link.'
+              : "Enter your email and we'll send you a reset link."
           }
           footer={
             resetSent ? (
@@ -374,46 +406,77 @@ function VerifyGate({ email, onBack }: { email: string; onBack: () => void }) {
     }
   }
 
+  function apply(next: string) {
+    setCode(next);
+    if (next.length === 6 && !busy) void submit();
+  }
+
+  useClipboardOtp(!busy, (c) => apply(c));
+
   return (
     <KeyboardAvoidingView
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <View style={styles.logoWrap}>
-          <Logo variant="default" size={44} />
-        </View>
-        <Text style={styles.title}>Verify your email</Text>
-        <Text style={styles.sub}>Enter the 6-digit code sent to {email}</Text>
+        <Enter delay={0}>
+          <View style={styles.logoWrap}>
+            <Logo variant="default" size={44} />
+          </View>
+        </Enter>
+        <Enter delay={80}>
+          <Text style={styles.title}>Verify your email</Text>
+        </Enter>
+        <Enter delay={140}>
+          <Text style={styles.sub}>Enter the 6-digit code sent to {email}</Text>
+        </Enter>
 
-        <View style={styles.field}>
-          <Text style={styles.label}>Code</Text>
-          <TextInput
-            style={[styles.input, styles.codeInput]}
-            value={code}
-            onChangeText={(t: string) => setCode(t.replace(/\D/g, '').slice(0, 6))}
-            placeholder="000000"
-            placeholderTextColor={p.textMuted}
-            keyboardType="number-pad"
-            maxLength={6}
+        <Enter delay={200}>
+          <View style={styles.field}>
+            <Text style={styles.label}>Code</Text>
+            <TextInput
+              style={[styles.input, styles.codeInput]}
+              value={code}
+              onChangeText={(t: string) => apply(t.replace(/\D/g, '').slice(0, 6))}
+              placeholder="000000"
+              placeholderTextColor={p.textMuted}
+              keyboardType="number-pad"
+              maxLength={6}
+              autoComplete="one-time-code"
+              accessibilityLabel="Verification code"
+            />
+          </View>
+        </Enter>
+
+        {error && (
+          <Enter delay={240}>
+            <Text style={styles.error}>{error}</Text>
+          </Enter>
+        )}
+        {resent && (
+          <Enter delay={240}>
+            <Text style={styles.info}>New code sent.</Text>
+          </Enter>
+        )}
+
+        <Enter delay={280}>
+          <Button label="Verify" onPress={() => void submit()} loading={busy} disabled={code.length !== 6} style={styles.cta} />
+        </Enter>
+        <Enter delay={340}>
+          <Button
+            label="Resend code"
+            variant="ghost"
+            onPress={async () => {
+              const r = await resendOtp();
+              if (r.error) setError(r.error);
+              else setResent(true);
+            }}
+            style={styles.switch}
           />
-        </View>
-
-        {error && <Text style={styles.error}>{error}</Text>}
-        {resent && <Text style={styles.info}>New code sent.</Text>}
-
-        <Button label="Verify" onPress={submit} loading={busy} disabled={code.length !== 6} style={styles.cta} />
-        <Button
-          label="Resend code"
-          variant="ghost"
-          onPress={async () => {
-            const r = await resendOtp();
-            if (r.error) setError(r.error);
-            else setResent(true);
-          }}
-          style={styles.switch}
-        />
-        <Button label="Back" variant="outline" onPress={onBack} style={styles.switch} />
+        </Enter>
+        <Enter delay={380}>
+          <Button label="Back" variant="outline" onPress={onBack} style={styles.switch} />
+        </Enter>
       </ScrollView>
     </KeyboardAvoidingView>
   );

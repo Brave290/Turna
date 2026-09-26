@@ -1,10 +1,9 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { BackHandler, StatusBar, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { BackHandler, StatusBar, StyleSheet, View } from 'react-native';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { drainQueue } from './lib/offline';
 import { ensureNotificationPermission } from './lib/notifications-perm';
 import { notifyScreenFocus } from './lib/useFastRefresh';
-import { isAdminEmail } from './lib/config';
 import { AuthScreen } from './screens/AuthScreen';
 import { OnboardingScreen } from './screens/OnboardingScreen';
 import { HomeScreen } from './screens/HomeScreen';
@@ -24,11 +23,9 @@ import { SettingsSubScreen } from './screens/SettingsSubScreen';
 import { DebtsScreen } from './screens/DebtsScreen';
 import { AdminDashboardScreen } from './screens/AdminDashboardScreen';
 import { TabBar } from './navigation/TabBar';
-import { Popup } from './components/Popup';
-import { Button } from './components/Button';
 import { UpdatePopup } from './components/UpdatePopup';
 import { SplashAnimated } from './components/SplashAnimated';
-import { spacing, typography, type Palette } from './theme';
+import { spacing, type Palette } from './theme';
 import { usePaletteStyles, useTheme, ThemeProvider } from './context/ThemeContext';
 import { MotionProvider } from './context/MotionContext';
 
@@ -58,17 +55,11 @@ type StackScreen =
 
 function Gate() {
   const { p, styles } = usePaletteStyles(makeStyles);
-  const { status, user } = useAuth();
+  const { status, isAdmin } = useAuth();
   const { resolved } = useTheme();
   const [tab, setTab] = useState<TabKey>('home');
   const [soloId, setSoloId] = useState<string | null>(null);
   const [stack, setStack] = useState<StackScreen[]>([{ name: 'home' }]);
-
-  // One-time, non-blocking offer so admins can reach the in-app dashboard
-  // right after signing in (they can also open it from Profile).
-  const isStaff = isAdminEmail(user?.email);
-  const [offerAdmin, setOfferAdmin] = useState(false);
-  const offerShown = useRef(false);
 
   useEffect(() => {
     if (status !== 'signedIn') {
@@ -76,15 +67,12 @@ function Gate() {
       setStack([{ name: 'home' }]);
       return;
     }
-    void drainQueue();
-    void ensureNotificationPermission();
-    if (isStaff && !offerShown.current) {
-      offerShown.current = true;
-      const id = setTimeout(() => setOfferAdmin(true), 900);
-      return () => clearTimeout(id);
+    if (!isAdmin) {
+      void drainQueue();
+      void ensureNotificationPermission();
     }
     return undefined;
-  }, [status, isStaff]);
+  }, [status, isAdmin]);
 
   // Android back: step backwards through the stack; only exit at the root.
   useEffect(() => {
@@ -190,10 +178,13 @@ function Gate() {
     if (status === 'onboarding') {
       return <OnboardingScreen />;
     }
+    if (isAdmin) {
+      return <AdminDashboardScreen onBack={() => {}} />;
+    }
     return renderCurrent();
-  }, [status, current, soloId, styles]);
+  }, [status, current, soloId, isAdmin, styles]);
 
-  const showTabs = status === 'signedIn';
+  const showTabs = status === 'signedIn' && !isAdmin;
 
   // Baseline status bar for screens that do not render their own: only the
   // splash paints the brand colour (auth/onboarding use the theme background).
@@ -217,35 +208,6 @@ function Gate() {
         />
       )}
       <UpdatePopup />
-      <Popup
-        visible={offerAdmin}
-        onClose={() => setOfferAdmin(false)}
-        title="Turna admin"
-        subtitle="This account has admin access."
-        footer={
-          <View style={styles.offerActions}>
-            <Button
-              label="Not now"
-              variant="ghost"
-              onPress={() => setOfferAdmin(false)}
-              style={{ flex: 1 }}
-            />
-            <Button
-              label="Open dashboard"
-              onPress={() => {
-                setOfferAdmin(false);
-                push({ name: 'admin' });
-              }}
-              style={{ flex: 1 }}
-            />
-          </View>
-        }
-      >
-        <Text style={styles.offerBody}>
-          Review KYC, decide contributions, and watch platform totals — all from
-          this device.
-        </Text>
-      </Popup>
     </View>
   );
 }
@@ -275,16 +237,5 @@ const makeStyles = (p: Palette) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: p.brand,
-  },
-  offerActions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.md,
-  },
-  offerBody: {
-    color: p.textMuted,
-    fontSize: typography.body,
-    lineHeight: 22,
-    marginTop: spacing.xs,
   },
 });
