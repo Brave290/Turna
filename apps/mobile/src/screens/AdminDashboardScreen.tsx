@@ -10,17 +10,12 @@ import {
   View,
 } from 'react-native';
 import {
-  Check,
-  CircleDot,
   Megaphone,
   RefreshCw,
   Search,
-  Send,
   ShieldAlert,
   Trash2,
-  UserCheck,
   Users,
-  Wallet,
   X,
 } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
@@ -32,21 +27,13 @@ import { StaggerItem } from '../components/Stagger';
 import { useToast } from '../components/Toast';
 import {
   mobileAdmin,
-  type AdminCircleRow,
-  type AdminContributionRow,
-  type AdminKycRow,
   type AdminOverview,
   type AdminUserRow,
 } from '../lib/api';
 import { codeInputProps, noteInputProps } from '../lib/input-props';
-import { formatCurrency, formatDate } from '../lib/format';
+import { formatDate } from '../lib/format';
 import { colors, radius, spacing, typography, type Palette } from '../theme';
 import { usePaletteStyles } from '../context/ThemeContext';
-
-function flatten<T>(v: T | T[] | null | undefined): T | null {
-  if (!v) return null;
-  return Array.isArray(v) ? (v[0] ?? null) : v;
-}
 
 function initials(name: string) {
   return (
@@ -60,11 +47,8 @@ function initials(name: string) {
 }
 
 const EMPTY: AdminOverview = {
-  counts: { users: 0, circles: 0, memberships: 0, pendingKyc: 0, pendingContributions: 0 },
+  counts: { users: 0, circles: 0, memberships: 0 },
   recentUsers: [],
-  recentCircles: [],
-  kycQueue: [],
-  pendingContributions: [],
 };
 
 export function AdminDashboardScreen({ onBack }: { onBack?: () => void }) {
@@ -80,8 +64,6 @@ export function AdminDashboardScreen({ onBack }: { onBack?: () => void }) {
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const [query, setQuery] = useState('');
-  const [rejectKyc, setRejectKyc] = useState<AdminKycRow | null>(null);
-  const [rejectReason, setRejectReason] = useState('');
   const [broadcastTitle, setBroadcastTitle] = useState('');
   const [broadcastBody, setBroadcastBody] = useState('');
   const [sending, setSending] = useState(false);
@@ -114,62 +96,6 @@ export function AdminDashboardScreen({ onBack }: { onBack?: () => void }) {
         u.display_name.toLowerCase().includes(q)
     );
   }, [data.recentUsers, query]);
-
-  const pendingKyc = useMemo(
-    () => data.kycQueue.filter((k) => k.status === 'pending'),
-    [data.kycQueue]
-  );
-
-  async function runKyc(row: AdminKycRow, decision: 'approved' | 'rejected', reason?: string) {
-    setBusyId(row.id);
-    const res = await mobileAdmin.kyc({ id: row.id, decision, reason });
-    setBusyId(null);
-    if (!res.ok) {
-      toast(res.error ?? 'Could not update KYC', 'error');
-      return;
-    }
-    toast(decision === 'approved' ? 'KYC approved' : 'KYC rejected');
-    await load();
-  }
-
-  async function approveKyc(row: AdminKycRow) {
-    const ok = await confirm(
-      'Approve this KYC?',
-      `${row.full_legal_name} · ${row.document_type.toUpperCase()} ${row.document_number}`,
-      { confirmLabel: 'Approve' }
-    );
-    if (ok) await runKyc(row, 'approved');
-  }
-
-  function openRejectKyc(row: AdminKycRow) {
-    setRejectReason('');
-    setRejectKyc(row);
-  }
-
-  async function submitRejectKyc() {
-    if (!rejectKyc) return;
-    const row = rejectKyc;
-    setRejectKyc(null);
-    await runKyc(row, 'rejected', rejectReason.trim() || 'Rejected by admin');
-  }
-
-  async function decideContribution(row: AdminContributionRow, decision: 'confirmed' | 'rejected') {
-    const ok = await confirm(
-      decision === 'confirmed' ? 'Confirm this contribution?' : 'Reject this contribution?',
-      `${row.member_name} · ${formatCurrency(row.amount)} · ${row.circle_name}`,
-      { confirmLabel: decision === 'confirmed' ? 'Confirm' : 'Reject', danger: decision === 'rejected' }
-    );
-    if (!ok) return;
-    setBusyId(row.id);
-    const res = await mobileAdmin.contribution({ contribution_id: row.id, decision });
-    setBusyId(null);
-    if (!res.ok) {
-      toast(res.error ?? 'Could not decide contribution', 'error');
-      return;
-    }
-    toast(decision === 'confirmed' ? 'Contribution confirmed' : 'Contribution rejected');
-    await load();
-  }
 
   async function removeUser(row: AdminUserRow) {
     const ok = await confirm(
@@ -294,26 +220,9 @@ export function AdminDashboardScreen({ onBack }: { onBack?: () => void }) {
               </Card>
               <Card style={styles.statCard}>
                 <Stat
-                  icon={CircleDot}
                   label="Circles"
                   value={String(c.circles)}
                   sub={`${c.memberships} memberships`}
-                />
-              </Card>
-              <Card style={styles.statCard}>
-                <Stat
-                  icon={UserCheck}
-                  label="KYC pending"
-                  value={String(c.pendingKyc)}
-                  sub={`${data.kycQueue.length} in queue`}
-                />
-              </Card>
-              <Card style={styles.statCard}>
-                <Stat
-                  icon={Wallet}
-                  label="Contributions"
-                  value={String(c.pendingContributions)}
-                  sub="Awaiting a decision"
                 />
               </Card>
             </View>
@@ -379,157 +288,6 @@ export function AdminDashboardScreen({ onBack }: { onBack?: () => void }) {
               )}
             </Card>
 
-            <Text style={styles.section}>Circles</Text>
-            <Card style={styles.panel}>
-              {data.recentCircles.length === 0 ? (
-                <Text style={styles.emptyLine}>No circles yet.</Text>
-              ) : (
-                data.recentCircles.slice(0, 10).map((ci, i) => (
-                  <View key={ci.id} style={[styles.row, i > 0 && styles.rowBorder]}>
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text style={styles.rowTitle} numberOfLines={1}>
-                        {ci.name}
-                      </Text>
-                      <Text style={styles.rowMeta}>
-                        {formatCurrency(ci.contribution_amount, ci.currency)} ·{' '}
-                        {formatDate(ci.created_at)}
-                      </Text>
-                    </View>
-                    <Badge
-                      label={ci.status}
-                      tone={ci.status === 'active' ? 'active' : ci.status === 'paused' ? 'pending' : 'muted'}
-                    />
-                  </View>
-                ))
-              )}
-            </Card>
-
-            <Text style={styles.section}>KYC queue</Text>
-            <Card style={styles.panel}>
-              <Text style={styles.panelHint}>{pendingKyc.length} awaiting review</Text>
-              {data.kycQueue.length === 0 ? (
-                <Text style={styles.emptyLine}>No KYC submissions yet.</Text>
-              ) : (
-                data.kycQueue.map((k, i) => {
-                  const profile = flatten<{ email?: string; display_name?: string }>(
-                    k.profiles as never
-                  );
-                  return (
-                    <StaggerItem key={k.id} index={i}>
-                      <View style={[styles.row, i > 0 && styles.rowBorder]}>
-                        <View style={{ flex: 1, minWidth: 0 }}>
-                          <Text style={styles.rowTitle} numberOfLines={1}>
-                            {k.full_legal_name}
-                          </Text>
-                          <Text style={styles.rowMeta} numberOfLines={1}>
-                            {profile?.email ?? '—'} · {k.document_type.toUpperCase()}{' '}
-                            {k.document_number}
-                          </Text>
-                          <Text style={styles.rowTiny}>Submitted {formatDate(k.created_at)}</Text>
-                          {k.status !== 'pending' && k.rejection_reason ? (
-                            <Text style={styles.reason}>{k.rejection_reason}</Text>
-                          ) : null}
-                        </View>
-                        <View style={styles.rowSide}>
-                          <Badge
-                            label={k.status}
-                            tone={
-                              k.status === 'approved'
-                                ? 'active'
-                                : k.status === 'rejected'
-                                  ? 'error'
-                                  : 'pending'
-                            }
-                          />
-                          {k.status === 'pending' ? (
-                            <View style={styles.inlineActions}>
-                              <Pressable
-                                accessibilityRole="button"
-                                disabled={busyId === k.id}
-                                onPress={() => void approveKyc(k)}
-                                style={({ pressed }) => [
-                                  styles.miniBtn,
-                                  styles.miniApprove,
-                                  pressed && styles.miniPressed,
-                                ]}
-                              >
-                                <Check size={14} color={colors.white} strokeWidth={2.5} />
-                                <Text style={styles.miniApproveText}>Approve</Text>
-                              </Pressable>
-                              <Pressable
-                                accessibilityRole="button"
-                                disabled={busyId === k.id}
-                                onPress={() => openRejectKyc(k)}
-                                style={({ pressed }) => [
-                                  styles.miniBtn,
-                                  styles.miniReject,
-                                  pressed && styles.miniPressed,
-                                ]}
-                              >
-                                <X size={14} color={p.error} strokeWidth={2.5} />
-                                <Text style={styles.miniRejectText}>Reject</Text>
-                              </Pressable>
-                            </View>
-                          ) : null}
-                        </View>
-                      </View>
-                    </StaggerItem>
-                  );
-                })
-              )}
-            </Card>
-
-            <Text style={styles.section}>Pending contributions</Text>
-            <Card style={styles.panel}>
-              {data.pendingContributions.length === 0 ? (
-                <Text style={styles.emptyLine}>Nothing is waiting on a decision.</Text>
-              ) : (
-                data.pendingContributions.map((row, i) => (
-                  <StaggerItem key={row.id} index={i}>
-                    <View style={[styles.row, i > 0 && styles.rowBorder]}>
-                      <View style={{ flex: 1, minWidth: 0 }}>
-                        <Text style={styles.rowTitle} numberOfLines={1}>
-                          {formatCurrency(row.amount)} · {row.circle_name}
-                        </Text>
-                        <Text style={styles.rowMeta} numberOfLines={1}>
-                          {row.member_name} · {row.member_email}
-                        </Text>
-                        <Text style={styles.rowTiny}>{formatDate(row.created_at)}</Text>
-                      </View>
-                      <View style={styles.inlineActions}>
-                        <Pressable
-                          accessibilityRole="button"
-                          disabled={busyId === row.id}
-                          onPress={() => void decideContribution(row, 'confirmed')}
-                          style={({ pressed }) => [
-                            styles.miniBtn,
-                            styles.miniApprove,
-                            pressed && styles.miniPressed,
-                          ]}
-                        >
-                          <Check size={14} color={colors.white} strokeWidth={2.5} />
-                          <Text style={styles.miniApproveText}>Confirm</Text>
-                        </Pressable>
-                        <Pressable
-                          accessibilityRole="button"
-                          disabled={busyId === row.id}
-                          onPress={() => void decideContribution(row, 'rejected')}
-                          style={({ pressed }) => [
-                            styles.miniBtn,
-                            styles.miniReject,
-                            pressed && styles.miniPressed,
-                          ]}
-                        >
-                          <X size={14} color={p.error} strokeWidth={2.5} />
-                          <Text style={styles.miniRejectText}>Reject</Text>
-                        </Pressable>
-                      </View>
-                    </View>
-                  </StaggerItem>
-                ))
-              )}
-            </Card>
-
             <Text style={styles.section}>Broadcast</Text>
             <Card style={styles.panel}>
               <View style={styles.broadcastHead}>
@@ -572,40 +330,6 @@ export function AdminDashboardScreen({ onBack }: { onBack?: () => void }) {
           </>
         )}
       </ScrollView>
-
-      <Popup
-        visible={rejectKyc !== null}
-        onClose={() => setRejectKyc(null)}
-        title="Reject KYC"
-        subtitle={
-          rejectKyc
-            ? `${rejectKyc.full_legal_name} · ${rejectKyc.document_type.toUpperCase()}`
-            : ''
-        }
-        footer={
-          <View style={styles.formActions}>
-            <Button
-              label="Cancel"
-              variant="ghost"
-              onPress={() => setRejectKyc(null)}
-              style={{ flex: 1 }}
-            />
-            <Button label="Reject" variant="danger" onPress={() => void submitRejectKyc()} style={{ flex: 1 }} />
-          </View>
-        }
-      >
-        <Text style={styles.label}>Reason</Text>
-        <TextInput
-          style={[styles.input, styles.textarea]}
-          value={rejectReason}
-          onChangeText={setRejectReason}
-          placeholder="Document unreadable"
-          placeholderTextColor={p.textMuted}
-          maxLength={300}
-          multiline
-          {...noteInputProps}
-        />
-      </Popup>
 
       {confirmNode}
       {toastNode}
@@ -728,10 +452,6 @@ const makeStyles = (p: Palette) =>
       borderTopWidth: 1,
       borderTopColor: p.border,
     },
-    rowSide: {
-      alignItems: 'flex-end',
-      gap: spacing.sm,
-    },
     rowTitle: {
       fontSize: typography.body,
       fontWeight: '600',
@@ -745,11 +465,6 @@ const makeStyles = (p: Palette) =>
     rowTiny: {
       fontSize: 11,
       color: p.textMuted,
-      marginTop: 3,
-    },
-    reason: {
-      fontSize: 11,
-      color: p.error,
       marginTop: 3,
     },
     emptyLine: {
@@ -782,43 +497,6 @@ const makeStyles = (p: Palette) =>
     },
     trashPressed: {
       opacity: 0.7,
-    },
-    inlineActions: {
-      flexDirection: 'row',
-      gap: 6,
-      flexWrap: 'wrap',
-      justifyContent: 'flex-end',
-    },
-    miniBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      minHeight: 32,
-      paddingHorizontal: 10,
-      borderRadius: radius.sm,
-      borderWidth: 1,
-    },
-    miniApprove: {
-      backgroundColor: p.primarySolid,
-      borderColor: p.primarySolid,
-    },
-    miniApproveText: {
-      color: colors.white,
-      fontSize: 12,
-      fontWeight: '600',
-    },
-    miniReject: {
-      backgroundColor: 'transparent',
-      borderColor: p.error,
-    },
-    miniRejectText: {
-      color: p.error,
-      fontSize: 12,
-      fontWeight: '600',
-    },
-    miniPressed: {
-      opacity: 0.8,
-      transform: [{ scale: 0.97 }],
     },
     broadcastHead: {
       flexDirection: 'row',
@@ -863,11 +541,6 @@ const makeStyles = (p: Palette) =>
       paddingTop: 12,
       textAlignVertical: 'top',
       marginBottom: spacing.sm,
-    },
-    formActions: {
-      flexDirection: 'row',
-      gap: spacing.sm,
-      marginTop: spacing.md,
     },
     errorCard: {
       borderColor: p.error,

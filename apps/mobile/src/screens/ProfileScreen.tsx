@@ -28,6 +28,7 @@ import { isAdminEmail } from '../lib/config';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { Screen } from '../components/Screen';
+import { Enter } from '../components/Enter';
 import { useConfirm } from '../components/Popup';
 import { useToast } from '../components/Toast';
 import { colors, spacing, typography, type Palette as ThemePalette } from '../theme';
@@ -323,67 +324,74 @@ export function ProfileScreen({
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.pageHead}>
-          <Text style={styles.pageTitle}>Profile</Text>
-          <Text style={styles.pageSub}>
-            Your identity across circles. Members only see a masked version.
-          </Text>
-        </View>
-
-        <Card style={styles.card}>
-          <View style={styles.identity}>
-            {avatarUri ? (
-              <Image source={{ uri: avatarUri }} style={styles.avatarImg} />
-            ) : (
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{initials}</Text>
-              </View>
-            )}
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={styles.name} numberOfLines={1}>
-                {name}
-              </Text>
-              <Text style={styles.email} numberOfLines={1}>
-                {mail}
-              </Text>
-              <Text style={styles.since}>
-                Member since {memberSince} · {circleCount} circle
-                {circleCount === 1 ? '' : 's'}
-              </Text>
-            </View>
-            <Pressable
-              style={styles.editBtn}
-              onPress={() =>
-                onPush?.({ name: 'settings-sub', route: 'settings/profile' })
-              }
-            >
-              <Text style={styles.editBtnText}>Edit profile</Text>
-              <ChevronRight size={16} color={p.primary} strokeWidth={2} />
-            </Pressable>
+        <Enter delay={0}>
+          <View style={styles.pageHead}>
+            <Text style={styles.pageTitle}>Profile</Text>
+            <Text style={styles.pageSub}>
+              Your identity across circles. Members only see a masked version.
+            </Text>
           </View>
-        </Card>
+        </Enter>
 
-        <Card style={styles.card}>
-          <Text style={styles.section}>Account</Text>
-          {accountRows.map((r, i) => (
-            <View
-              key={r.label}
-              style={[styles.hubRow, i < accountRows.length - 1 && styles.hubRowBorder]}
-            >
-              <Pressable style={styles.hubInner} onPress={r.onPress}>
-                <View style={styles.hubIcon}>
-                  <r.icon size={16} color={p.primary} strokeWidth={2} />
+        <Enter delay={80}>
+          <Card style={styles.card}>
+            <View style={styles.identity}>
+              {avatarUri ? (
+                <Image source={{ uri: avatarUri }} style={styles.avatarImg} />
+              ) : (
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>{initials}</Text>
                 </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={styles.rowLabel}>{r.label}</Text>
-                  <Text style={styles.rowDesc}>{r.description}</Text>
-                </View>
-                <ChevronRight size={16} color={p.textMuted} strokeWidth={2} />
+              )}
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.name} numberOfLines={1}>
+                  {name}
+                </Text>
+                <Text style={styles.email} numberOfLines={1}>
+                  {mail}
+                </Text>
+                <Text style={styles.since}>
+                  Member since {memberSince} · {circleCount} circle
+                  {circleCount === 1 ? '' : 's'}
+                </Text>
+              </View>
+              <Pressable
+                style={styles.editBtn}
+                onPress={() =>
+                  onPush?.({ name: 'settings-sub', route: 'settings/profile' })
+                }
+              >
+                <Text style={styles.editBtnText}>Edit profile</Text>
+                <ChevronRight size={16} color={p.primary} strokeWidth={2} />
               </Pressable>
             </View>
-          ))}
-        </Card>
+          </Card>
+        </Enter>
 
+        <Enter delay={160}>
+          <Card style={styles.card}>
+            <Text style={styles.section}>Account</Text>
+            {accountRows.map((r, i) => (
+              <View
+                key={r.label}
+                style={[styles.hubRow, i < accountRows.length - 1 && styles.hubRowBorder]}
+              >
+                <Pressable style={styles.hubInner} onPress={r.onPress}>
+                  <View style={styles.hubIcon}>
+                    <r.icon size={16} color={p.primary} strokeWidth={2} />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={styles.rowLabel}>{r.label}</Text>
+                    <Text style={styles.rowDesc}>{r.description}</Text>
+                  </View>
+                  <ChevronRight size={16} color={p.textMuted} strokeWidth={2} />
+                </Pressable>
+              </View>
+            ))}
+          </Card>
+        </Enter>
+
+        <Enter delay={240}>
         <Card style={styles.card}>
           <Text style={styles.hubTitle}>Edit details</Text>
           <Text style={styles.hint}>
@@ -497,29 +505,32 @@ export function ProfileScreen({
             style={styles.saveBtn}
           />
         </Card>
+        </Enter>
 
-        <Card style={styles.card}>
-          <View style={styles.ssoRow}>
-            <View style={styles.hubIcon}>
-              <MonitorSmartphone size={16} color={p.primary} strokeWidth={2} />
+        <Enter delay={320}>
+          <Card style={styles.card}>
+            <View style={styles.ssoRow}>
+              <View style={styles.hubIcon}>
+                <MonitorSmartphone size={16} color={p.primary} strokeWidth={2} />
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.hubTitle}>Active sessions</Text>
+                <Text style={styles.hint}>
+                  Sign out all other devices if you don't recognize a session.
+                </Text>
+              </View>
+              <Pressable
+                style={[styles.ssoBtn, busy && styles.ssoBtnBusy]}
+                onPress={signOutOthers}
+                disabled={busy}
+              >
+                <Text style={styles.ssoBtnText}>
+                  {busy ? 'Signing out…' : 'Sign out others'}
+                </Text>
+              </Pressable>
             </View>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={styles.hubTitle}>Active sessions</Text>
-              <Text style={styles.hint}>
-                Sign out all other devices if you don't recognize a session.
-              </Text>
-            </View>
-            <Pressable
-              style={[styles.ssoBtn, busy && styles.ssoBtnBusy]}
-              onPress={signOutOthers}
-              disabled={busy}
-            >
-              <Text style={styles.ssoBtnText}>
-                {busy ? 'Signing out…' : 'Sign out others'}
-              </Text>
-            </Pressable>
-          </View>
-        </Card>
+          </Card>
+        </Enter>
 
         <Button
           label="Log out"

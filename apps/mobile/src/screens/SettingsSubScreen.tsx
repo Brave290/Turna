@@ -11,10 +11,8 @@ import {
   View,
 } from 'react-native';
 import {
-  AlertTriangle,
   BadgeCheck,
   Bell,
-  CheckCircle2,
   ChevronRight,
   Download,
   Eye,
@@ -28,7 +26,6 @@ import {
   Mail,
   MessageSquare,
   MonitorSmartphone,
-  Scale,
   Shield,
   ShieldCheck,
   SunMoon,
@@ -37,7 +34,6 @@ import {
   Users,
   Wallet,
   Clock,
-  ExternalLink,
   Globe,
 } from 'lucide-react-native';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';

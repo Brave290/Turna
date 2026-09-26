@@ -10,7 +10,6 @@ import {
 } from 'react-native';
 import {
   Users,
-  UserPlus,
   TrendingUp,
   ArrowUpRight,
   ArrowLeftRight,
@@ -35,6 +34,7 @@ import { Screen } from '../components/Screen';
 import { OfflineScreen } from '../components/OfflineScreen';
 import { StaggerItem } from '../components/Stagger';
 import { SyncedLine } from '../components/SyncedLine';
+import { Enter } from '../components/Enter';
 import { colors, spacing, typography, type Palette } from '../theme';
 import { formatCurrency, formatRelativeTime } from '../lib/format';
 import { useMotion } from '../context/MotionContext';
@@ -343,51 +343,53 @@ export function HomeScreen({
           />
         }
       >
-        <View style={styles.greetRow}>
-          <View style={styles.greetBlock}>
-            <Text style={styles.greeting}>{greeting(firstName)}</Text>
-            <Text style={styles.sub}>
-              Here's what's happening with your savings circles.
-            </Text>
-            <SyncedLine cacheKey={user ? `home:${user.id}` : null} />
+        <Enter delay={0}>
+          <View style={styles.greetRow}>
+            <View style={styles.greetBlock}>
+              <Text style={styles.greeting}>{greeting(firstName)}</Text>
+              <Text style={styles.sub}>
+                Here's what's happening with your savings circles.
+              </Text>
+              <SyncedLine cacheKey={user ? `home:${user.id}` : null} />
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={
+                unread > 0
+                  ? `Notifications, ${unread} unread`
+                  : 'Notifications, none unread'
+              }
+              onPress={() => onPush?.({ name: 'notifications' })}
+              style={({ pressed }) => [
+                styles.bellBtn,
+                pressed && styles.bellBtnPressed,
+              ]}
+            >
+              <Bell size={21} color={p.text} strokeWidth={2} />
+              {unread > 0 && (
+                <View style={styles.bellBadge}>
+                  <Text style={styles.bellBadgeText}>
+                    {unread > 9 ? '9+' : String(unread)}
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={
+                resolved === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'
+              }
+              onPress={() => setMode(resolved === 'dark' ? 'light' : 'dark')}
+              style={({ pressed }) => [styles.bellBtn, pressed && styles.bellBtnPressed]}
+            >
+              {resolved === 'dark' ? (
+                <Sun size={20} color={p.text} strokeWidth={2} />
+              ) : (
+                <Moon size={20} color={p.text} strokeWidth={2} />
+              )}
+            </Pressable>
           </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={
-              unread > 0
-                ? `Notifications, ${unread} unread`
-                : 'Notifications, none unread'
-            }
-            onPress={() => onPush?.({ name: 'notifications' })}
-            style={({ pressed }) => [
-              styles.bellBtn,
-              pressed && styles.bellBtnPressed,
-            ]}
-          >
-            <Bell size={21} color={p.text} strokeWidth={2} />
-            {unread > 0 && (
-              <View style={styles.bellBadge}>
-                <Text style={styles.bellBadgeText}>
-                  {unread > 9 ? '9+' : String(unread)}
-                </Text>
-              </View>
-            )}
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={
-              resolved === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'
-            }
-            onPress={() => setMode(resolved === 'dark' ? 'light' : 'dark')}
-            style={({ pressed }) => [styles.bellBtn, pressed && styles.bellBtnPressed]}
-          >
-            {resolved === 'dark' ? (
-              <Sun size={20} color={p.text} strokeWidth={2} />
-            ) : (
-              <Moon size={20} color={p.text} strokeWidth={2} />
-            )}
-          </Pressable>
-        </View>
+        </Enter>
 
         {loading ? (
           <View style={styles.loading}>
@@ -401,81 +403,87 @@ export function HomeScreen({
               </Card>
             )}
 
-            <View style={styles.hero}>
-              <Text style={styles.heroLabel}>Total savings</Text>
-              <Text style={styles.heroValue}>{formatCurrency(totalPaid)}</Text>
-              <View style={styles.heroFoot}>
-                <View style={{ flex: 1 }}>
-                  {hasCircles ? (
-                    <Text style={styles.heroMint}>
-                      {settlePct}% settled this cycle
+            <Enter delay={80}>
+              <View style={styles.hero}>
+                <Text style={styles.heroLabel}>Total savings</Text>
+                <Text style={styles.heroValue}>{formatCurrency(totalPaid)}</Text>
+                <View style={styles.heroFoot}>
+                  <View style={{ flex: 1 }}>
+                    {hasCircles ? (
+                      <Text style={styles.heroMint}>
+                        {settlePct}% settled this cycle
+                      </Text>
+                    ) : (
+                      <Text style={styles.heroDim}>
+                        Start your first savings circle
+                      </Text>
+                    )}
+                    <Text style={styles.heroTiny}>Confirmed contributions</Text>
+                  </View>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={styles.heroTiny}>Expected</Text>
+                    <Text style={styles.heroExpected}>
+                      {formatCurrency(totalExpected)}
                     </Text>
-                  ) : (
-                    <Text style={styles.heroDim}>
-                      Start your first savings circle
-                    </Text>
-                  )}
-                  <Text style={styles.heroTiny}>Confirmed contributions</Text>
-                </View>
-                <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={styles.heroTiny}>Expected</Text>
-                  <Text style={styles.heroExpected}>
-                    {formatCurrency(totalExpected)}
-                  </Text>
+                  </View>
                 </View>
               </View>
-            </View>
+            </Enter>
 
-            <View style={styles.actions}>
-              <Pressable
-                style={[styles.btn, styles.btnPrimary]}
-                onPress={() => onPush?.({ name: 'new-circle' })}
-              >
-                <Text style={styles.btnPrimaryText}>Create a Circle</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.btn, styles.btnOutline]}
-                onPress={() => onPush?.({ name: 'join-circle' })}
-              >
-                <Text style={styles.btnOutlineText}>Join a Circle</Text>
-              </Pressable>
-            </View>
+            <Enter delay={160}>
+              <View style={styles.actions}>
+                <Pressable
+                  style={[styles.btn, styles.btnPrimary]}
+                  onPress={() => onPush?.({ name: 'new-circle' })}
+                >
+                  <Text style={styles.btnPrimaryText}>Create a Circle</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.btn, styles.btnOutline]}
+                  onPress={() => onPush?.({ name: 'join-circle' })}
+                >
+                  <Text style={styles.btnOutlineText}>Join a Circle</Text>
+                </Pressable>
+              </View>
+            </Enter>
 
             {hasCircles && (
-              <View style={styles.statGrid}>
-                <Card style={styles.statCard}>
-                  <Stat
-                    icon={Users}
-                    label="My Circles"
-                    value={String(all.filter((c) => c.status === 'active').length)}
-                    sub="Active circles"
-                  />
-                </Card>
-                <Card style={styles.statCard}>
-                  <Stat
-                    icon={PiggyBank}
-                    label="This Cycle"
-                    value={formatCurrency(stats.totalContributed)}
-                    sub="Total contributed"
-                  />
-                </Card>
-                <Card style={styles.statCard}>
-                  <Stat
-                    icon={ArrowLeftRight}
-                    label="Total Payouts"
-                    value={formatCurrency(totalPaid)}
-                    sub="Received"
-                  />
-                </Card>
-                <Card style={styles.statCard}>
-                  <Stat
-                    icon={Bell}
-                    label="Pending Actions"
-                    value={String(pendingActions)}
-                    sub={pendingActions > 0 ? 'Needs attention' : 'All clear'}
-                  />
-                </Card>
-              </View>
+              <Enter delay={240}>
+                <View style={styles.statGrid}>
+                  <Card style={styles.statCard}>
+                    <Stat
+                      icon={Users}
+                      label="My Circles"
+                      value={String(all.filter((c) => c.status === 'active').length)}
+                      sub="Active circles"
+                    />
+                  </Card>
+                  <Card style={styles.statCard}>
+                    <Stat
+                      icon={PiggyBank}
+                      label="This Cycle"
+                      value={formatCurrency(stats.totalContributed)}
+                      sub="Total contributed"
+                    />
+                  </Card>
+                  <Card style={styles.statCard}>
+                    <Stat
+                      icon={ArrowLeftRight}
+                      label="Total Payouts"
+                      value={formatCurrency(totalPaid)}
+                      sub="Received"
+                    />
+                  </Card>
+                  <Card style={styles.statCard}>
+                    <Stat
+                      icon={Bell}
+                      label="Pending Actions"
+                      value={String(pendingActions)}
+                      sub={pendingActions > 0 ? 'Needs attention' : 'All clear'}
+                    />
+                  </Card>
+                </View>
+              </Enter>
             )}
 
             {!hasCircles && (

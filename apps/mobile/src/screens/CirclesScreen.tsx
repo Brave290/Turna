@@ -9,6 +9,7 @@ import { useConnectivity } from '../lib/connectivity';
 import { OfflineScreen } from '../components/OfflineScreen';
 import { Card, Badge } from '../components/Card';
 import { Screen } from '../components/Screen';
+import { Enter } from '../components/Enter';
 import { formatCurrency } from '../lib/format';
 import { colors, spacing, typography, type Palette } from '../theme';
 import { usePaletteStyles } from '../context/ThemeContext';
@@ -118,22 +119,24 @@ export function CirclesScreen({ onPush, onNewCircle }: { onPush?: (screen: any) 
 
   return (
     <Screen tone="cream">
-      <View style={styles.header}>
-        <View style={styles.headRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.title}>Circles</Text>
-            <Text style={styles.sub}>{sub}</Text>
+      <Enter delay={0}>
+        <View style={styles.header}>
+          <View style={styles.headRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.title}>Circles</Text>
+              <Text style={styles.sub}>{sub}</Text>
+            </View>
+          </View>
+          <View style={styles.actionRow}>
+            <Pressable style={[styles.btn, styles.btnOutline]} onPress={() => onPush?.({ name: 'join-circle' })}>
+              <Text style={styles.btnOutlineText}>Join</Text>
+            </Pressable>
+            <Pressable style={[styles.btn, styles.btnPrimary]} onPress={onNewCircle}>
+              <Text style={styles.btnPrimaryText}>New Circle</Text>
+            </Pressable>
           </View>
         </View>
-        <View style={styles.actionRow}>
-          <Pressable style={[styles.btn, styles.btnOutline]} onPress={() => onPush?.({ name: 'join-circle' })}>
-            <Text style={styles.btnOutlineText}>Join</Text>
-          </Pressable>
-          <Pressable style={[styles.btn, styles.btnPrimary]} onPress={onNewCircle}>
-            <Text style={styles.btnPrimaryText}>New Circle</Text>
-          </Pressable>
-        </View>
-      </View>
+      </Enter>
       {!online && rows.length === 0 ? (
         <OfflineScreen
           onRetry={() => {
@@ -184,40 +187,42 @@ export function CirclesScreen({ onPush, onNewCircle }: { onPush?: (screen: any) 
               </View>
             </Card>
           }
-          renderItem={({ item }) => (
-            <Pressable style={styles.card} onPress={() => onPush?.({ name: 'circle-detail', circleId: item.id })}>
-              <View style={styles.row}>
-                <View style={styles.main}>
-                  <Text style={styles.name}>{item.name}</Text>
-                  <Text style={styles.meta}>
-                    <Text style={styles.amount}>{formatCurrency(Number(item.contribution_amount || 0), item.currency)}</Text>
-                    <Text style={styles.metaNormal}> / {item.frequency}</Text>
-                  </Text>
+          renderItem={({ item, index }) => (
+            <Enter delay={index * 80}>
+              <Pressable style={styles.card} onPress={() => onPush?.({ name: 'circle-detail', circleId: item.id })}>
+                <View style={styles.row}>
+                  <View style={styles.main}>
+                    <Text style={styles.name}>{item.name}</Text>
+                    <Text style={styles.meta}>
+                      <Text style={styles.amount}>{formatCurrency(Number(item.contribution_amount || 0), item.currency)}</Text>
+                      <Text style={styles.metaNormal}> / {item.frequency}</Text>
+                    </Text>
+                  </View>
+                  <Badge
+                    label={item.status}
+                    tone={
+                      item.status === 'active' ? 'active' : item.status === 'paused' ? 'pending' : 'muted'
+                    }
+                  />
                 </View>
-                <Badge
-                  label={item.status}
-                  tone={
-                    item.status === 'active' ? 'active' : item.status === 'paused' ? 'pending' : 'muted'
-                  }
-                />
-              </View>
-              <View style={styles.badgeRow}>
-                <Badge label={item.role} tone="muted" />
-                {item.member_count != null && (
-                  <Badge label={`${item.member_count} members`} tone="muted" />
-                )}
-                <Badge label={`Cycle ${item.current_cycle || 0}`} tone="muted" />
-                {item.payoutPosition != null && (
-                  <Badge label={`Pos ${item.payoutPosition}`} tone="active" />
-                )}
-              </View>
-              <View style={styles.openRow}>
-                <Text style={styles.desc} numberOfLines={1}>
-                  {item.description ?? ''}
-                </Text>
-                <Text style={styles.open}>Open →</Text>
-              </View>
-            </Pressable>
+                <View style={styles.badgeRow}>
+                  <Badge label={item.role} tone="muted" />
+                  {item.member_count != null && (
+                    <Badge label={`${item.member_count} members`} tone="muted" />
+                  )}
+                  <Badge label={`Cycle ${item.current_cycle || 0}`} tone="muted" />
+                  {item.payoutPosition != null && (
+                    <Badge label={`Pos ${item.payoutPosition}`} tone="active" />
+                  )}
+                </View>
+                <View style={styles.openRow}>
+                  <Text style={styles.desc} numberOfLines={1}>
+                    {item.description ?? ''}
+                  </Text>
+                  <Text style={styles.open}>Open →</Text>
+                </View>
+              </Pressable>
+            </Enter>
           )}
         />
       )}

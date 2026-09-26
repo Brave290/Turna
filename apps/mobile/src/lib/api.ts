@@ -104,18 +104,6 @@ export const mobileAdmin = {
   overview() {
     return postAuth<AdminOverview>('/api/mobile/admin', { action: 'overview' });
   },
-  kyc(input: { id: string; decision: 'approved' | 'rejected'; reason?: string }) {
-    return postAuth<{ ok?: boolean; status?: string }>('/api/mobile/admin', {
-      action: 'kyc',
-      ...input,
-    });
-  },
-  contribution(input: { contribution_id: string; decision: 'confirmed' | 'rejected' }) {
-    return postAuth<{ ok?: boolean; decision?: string }>('/api/mobile/admin', {
-      action: 'contribution',
-      ...input,
-    });
-  },
   broadcast(input: { title: string; body: string }) {
     return postAuth<{ count?: number; inApp?: number; emails?: number }>(
       '/api/mobile/admin',
@@ -138,49 +126,11 @@ export type AdminUserRow = {
   created_at: string;
 };
 
-export type AdminCircleRow = {
-  id: string;
-  name: string;
-  status: string;
-  contribution_amount: number;
-  currency: string;
-  owner_id: string;
-  created_at: string;
-};
-
-export type AdminKycRow = {
-  id: string;
-  user_id: string;
-  document_type: string;
-  document_number: string;
-  full_legal_name: string;
-  status: string;
-  rejection_reason: string | null;
-  created_at: string;
-  profiles: unknown;
-};
-
-export type AdminContributionRow = {
-  id: string;
-  status: string;
-  amount: number;
-  created_at: string;
-  circle_id: string;
-  circle_name: string;
-  member_email: string;
-  member_name: string;
-};
-
 export type AdminOverview = {
   counts: {
     users: number;
     circles: number;
     memberships: number;
-    pendingKyc: number;
-    pendingContributions: number;
   };
   recentUsers: AdminUserRow[];
-  recentCircles: AdminCircleRow[];
-  kycQueue: AdminKycRow[];
-  pendingContributions: AdminContributionRow[];
 };

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { BackHandler, StatusBar, StyleSheet, View } from 'react-native';
+import { BackHandler, Linking, StatusBar, StyleSheet, View } from 'react-native';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { drainQueue } from './lib/offline';
 import { ensureNotificationPermission } from './lib/notifications-perm';
@@ -91,6 +91,24 @@ function Gate() {
     });
     return () => sub.remove();
   }, [stack, tab]);
+
+  // Deep links: handle turnaapp:// URLs (e.g. reset-password).
+  useEffect(() => {
+    const handleUrl = (url: string | null) => {
+      if (!url) return;
+      if (url.startsWith('turnaapp://auth/reset-password')) {
+        const match = url.match(/[?&]token=([^&]+)/);
+        const token = match ? decodeURIComponent(match[1]) : null;
+        const webUrl = token
+          ? `https://turnaapp.com/auth/reset-password?token=${encodeURIComponent(token)}`
+          : 'https://turnaapp.com/auth/reset-password';
+        Linking.openURL(webUrl).catch(() => {});
+      }
+    };
+    Linking.getInitialURL().then(handleUrl).catch(() => {});
+    const sub = Linking.addEventListener('url', ({ url }) => handleUrl(url));
+    return () => sub.remove();
+  }, []);
 
   const current = stack[stack.length - 1];
 

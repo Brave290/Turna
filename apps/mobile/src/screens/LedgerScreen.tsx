@@ -18,6 +18,7 @@ import { OfflineScreen } from '../components/OfflineScreen';
 import { Card, Badge } from '../components/Card';
 import { Button } from '../components/Button';
 import { Screen } from '../components/Screen';
+import { Enter } from '../components/Enter';
 import { colors, spacing, typography, type Palette } from '../theme';
 import { usePaletteStyles } from '../context/ThemeContext';
 
@@ -182,21 +183,23 @@ export function LedgerScreen({ onPush }: { onPush?: (screen: any) => void } = {}
 
   return (
     <Screen tone="cream">
-      <View style={styles.header}>
-        <Text style={styles.title}>Ledger</Text>
-        <Text style={styles.sub}>{sub}</Text>
-        <View style={styles.badgeWrap}>
-          <Badge label={isAdmin ? 'Admin view' : 'Privacy mode'} tone={isAdmin ? 'active' : 'muted'} />
-          {events.length > 0 && (
-            <Pressable onPress={exportCsv} style={styles.linkBtn}>
-              <Text style={styles.linkText}>Export CSV</Text>
+      <Enter delay={0}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Ledger</Text>
+          <Text style={styles.sub}>{sub}</Text>
+          <View style={styles.badgeWrap}>
+            <Badge label={isAdmin ? 'Admin view' : 'Privacy mode'} tone={isAdmin ? 'active' : 'muted'} />
+            {events.length > 0 && (
+              <Pressable onPress={exportCsv} style={styles.linkBtn}>
+                <Text style={styles.linkText}>Export CSV</Text>
+              </Pressable>
+            )}
+            <Pressable onPress={() => onPush?.({ name: 'audit-log' })} style={styles.linkBtn}>
+              <Text style={styles.linkText}>Audit log</Text>
             </Pressable>
-          )}
-          <Pressable onPress={() => onPush?.({ name: 'audit-log' })} style={styles.linkBtn}>
-            <Text style={styles.linkText}>Audit log</Text>
-          </Pressable>
+          </View>
         </View>
-      </View>
+      </Enter>
 
       {!online && events.length === 0 ? (
         <OfflineScreen
@@ -246,21 +249,23 @@ export function LedgerScreen({ onPush }: { onPush?: (screen: any) => void } = {}
               )}
             </Card>
           }
-          renderItem={({ item }) => (
-            <View style={styles.tr}>
-              <Text style={[styles.td, styles.tdMuted, { flex: 1.2 }]} numberOfLines={2}>
-                {when(item.created_at)}
-              </Text>
-              <Text style={[styles.td, { flex: 1 }]} numberOfLines={1}>
-                {item.circles?.name ?? '—'}
-              </Text>
-              <Text style={[styles.td, styles.tdMedium, { flex: 1.2 }]} numberOfLines={2}>
-                {item.event_type.replace(/_/g, ' ')}
-              </Text>
-              <Text style={[styles.td, styles.tdMuted, { flex: 0.9 }]} numberOfLines={1}>
-                {item.entity_type}
-              </Text>
-            </View>
+          renderItem={({ item, index }) => (
+            <Enter delay={index * 60}>
+              <View style={styles.tr}>
+                <Text style={[styles.td, styles.tdMuted, { flex: 1.2 }]} numberOfLines={2}>
+                  {when(item.created_at)}
+                </Text>
+                <Text style={[styles.td, { flex: 1 }]} numberOfLines={1}>
+                  {item.circles?.name ?? '—'}
+                </Text>
+                <Text style={[styles.td, styles.tdMedium, { flex: 1.2 }]} numberOfLines={2}>
+                  {item.event_type.replace(/_/g, ' ')}
+                </Text>
+                <Text style={[styles.td, styles.tdMuted, { flex: 0.9 }]} numberOfLines={1}>
+                  {item.entity_type}
+                </Text>
+              </View>
+            </Enter>
           )}
         />
       )}
