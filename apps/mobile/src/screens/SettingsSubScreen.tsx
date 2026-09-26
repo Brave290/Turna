@@ -40,6 +40,7 @@ import {
   ExternalLink,
   Globe,
 } from 'lucide-react-native';
+import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import { useAuth } from '../context/AuthContext';
 import { supabase, APP_API_URL } from '../lib/supabase';
 import { enqueueOp, isOfflineError } from '../lib/offline';
@@ -54,6 +55,8 @@ import { useToast } from '../components/Toast';
 import { colors, spacing, typography, type Palette } from '../theme';
 import { LOCAL_VERSION_CODE, LOCAL_VERSION_NAME } from '../generated/version';
 import { usePaletteStyles } from '../context/ThemeContext';
+import { Enter } from '../components/Enter';
+import { useClipboardOtp } from '../lib/otp-clipboard';
 
 /** Settings sub-pages — same labels/copy as web settings nav-config. */
 export type SettingsRoute =
@@ -420,7 +423,8 @@ function LoadingRow({ label }: { label?: string }) {
   );
 }
 
-/** Shared 6-digit code entry — unlocks profile and payout account edits. */
+/** Shared 6-digit code entry — unlocks profile edits. Auto-verifies from
+ *  the clipboard (or once 6 digits are typed) the moment a code appears. */
 function OtpEntry({
   message,
   busy,
@@ -436,18 +440,27 @@ function OtpEntry({
 }) {
   const { p, styles: s } = usePaletteStyles(makeS);
   const [code, setCode] = useState('');
+
+  function apply(next: string) {
+    setCode(next);
+    if (next.length === 6 && !busy) onVerify(next);
+  }
+  useClipboardOtp(!busy, (c) => apply(c));
+
   return (
+    <Enter>
     <View style={s.otpCard}>
       <Text style={s.otpTitle}>Enter the 6-digit code we emailed you</Text>
       {message ? <Text style={s.otpMsg}>{message}</Text> : null}
       <TextInput
         style={[s.input, s.otpInput]}
         value={code}
-        onChangeText={(v: string) => setCode(v.replace(/\D/g, '').slice(0, 6))}
+        onChangeText={(v: string) => apply(v.replace(/\D/g, '').slice(0, 6))}
         keyboardType="numeric"
         maxLength={6}
         placeholder="000000"
         placeholderTextColor={p.textMuted}
+        autoComplete="one-time-code"
         accessibilityLabel="Verification code"
       />
       <Button
@@ -479,6 +492,7 @@ function OtpEntry({
         />
       </View>
     </View>
+    </Enter>
   );
 }
 
@@ -881,6 +895,7 @@ function ProfileSection({ ctx }: { ctx: Ctx }) {
   const { p, styles: s } = usePaletteStyles(makeS);
   const { row, loaded, values, displayName, email, user } = useProfile();
   const [avatarBusy, setAvatarBusy] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const hasProfileData = Boolean(row?.phone || row?.bio || row?.city || row?.date_of_birth);
   const avatarUrl = row?.avatar_url ?? null;
@@ -938,6 +953,62 @@ function ProfileSection({ ctx }: { ctx: Ctx }) {
     }
   }
 
+  async function pickAvatar(source: 'library' | 'camera') {
+    if (avatarBusy || !user) return;
+    setPickerOpen(false);
+    setAvatarBusy(true);
+    try {
+      const opts = {
+        mediaType: 'photo' as const,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        quality: 0.8 as const,
+        includeBase64: true,
+      };
+      const res =
+        source === 'camera'
+          ? await launchCamera({ ...opts, cameraType: 'back' })
+          : await launchImageLibrary(opts);
+      const asset = res.assets?.[0];
+      if (res.didCancel || !asset?.base64) return;
+      const dataUrl = `data:${asset.type ?? 'image/jpeg'};base64,${asset.base64}`;
+      if (dataUrl.length > 6_900_000) {
+        ctx.toast('Image must be 5MB or smaller.', 'error');
+        return;
+      }
+      const payload = {
+        avatar_url: dataUrl,
+        avatar_version: Date.now(),
+        updated_at: new Date().toISOString(),
+      };
+      const { error } = await supabase.from('profiles').update(payload).eq('id', user.id);
+      if (error) {
+        if (isOfflineError(new Error(error.message))) {
+          await enqueueOp({
+            table: 'profiles',
+            action: 'update',
+            match: { id: user.id },
+            payload,
+          });
+          ctx.toast('Saved — will sync when you\u2019re back online.');
+          return;
+        }
+        ctx.toast(error.message, 'error');
+        return;
+      }
+      try {
+        await supabase.auth.updateUser({ data: { avatar_url: dataUrl } });
+      } catch {
+        /* metadata optional */
+      }
+      ctx.toast('Profile picture updated.');
+    } catch {
+      ctx.toast('Could not update profile picture', 'error');
+    } finally {
+      setAvatarBusy(false);
+    }
+  }
+
   return (
     <>
       <Panel
@@ -962,21 +1033,38 @@ function ProfileSection({ ctx }: { ctx: Ctx }) {
               <Text style={s.rowDesc} numberOfLines={1}>
                 {email ?? ''}
               </Text>
-              {avatarUrl ? (
+              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
                 <Button
-                  label="Remove"
-                  variant="outline"
-                  onPress={() => void removeAvatar()}
+                  label="Change photo"
+                  onPress={() => setPickerOpen(true)}
                   loading={avatarBusy}
                   disabled={avatarBusy}
                   style={s.removeBtn}
                 />
-              ) : null}
+                {avatarUrl ? (
+                  <Button
+                    label="Remove"
+                    variant="outline"
+                    onPress={() => void removeAvatar()}
+                    loading={avatarBusy}
+                    disabled={avatarBusy}
+                    style={s.removeBtn}
+                  />
+                ) : null}
+              </View>
             </View>
           </View>
         )}
       </Panel>
 
+      <Popup visible={pickerOpen} onClose={() => setPickerOpen(false)} title="Profile photo">
+        <Text style={{ color: p.text, fontSize: typography.body, lineHeight: 20, marginBottom: spacing.md }}>
+          Choose a new photo. It is shown to circle members.
+        </Text>
+        <Button label="Choose from library" onPress={() => void pickAvatar('library')} disabled={avatarBusy} />
+        <View style={{ height: spacing.sm }} />
+        <Button label="Take a photo" variant="outline" onPress={() => void pickAvatar('camera')} disabled={avatarBusy} />
+      </Popup>
       <Panel
         title="Public profile"
         description="Locked after first save — unlock with an email code to edit."
@@ -1171,6 +1259,8 @@ function SecuritySection({ ctx }: { ctx: Ctx }) {
   const [formError, setFormError] = useState<string | null>(null);
   const [signOutBusy, setSignOutBusy] = useState(false);
 
+  useClipboardOtp(step === 'verify', setOtp);
+
   async function requestCode() {
     setFormError(null);
     setSending(true);
@@ -1284,7 +1374,7 @@ function SecuritySection({ ctx }: { ctx: Ctx }) {
             disabled={sending}
           />
         ) : (
-          <View>
+          <Enter>
             <Field label="6-digit code">
               <TextInput
                 style={[s.input, s.otpInput]}
@@ -1360,7 +1450,7 @@ function SecuritySection({ ctx }: { ctx: Ctx }) {
                 style={s.flexBtn}
               />
             </View>
-          </View>
+          </Enter>
         )}
         {formError ? <ErrorBox message={formError} /> : null}
       </Panel>

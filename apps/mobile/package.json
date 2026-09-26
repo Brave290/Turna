@@ -21,6 +21,7 @@
   "dependencies": {
     "@babel/runtime": "^7.29.7",
     "@react-native-async-storage/async-storage": "^1.23.1",
+    "@react-native-clipboard/clipboard": "^1.16.3",
     "@react-native-community/netinfo": "^12.0.1",
     "@react-native-voice/voice": "^3.2.4",
     "@supabase/supabase-js": "^2.39.0",
@@ -28,6 +29,7 @@
     "lucide-react-native": "^1.48.0",
     "react": "18.2.0",
     "react-native": "0.73.6",
+    "react-native-image-picker": "^8.2.1",
     "react-native-svg": "^15.3.0",
     "react-native-url-polyfill": "^2.0.0"
   },
