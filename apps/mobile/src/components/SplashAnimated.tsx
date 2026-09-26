@@ -3,7 +3,7 @@ import { Animated, Easing, Image, StyleSheet, Text, View } from 'react-native';
 import { useMotion } from '../context/MotionContext';
 import { colors } from '../theme';
 
-const APP_ICON = require('../assets/app-icon-192.png');
+const APP_ICON = require('../../assets/app-icon-192.png');
 
 /**
  * The one and only splash: continues the native app-icon splash on the same

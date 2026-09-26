@@ -508,3 +508,40 @@
     content: none !important;
   }
 }
+
+/* ── Turna download celebration (confetti + shimmer) ── */
+@keyframes turna-confetti-drop {
+  0% {
+    transform: translate3d(0, -10vh, 0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(var(--dx, 0px), 110vh, 0) rotate(var(--spin, 720deg));
+    opacity: 0.85;
+  }
+}
+.turna-confetti-piece {
+  animation: turna-confetti-drop var(--dur, 1.6s) cubic-bezier(0.22, 0.61, 0.36, 1)
+    forwards;
+}
+
+@keyframes turna-shimmer {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(420%);
+  }
+}
+.turna-shimmer {
+  animation: turna-shimmer 1.15s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .turna-confetti-piece {
+    animation-duration: 0.01s !important;
+  }
+  .turna-shimmer {
+    animation: none !important;
+  }
+}
