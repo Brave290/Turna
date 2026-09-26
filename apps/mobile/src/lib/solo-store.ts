@@ -38,6 +38,30 @@ export type SoloLedger = {
 };
 
 const KEY = 'turna.solo.mobile.v1';
+/**
+ * Deleted-ledger tombstones: a local delete that could not reach the server
+ * must never be resurrected by the next pull (that was the bug — local-first
+ * delete + pull re-adding the row).
+ */
+const DELETED_KEY = 'turna.solo.deleted.v1';
+type DeletedMap = Record<string, string>;
+
+async function readDeleted(): Promise<DeletedMap> {
+  try {
+    const raw = await AsyncStorage.getItem(DELETED_KEY);
+    return raw ? (JSON.parse(raw) as DeletedMap) : {};
+  } catch {
+    return {};
+  }
+}
+
+async function writeDeleted(map: DeletedMap) {
+  try {
+    await AsyncStorage.setItem(DELETED_KEY, JSON.stringify(map));
+  } catch {
+    /* storage full — a stale tombstone is harmless */
+  }
+}
 
 /** Offline IDs must be valid UUIDs for DB uuid columns. */
 export function offlineUuid(): string {
@@ -103,12 +127,19 @@ export async function deleteSoloLedger(id: string) {
   const map = await readAll();
   delete map[id];
   await writeAll(map);
+  const deleted = await readDeleted();
   try {
-    await import('./supabase').then(({ supabase }) =>
-      supabase.from('solo_ledgers').delete().eq('id', id)
-    );
+    const { supabase } = await import('./supabase');
+    const { error } = await supabase.from('solo_ledgers').delete().eq('id', id);
+    if (error) throw new Error(error.message);
+    // Server agrees the row is gone — drop any tombstone we were holding.
+    delete deleted[id];
+    await writeDeleted(deleted);
   } catch {
-    /* offline — local delete is enough */
+    // Offline (or the delete was rejected): tombstone the id so the next
+    // pull cannot bring the ledger back.
+    deleted[id] = new Date().toISOString();
+    await writeDeleted(deleted);
   }
 }
 
@@ -256,6 +287,25 @@ export async function pullSoloFromServer(): Promise<void> {
     .order('updated_at', { ascending: false })
     .limit(50);
   if (!ledgers) return;
+
+  // Reconcile tombstones: retry the delete while the server still has the
+  // row, and forget it once the server no longer returns it.
+  const deleted = await readDeleted();
+  const serverIds = new Set(
+    (ledgers as { id: string }[]).map((l) => l.id)
+  );
+  for (const id of Object.keys(deleted)) {
+    if (!serverIds.has(id)) {
+      delete deleted[id];
+      continue;
+    }
+    const { error } = await supabase.from('solo_ledgers').delete().eq('id', id);
+    if (!error) {
+      delete deleted[id];
+      serverIds.delete(id);
+    }
+  }
+
   const map = await readAll();
   for (const l of ledgers as {
     id: string;
@@ -265,6 +315,11 @@ export async function pullSoloFromServer(): Promise<void> {
     description: string | null;
     updated_at: string;
   }[]) {
+    if (deleted[l.id]) {
+      // Pending local delete — do not resurrect it.
+      delete map[l.id];
+      continue;
+    }
     const [{ data: cs }, { data: es }] = await Promise.all([
       supabase.from('solo_contributors').select('*').eq('ledger_id', l.id),
       supabase.from('solo_entries').select('*').eq('ledger_id', l.id),
@@ -316,6 +371,7 @@ export async function pullSoloFromServer(): Promise<void> {
     };
   }
   await writeAll(map);
+  await writeDeleted(deleted);
 }
 
 /** Push queued offline mutations to Supabase. */
@@ -364,6 +420,7 @@ export async function pushSoloToServer(): Promise<number> {
             note: c.note,
             expected_amount: c.expected_amount,
             sort_order: c.sort_order,
+            archived: c.archived ?? false,
             local_updated_at: c.local_updated_at,
           },
           { onConflict: 'id' }

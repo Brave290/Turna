@@ -18,7 +18,9 @@ import {
   CalendarDays,
   ChevronRight,
   Home as HomeIcon,
+  Moon,
   PiggyBank,
+  Sun,
   Clock,
   FileText,
 } from 'lucide-react-native';
@@ -29,7 +31,7 @@ import { Card, Badge, Stat } from '../components/Card';
 import { Screen } from '../components/Screen';
 import { colors, spacing, typography, type Palette } from '../theme';
 import { formatCurrency, formatRelativeTime } from '../lib/format';
-import { usePaletteStyles } from '../context/ThemeContext';
+import { usePaletteStyles, useTheme } from '../context/ThemeContext';
 
 type CircleRow = {
   id: string;
@@ -99,6 +101,7 @@ export function HomeScreen({
   onPush?: (screen: any) => void;
 } = {}) {
   const { p, styles } = usePaletteStyles(makeStyles);
+  const { resolved, setMode } = useTheme();
   const { displayName, user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -314,6 +317,20 @@ export function HomeScreen({
                   {unread > 9 ? '9+' : String(unread)}
                 </Text>
               </View>
+            )}
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+              resolved === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'
+            }
+            onPress={() => setMode(resolved === 'dark' ? 'light' : 'dark')}
+            style={({ pressed }) => [styles.bellBtn, pressed && styles.bellBtnPressed]}
+          >
+            {resolved === 'dark' ? (
+              <Sun size={20} color={p.text} strokeWidth={2} />
+            ) : (
+              <Moon size={20} color={p.text} strokeWidth={2} />
             )}
           </Pressable>
         </View>

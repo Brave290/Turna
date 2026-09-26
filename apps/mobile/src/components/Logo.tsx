@@ -1,5 +1,13 @@
 import React from 'react';
-import { Image, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import {
+  Image,
+  StyleSheet,
+  Text,
+  View,
+  type ImageStyle,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import { colors, spacing, type Palette } from '../theme';
 import { usePaletteStyles } from '../context/ThemeContext';
 
@@ -19,7 +27,7 @@ export function Logo({
   size?: number;
   variant?: 'default' | 'on-dark';
   withWordmark?: boolean;
-  style?: StyleProp<ViewStyle>;
+  style?: StyleProp<ViewStyle & ImageStyle>;
 }) {
   const { p, styles } = usePaletteStyles(makeStyles);
   const src = variant === 'on-dark' ? LOGO_ON_DARK : LOGO;

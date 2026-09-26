@@ -148,7 +148,7 @@ export function AuthScreen({ onSwitch }: { onSwitch?: () => void }) {
     >
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <View style={styles.logoWrap}>
-          <Logo variant="on-dark" size={48} />
+          <Logo variant="default" size={44} />
         </View>
         <Text style={styles.title}>
           {mode === 'login' ? 'Welcome back' : 'Create your account'}
@@ -167,7 +167,7 @@ export function AuthScreen({ onSwitch }: { onSwitch?: () => void }) {
               value={name}
               onChangeText={setName}
               placeholder="Jane Okafor"
-              placeholderTextColor="rgba(255,255,255,0.4)"
+              placeholderTextColor={p.textMuted}
               autoCapitalize="words"
             />
           </View>
@@ -180,7 +180,7 @@ export function AuthScreen({ onSwitch }: { onSwitch?: () => void }) {
             value={email}
             onChangeText={setEmail}
             placeholder="you@example.com"
-            placeholderTextColor="rgba(255,255,255,0.4)"
+            placeholderTextColor={p.textMuted}
             autoCapitalize="none"
             autoComplete="email"
             keyboardType="email-address"
@@ -210,7 +210,7 @@ export function AuthScreen({ onSwitch }: { onSwitch?: () => void }) {
               value={password}
               onChangeText={setPassword}
               placeholder={mode === 'login' ? 'Enter your password' : 'At least 8 characters'}
-              placeholderTextColor="rgba(255,255,255,0.4)"
+              placeholderTextColor={p.textMuted}
               secureTextEntry={!showPw}
               autoComplete="password"
             />
@@ -222,9 +222,9 @@ export function AuthScreen({ onSwitch }: { onSwitch?: () => void }) {
               accessibilityLabel={showPw ? 'Hide password' : 'Show password'}
             >
               {showPw ? (
-                <EyeOff size={18} color="rgba(255,255,255,0.55)" />
+                <EyeOff size={18} color={p.textMuted} />
               ) : (
-                <Eye size={18} color="rgba(255,255,255,0.55)" />
+                <Eye size={18} color={p.textMuted} />
               )}
             </Pressable>
           </View>
@@ -234,7 +234,7 @@ export function AuthScreen({ onSwitch }: { onSwitch?: () => void }) {
           <Switch
             value={remember}
             onValueChange={setRemember}
-            trackColor={{ false: 'rgba(255,255,255,0.2)', true: colors.primary }}
+            trackColor={{ false: p.border, true: p.primarySolid }}
             thumbColor={colors.white}
           />
           <Text style={styles.checkLabel}>Remember my email</Text>
@@ -378,7 +378,7 @@ function VerifyGate({ email, onBack }: { email: string; onBack: () => void }) {
     >
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <View style={styles.logoWrap}>
-          <Logo variant="on-dark" size={48} />
+          <Logo variant="default" size={44} />
         </View>
         <Text style={styles.title}>Verify your email</Text>
         <Text style={styles.sub}>Enter the 6-digit code sent to {email}</Text>
@@ -390,7 +390,7 @@ function VerifyGate({ email, onBack }: { email: string; onBack: () => void }) {
             value={code}
             onChangeText={(t: string) => setCode(t.replace(/\D/g, '').slice(0, 6))}
             placeholder="000000"
-            placeholderTextColor="rgba(255,255,255,0.4)"
+            placeholderTextColor={p.textMuted}
             keyboardType="number-pad"
             maxLength={6}
           />
@@ -417,29 +417,31 @@ function VerifyGate({ email, onBack }: { email: string; onBack: () => void }) {
 }
 
 const makeStyles = (p: Palette) => StyleSheet.create({
-  flex: { flex: 1, backgroundColor: p.brand },
+  flex: { flex: 1, backgroundColor: p.bg },
   scroll: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xxl,
   },
   logoWrap: {
     alignItems: 'center',
     marginBottom: spacing.lg,
   },
   title: {
-    color: colors.white,
-    fontSize: typography.title,
-    fontWeight: '700',
+    color: p.text,
+    fontSize: 30,
+    fontWeight: '800',
     textAlign: 'center',
+    letterSpacing: -0.8,
   },
   sub: {
-    color: 'rgba(255,255,255,0.75)',
-    fontSize: typography.body,
+    color: p.textMuted,
+    fontSize: 16,
     textAlign: 'center',
     marginTop: spacing.sm,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xl,
+    lineHeight: 22,
   },
   field: { marginBottom: spacing.md },
   pwWrap: { position: 'relative' },
@@ -469,12 +471,12 @@ const makeStyles = (p: Palette) => StyleSheet.create({
     marginBottom: 6,
   },
   resetInput: {
-    minHeight: 48,
+    minHeight: 50,
     borderWidth: 1,
     borderColor: p.border,
     borderRadius: radius.md,
     paddingHorizontal: spacing.lg,
-    fontSize: typography.body,
+    fontSize: 16,
     color: p.text,
     backgroundColor: p.surface,
   },
@@ -489,20 +491,20 @@ const makeStyles = (p: Palette) => StyleSheet.create({
     lineHeight: 22,
   },
   label: {
-    color: 'rgba(255,255,255,0.8)',
+    color: p.textMuted,
     fontSize: typography.caption,
     fontWeight: '600',
     marginBottom: 6,
   },
   input: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: p.surface,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: p.border,
     borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 14,
-    color: colors.white,
-    fontSize: typography.body,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 15,
+    color: p.text,
+    fontSize: 16,
   },
   codeInput: {
     textAlign: 'center',
@@ -518,22 +520,22 @@ const makeStyles = (p: Palette) => StyleSheet.create({
   },
   checkLabel: {
     flex: 1,
-    color: 'rgba(255,255,255,0.7)',
+    color: p.textMuted,
     fontSize: typography.caption,
     lineHeight: 20,
   },
   checkbox: {
     width: 18,
     height: 18,
-    borderRadius: 4,
+    borderRadius: 5,
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.45)',
+    borderColor: p.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkboxOn: {
     backgroundColor: p.primarySolid,
-    borderColor: p.primary,
+    borderColor: p.primarySolid,
   },
   checkMark: {
     color: colors.white,
@@ -542,10 +544,10 @@ const makeStyles = (p: Palette) => StyleSheet.create({
   },
   link: {
     color: p.primary,
-    textDecorationLine: 'underline',
+    fontWeight: '600',
   },
   error: {
-    color: '#FF8A8A',
+    color: p.error,
     fontSize: typography.caption,
     marginBottom: spacing.sm,
     textAlign: 'center',
@@ -556,9 +558,13 @@ const makeStyles = (p: Palette) => StyleSheet.create({
     marginBottom: spacing.sm,
     textAlign: 'center',
   },
-  cta: { marginTop: spacing.sm },
+  cta: {
+    marginTop: spacing.sm,
+    borderRadius: radius.full,
+    minHeight: 52,
+  },
   switchText: {
-    color: 'rgba(255,255,255,0.7)',
+    color: p.textMuted,
     fontSize: typography.body,
     textAlign: 'center',
     marginTop: spacing.lg,

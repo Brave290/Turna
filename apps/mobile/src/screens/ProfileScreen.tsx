@@ -373,7 +373,7 @@ export function ProfileScreen({
 
           <Field label="Full name" error={nameError}>
             <TextInput
-              style={[styles.input, nameError && styles.inputError]}
+              style={[styles.input, nameError ? styles.inputError : null]}
               value={f.display_name}
               onChangeText={(v: string) => setF((s) => ({ ...s, display_name: v }))}
               maxLength={100}

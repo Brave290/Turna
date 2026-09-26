@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, Share, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Card, Badge } from '../components/Card';
@@ -107,6 +107,27 @@ export function AuditLogScreen({ onBack }: { onBack?: () => void } = {}) {
     void load();
   }, [load]);
 
+  // Same CSV export as LedgerScreen: raw rows, quoted fields, shared as a file
+  // name via the OS share sheet.
+  const exportCsv = () => {
+    const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
+    const table = [
+      ['timestamp', 'circle', 'event', 'entity', 'event_id'],
+      ...events.map((e) => [
+        e.created_at,
+        e.circles?.name ?? '',
+        e.event_type,
+        e.entity_type,
+        e.id,
+      ]),
+    ];
+    const csv = table.map((r) => r.map(esc).join(',')).join('\n');
+    void Share.share({
+      message: csv,
+      title: `turna-audit-log-${new Date().toISOString().slice(0, 10)}.csv`,
+    });
+  };
+
   return (
     <Screen tone="cream">
       <View style={styles.header}>
@@ -119,8 +140,13 @@ export function AuditLogScreen({ onBack }: { onBack?: () => void } = {}) {
             </Text>
           </View>
         </View>
-        <View style={{ marginTop: spacing.sm, flexDirection: 'row' }}>
+        <View style={{ marginTop: spacing.sm, flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' }}>
           <Badge label={isAdmin ? 'Admin view' : 'Privacy mode'} tone={isAdmin ? 'active' : 'muted'} />
+          {events.length > 0 && (
+            <Pressable onPress={exportCsv} style={styles.linkBtn}>
+              <Text style={styles.linkText}>Export CSV</Text>
+            </Pressable>
+          )}
         </View>
       </View>
       {loading ? (
@@ -227,6 +253,19 @@ const makeStyles = (p: Palette) => StyleSheet.create({
   },
   card: {
     marginBottom: 0,
+  },
+  linkBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: spacing.sm,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: p.border,
+    backgroundColor: p.surface,
+  },
+  linkText: {
+    fontSize: 12,
+    color: p.primary,
+    fontWeight: '600',
   },
   row: {
     flexDirection: 'row',

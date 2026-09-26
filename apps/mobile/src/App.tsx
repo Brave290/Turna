@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { BackHandler, StyleSheet, Text, View } from 'react-native';
+import { BackHandler, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { drainQueue } from './lib/offline';
+import { ensureNotificationPermission } from './lib/notifications-perm';
 import { AuthScreen } from './screens/AuthScreen';
 import { OnboardingScreen } from './screens/OnboardingScreen';
 import { HomeScreen } from './screens/HomeScreen';
@@ -22,7 +23,7 @@ import { TabBar } from './navigation/TabBar';
 import { UpdatePopup } from './components/UpdatePopup';
 import { Logo } from './components/Logo';
 import { colors, spacing, typography, type Palette } from './theme';
-import { usePaletteStyles, ThemeProvider } from './context/ThemeContext';
+import { usePaletteStyles, useTheme, ThemeProvider } from './context/ThemeContext';
 import { MotionProvider } from './context/MotionContext';
 
 type TabKey = 'home' | 'circles' | 'ledger' | 'solo' | 'profile';
@@ -50,6 +51,7 @@ type StackScreen =
 function Gate() {
   const { p, styles } = usePaletteStyles(makeStyles);
   const { status } = useAuth();
+  const { resolved } = useTheme();
   const [tab, setTab] = useState<TabKey>('home');
   const [guest, setGuest] = useState(false);
   const [soloId, setSoloId] = useState<string | null>(null);
@@ -62,6 +64,9 @@ function Gate() {
       return;
     }
     void drainQueue();
+    // Ask once, right after sign-in (Android 13+ POST_NOTIFICATIONS; no-op on
+    // iOS and older Android). The helper one-shots itself via AsyncStorage.
+    void ensureNotificationPermission();
   }, [status]);
 
   // Android back: step backwards through the stack; only exit at the root.
@@ -134,7 +139,7 @@ function Gate() {
       case 'audit-log':
         return <AuditLogScreen onBack={pop} />;
       case 'contributions':
-        return <ContributionsScreen onBack={pop} />;
+        return <ContributionsScreen onBack={pop} onPush={push} />;
       case 'payouts':
         return <PayoutsScreen onBack={pop} />;
       case 'settings':
@@ -169,8 +174,16 @@ function Gate() {
 
   const showTabs = status === 'signedIn';
 
+  // Baseline status bar for screens that do not render their own: only the
+  // splash paints the brand colour (auth/onboarding use the theme background).
+  const splash = status === 'loading';
+
   return (
     <View style={styles.root}>
+      <StatusBar
+        barStyle={splash || resolved === 'dark' ? 'light-content' : 'dark-content'}
+        backgroundColor={splash ? p.brand : p.bg}
+      />
       <View style={styles.body}>{body}</View>
       {showTabs && (
         <TabBar

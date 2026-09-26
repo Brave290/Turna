@@ -16,7 +16,6 @@ import {
   Bell,
   CheckCircle2,
   ChevronRight,
-  Cloud,
   Download,
   Eye,
   EyeOff,
@@ -695,7 +694,7 @@ function ProfileFormCard({ initial, ctx }: { initial: ProfileValues; ctx: Ctx })
     <>
       <Field label="Full name" error={nameError}>
         <TextInput
-          style={[s.input, nameError && s.inputError]}
+          style={[s.input, nameError ? s.inputError : null]}
           value={f.display_name}
           onChangeText={set('display_name')}
           maxLength={100}
@@ -1177,11 +1176,6 @@ function SecuritySection({ ctx }: { ctx: Ctx }) {
   const [formError, setFormError] = useState<string | null>(null);
   const [signOutBusy, setSignOutBusy] = useState(false);
 
-  const identities = ((user as any)?.app_metadata?.identities ??
-    (user as any)?.identities ??
-    []) as { provider?: string }[];
-  const googleConnected = identities.some((i) => i.provider === 'google');
-
   async function requestCode() {
     setFormError(null);
     setSending(true);
@@ -1275,12 +1269,6 @@ function SecuritySection({ ctx }: { ctx: Ctx }) {
           label="Email OTP"
           description="Used for secure verification in Turna"
           value="On"
-        />
-        <Row
-          icon={Cloud}
-          label="Google"
-          description={googleConnected ? 'Connected to your Google account' : 'Not connected'}
-          value={googleConnected ? 'Connected' : 'Not connected'}
         />
       </Group>
 
@@ -2728,7 +2716,7 @@ function DeleteSection({ ctx }: { ctx: Ctx }) {
       >
         <Field label="Type your email to confirm" error={fieldError}>
           <TextInput
-            style={[s.input, fieldError && s.inputError]}
+            style={[s.input, fieldError ? s.inputError : null]}
             value={confirmEmail}
             onChangeText={setConfirmEmail}
             placeholder="you@example.com"

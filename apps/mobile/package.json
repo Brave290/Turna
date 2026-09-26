@@ -16,11 +16,12 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
     "start": "react-native start",
-    "lint": "echo 'No mobile eslint config \u2014 run typecheck instead'"
+    "lint": "echo 'No mobile eslint config — run typecheck instead'"
   },
   "dependencies": {
     "@babel/runtime": "^7.29.7",
     "@react-native-async-storage/async-storage": "^1.23.1",
+    "@react-native-community/netinfo": "^12.0.1",
     "@supabase/supabase-js": "^2.39.0",
     "@turna/config": "workspace:*",
     "lucide-react-native": "^1.48.0",

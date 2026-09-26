@@ -42,7 +42,7 @@ export function Popup({
 }
 
 /**
- * Branded confirm dialog (replaces native Alert.alert) — mirrors the web useConfirm.
+ * Branded confirm dialog (replaces the native alert) — mirrors the web useConfirm.
  * const { confirm, node } = useConfirm(); … if (await confirm({...})) …; render {node}
  */
 export function useConfirm() {

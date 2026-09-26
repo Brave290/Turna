@@ -146,6 +146,23 @@ export function NotificationsScreen({ onBack }: { onBack?: () => void } = {}) {
     }
   }
 
+  // Web parity: opening a notification marks it read (optimistic, then server).
+  async function markRead(id: string) {
+    if (!user) return;
+    const target = rows.find((r) => r.id === id);
+    if (!target || target.status === 'read') return;
+    setRows((rs) => rs.map((r) => (r.id === id ? { ...r, status: 'read' } : r)));
+    try {
+      await supabase
+        .from('notifications')
+        .update({ status: 'read' })
+        .eq('id', id)
+        .eq('user_id', user.id);
+    } catch {
+      /* offline — keep optimistic state */
+    }
+  }
+
   return (
     <Screen tone="cream">
       <View style={styles.header}>
@@ -189,26 +206,35 @@ export function NotificationsScreen({ onBack }: { onBack?: () => void } = {}) {
             </Card>
           }
           renderItem={({ item }) => (
-            <Card style={styles.card}>
-              <View style={styles.row}>
-                <View style={styles.iconBox}>
-                  <Bell size={20} color={p.primary} strokeWidth={2} />
-                </View>
-                <View style={styles.content}>
-                  <View style={styles.titleRow}>
-                    <Text style={styles.nTitle}>{item.title}</Text>
-                    <Badge
-                      label={item.status.replace(/_/g, ' ')}
-                      tone={toneFor(item.status)}
-                    />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Notification: ${item.title}`}
+              onPress={() => void markRead(item.id)}
+              style={({ pressed }) => (pressed ? styles.cardPressed : undefined)}
+            >
+              <Card style={styles.card}>
+                <View style={styles.row}>
+                  <View style={styles.iconBox}>
+                    <Bell size={20} color={p.primary} strokeWidth={2} />
                   </View>
-                  <Text style={styles.nBody}>{item.body}</Text>
-                  <Text style={styles.nWhen}>
-                    {formatRelativeTime(item.created_at)}
-                  </Text>
+                  <View style={styles.content}>
+                    <View style={styles.titleRow}>
+                      <Text style={[styles.nTitle, item.status !== 'read' && styles.nTitleUnread]}>
+                        {item.title}
+                      </Text>
+                      <Badge
+                        label={item.status.replace(/_/g, ' ')}
+                        tone={toneFor(item.status)}
+                      />
+                    </View>
+                    <Text style={styles.nBody}>{item.body}</Text>
+                    <Text style={styles.nWhen}>
+                      {formatRelativeTime(item.created_at)}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-            </Card>
+              </Card>
+            </Pressable>
           )}
         />
       )}
@@ -278,6 +304,9 @@ const makeStyles = (p: Palette) => StyleSheet.create({
   card: {
     marginBottom: 0,
   },
+  cardPressed: {
+    opacity: 0.7,
+  },
   row: {
     flexDirection: 'row',
     gap: spacing.lg,
@@ -306,6 +335,9 @@ const makeStyles = (p: Palette) => StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     color: p.text,
+  },
+  nTitleUnread: {
+    fontWeight: '700',
   },
   nBody: {
     fontSize: 14,

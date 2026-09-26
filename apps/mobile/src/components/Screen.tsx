@@ -11,6 +11,7 @@ import {
 import { colors, type Palette } from '../theme';
 import { useMotion } from '../context/MotionContext';
 import { usePaletteStyles, useTheme } from '../context/ThemeContext';
+import { OfflineBanner } from './OfflineBanner';
 
 const AView = Animated.View as unknown as React.ComponentType<{
   style?: StyleProp<ViewStyle>;
@@ -50,7 +51,9 @@ export function Screen({
     <SafeAreaView style={[styles.root, forest ? styles.forest : styles.cream, style]}>
       <StatusBar
         barStyle={forest || resolved === 'dark' ? 'light-content' : 'dark-content'}
+        backgroundColor={forest ? p.brand : p.bg}
       />
+      <OfflineBanner />
       <AView
         style={{
           flex: 1,

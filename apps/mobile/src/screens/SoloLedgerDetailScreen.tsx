@@ -2,9 +2,11 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   FlatList,
   Keyboard,
+  Linking,
   PanResponder,
   Pressable,
   RefreshControl,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -13,6 +15,7 @@ import {
 import { Screen } from '../components/Screen';
 import { LoadingOverlay } from '../components/Loading';
 import { useConfirm } from '../components/Popup';
+import { useToast } from '../components/Toast';
 import { colors, spacing, typography, type Palette } from '../theme';
 import { Check, ChevronLeft, ChevronRight, Plus } from 'lucide-react-native';
 import {
@@ -65,6 +68,7 @@ export function SoloLedgerDetailScreen({
   const [addAmount, setAddAmount] = useState('');
   const [addRef, setAddRef] = useState<{ focus?: () => void } | null>(null);
   const { confirm, node: confirmNode } = useConfirm();
+  const { show: toast, node: toastNode } = useToast();
   const landedRef = useRef(false);
 
   // Rotation window, derived from the auto name ("June – December 2026").
@@ -355,6 +359,84 @@ export function SoloLedgerDetailScreen({
     })();
   }
 
+  // Web parity (solo-ledger-board.tsx): share a plain-text month summary.
+  function shareSummary() {
+    if (!ledger) return;
+    const expected = rows.reduce(
+      (sum, { c }) => sum + (c.expected_amount || ledger.default_amount),
+      0
+    );
+    const lines = [
+      `${ledger.name} — ${formatPeriodLabel(period)}`,
+      `Collected: ${money(stats.collected)}`,
+      `Expected: ${money(expected)}`,
+      `Paid: ${stats.paid}/${stats.total}`,
+      `Outstanding: ${money(Math.max(0, expected - stats.collected))}`,
+      `— via Turna`,
+    ].join('\n');
+    void Share.share({ message: lines, title: ledger.name });
+  }
+
+  // CSV of the visible month (same columns the web sheet exports).
+  function exportCsv() {
+    if (!ledger) return;
+    const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
+    const table = [
+      ['turn', 'name', 'expected', 'status', 'paid', 'paid_on', 'period'],
+      ...rows.map(({ c, entry }, i) => [
+        String(i + 1),
+        c.name,
+        String((c.expected_amount || ledger.default_amount) / 100),
+        entry?.status ?? 'unpaid',
+        String((entry?.amount_paid ?? 0) / 100),
+        entry?.paid_on ?? '',
+        period,
+      ]),
+    ];
+    void Share.share({
+      message: table.map((r) => r.map(esc).join(',')).join('\n'),
+      title: `turna-${period}.csv`,
+    });
+  }
+
+  // Web parity: WhatsApp deep link when the person has a phone, otherwise the
+  // unpaid list goes through the share sheet.
+  function remindUnpaid() {
+    if (!ledger) return;
+    const unpaid = rows.filter(({ entry }) => !entry || entry.status !== 'paid');
+    if (unpaid.length === 0) {
+      toast('Everyone is paid for this month');
+      return;
+    }
+    const msgFor = ({ c, entry }: { c: SoloContributor; entry: { amount_paid: number } | null }) => {
+      const due = (c.expected_amount || ledger.default_amount) - (entry?.amount_paid ?? 0);
+      return `Hi ${c.name}, your ${ledger.name} contribution for ${formatPeriodLabel(
+        period
+      )} is still outstanding (${money(Math.max(0, due))}). Thank you!`;
+    };
+    const withPhone = unpaid.find(({ c }) => c.phone);
+    if (withPhone) {
+      const url = `https://wa.me/${withPhone.c.phone!.replace(/\D/g, '')}?text=${encodeURIComponent(
+        msgFor(withPhone)
+      )}`;
+      void Linking.openURL(url)
+        .then(() =>
+          toast(
+            `Opened reminder for ${withPhone.c.name} (${unpaid.length} unpaid)`
+          )
+        )
+        .catch(() => toast('Could not open WhatsApp', 'error'));
+      return;
+    }
+    void Share.share({
+      message: [
+        `Remind unpaid in ${ledger.name} (${formatPeriodLabel(period)}):`,
+        ...unpaid.map(({ c }) => `- ${c.name}`),
+      ].join('\n'),
+      title: ledger.name,
+    });
+  }
+
   if (!ledger) {
     return (
       <Screen tone="cream">
@@ -423,6 +505,20 @@ export function SoloLedgerDetailScreen({
           {money(perPerson)} × {stats.total} people = {money(pot)} pot ·{' '}
           {money(stats.collected)} collected · {stats.paid}/{stats.total} paid
         </Text>
+
+        <View style={styles.toolRow}>
+          <Pressable onPress={shareSummary} style={styles.toolBtn} hitSlop={6}>
+            <Text style={styles.toolText}>Share summary</Text>
+          </Pressable>
+          <Pressable onPress={exportCsv} style={styles.toolBtn} hitSlop={6}>
+            <Text style={styles.toolText}>Export CSV</Text>
+          </Pressable>
+          {stats.total > 0 && (
+            <Pressable onPress={remindUnpaid} style={styles.toolBtn} hitSlop={6}>
+              <Text style={styles.toolText}>Remind unpaid</Text>
+            </Pressable>
+          )}
+        </View>
 
         {rotation?.status ? (
           <Text style={styles.status}>{rotation.status}</Text>
@@ -583,6 +679,7 @@ export function SoloLedgerDetailScreen({
       </Text>
 
       {confirmNode}
+      {toastNode}
     </Screen>
   );
 }
@@ -662,6 +759,25 @@ const makeStyles = (p: Palette) => StyleSheet.create({
     color: p.textMuted,
     fontWeight: '600',
     marginTop: 4,
+  },
+  toolRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    flexWrap: 'wrap',
+    marginTop: spacing.sm,
+  },
+  toolBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: spacing.sm,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: p.border,
+    backgroundColor: p.surface,
+  },
+  toolText: {
+    fontSize: 12,
+    color: p.primary,
+    fontWeight: '600',
   },
   rotation: {
     fontSize: typography.caption,
