@@ -35,7 +35,7 @@ export async function changeEmail(
     return { error: { form: [error.message] } };
   }
 
-  revalidatePath('/dashboard/settings/email');
+  revalidatePath('/');
   return {
     success: 'Check your new inbox for a confirmation link.',
   };

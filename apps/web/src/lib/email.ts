@@ -200,7 +200,7 @@ export const emailTemplates = {
           <strong style="color:${C.forest};">"${circleName}"</strong> is due on
           <strong style="color:${C.forest};">${dueDate}</strong>.
         </p>
-        ${button(`${BASE_URL}/dashboard`, 'View Circle')}
+        ${button(`${BASE_URL}/`, 'View Circle')}
         ${spamHint()}
       `),
       text: `Your contribution of ${amount} for "${circleName}" is due on ${dueDate}.`,
@@ -217,7 +217,7 @@ export const emailTemplates = {
           <strong style="color:${C.forest};">${recipientName}</strong> has been initiated for
           <strong style="color:${C.forest};">"${circleName}"</strong>.
         </p>
-        ${button(`${BASE_URL}/dashboard`, 'View Details')}
+        ${button(`${BASE_URL}/`, 'View Details')}
         ${spamHint()}
       `),
       text: `Payout of ${amount} to ${recipientName} initiated for "${circleName}".`,
@@ -232,7 +232,7 @@ export const emailTemplates = {
         <p style="margin:0 0 24px;font-size:15px;color:${C.muted};line-height:1.6;">
           Your ${APP_NAME} account is ready. Create your first savings circle or join one with an invite.
         </p>
-        ${button(`${BASE_URL}/dashboard`, 'Go to Dashboard')}
+        ${button(`${BASE_URL}/`, 'Open Turna')}
         <p style="margin:24px 0 0;font-size:13px;color:${C.muted};line-height:1.5;">
           Need help? Reply to this email or contact ${SUPPORT_EMAIL}.
         </p>
@@ -258,7 +258,7 @@ export const emailTemplates = {
         </p>
         <p style="margin:16px 0;font-size:28px;font-weight:700;color:${C.primary};">${amount}</p>
         ${detail ? `<p style="margin:0 0 20px;font-size:13px;color:${C.muted};line-height:1.5;">${detail}</p>` : ''}
-        ${button(`${BASE_URL}/dashboard/payments`, 'View Payments')}
+        ${button(`${BASE_URL}/`, 'View Payments')}
         ${spamHint()}
       `),
       text: `${title}: ${amount} for ${circleName}${detail ? `. ${detail}` : ''}`,
@@ -288,7 +288,7 @@ export const emailTemplates = {
         <ul style="margin:20px 0;padding:0;list-style:none;">
           ${items}
         </ul>
-        ${button(`${BASE_URL}/dashboard/payments`, 'Open Payments')}
+        ${button(`${BASE_URL}/`, 'Open Payments')}
         <p style="margin:24px 0 0;font-size:13px;color:${C.muted};line-height:1.5;">
           You get one digest per day when money moves — not one email per swipe.
         </p>
@@ -305,7 +305,7 @@ export const emailTemplates = {
     reference: string,
     bankName?: string
   ) {
-    const historyUrl = `${BASE_URL}/dashboard/payments`;
+    const historyUrl = `${BASE_URL}/`;
     return {
       subject: `Payout received — ${amount} · ${circleName}`,
       html: shell('Payout received', `
@@ -342,7 +342,7 @@ export const emailTemplates = {
       html: shell(safeTitle, `
         <h1 style="margin:0 0 12px;font-size:24px;font-weight:700;color:${C.forest};">${safeTitle}</h1>
         ${paragraphs}
-        ${button(`${BASE_URL}/dashboard`, 'Open Turna')}
+        ${button(`${BASE_URL}/`, 'Open Turna')}
         <p style="margin:24px 0 0;font-size:13px;color:${C.muted};line-height:1.5;">
           This is a message from the Turna team. Need help? Reply to this email or contact ${SUPPORT_EMAIL}.
         </p>

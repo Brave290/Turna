@@ -85,7 +85,7 @@ export async function postAnnouncement(
       .select('display_name')
       .eq('id', user.id)
       .maybeSingle();
-    revalidatePath(`/dashboard/circles/${circleId}`);
+    revalidatePath('/');
     return {
       success: 'Announcement posted',
       announcement: {
@@ -176,7 +176,7 @@ export async function createPoll(
     .single();
   if (error) return { error: { form: [error.message] } };
 
-  revalidatePath(`/dashboard/circles/${circleId}`);
+  revalidatePath('/');
   return {
     success: 'Poll created',
     poll: {
@@ -272,7 +272,7 @@ export async function saveCircleRules(
   }
 
   if (error) return { error: { form: [error.message] } };
-  revalidatePath(`/dashboard/circles/${circleId}`);
+  revalidatePath('/');
   return { success: 'Circle rules saved' };
 }
 
@@ -346,7 +346,7 @@ export async function setMemberRole(
     // best-effort
   }
 
-  revalidatePath(`/dashboard/circles/${circleId}`);
+  revalidatePath('/');
   return { success: `Role updated to ${role}` };
 }
 

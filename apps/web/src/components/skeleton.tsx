@@ -39,7 +39,7 @@ export function SkeletonCard({ className }: { className?: string }) {
 
 export function DashboardSkeleton() {
   return (
-    <div className="space-y-6 animate-fade-in" aria-busy="true" aria-label="Loading dashboard">
+    <div className="space-y-6 animate-fade-in" aria-busy="true" aria-label="Loading">
       <div className="space-y-3">
         <Skeleton className="h-4 w-28" />
         <Skeleton className="h-8 w-48" />

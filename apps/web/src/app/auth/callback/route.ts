@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   const next =
     typeof nextParam === 'string' && nextParam.startsWith('/') && !nextParam.startsWith('//')
       ? nextParam
-      : '/dashboard';
+      : '/';
 
   if (code) {
     let cookieStore: CookieToSet[] = [];

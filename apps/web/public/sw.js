@@ -1,7 +1,7 @@
 /* Turna offline support — cache shell for repeat visits.
    Financial mutations still require network; never fake success offline. */
 const CACHE = 'turna-shell-v1';
-const PRECACHE = ['/', '/dashboard', '/offline'];
+const PRECACHE = ['/'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

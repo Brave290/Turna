@@ -89,7 +89,7 @@ export default function VerifyEmailPage() {
       } else if (res?.success) {
         setSuccess(res.success);
         toast.success(res.success);
-        const target = res?.redirectTo || "/dashboard";
+        const target = res?.redirectTo || "/";
         setTimeout(() => router.push(target), 800);
       } else {
         setError("Verification failed. Try again.");

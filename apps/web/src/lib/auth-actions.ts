@@ -27,7 +27,7 @@ function safeNext(raw: FormDataEntryValue | null): string {
   if (typeof raw === 'string' && raw.startsWith('/') && !raw.startsWith('//')) {
     return raw;
   }
-  return '/dashboard';
+  return '/';
 }
 
 function generateOtp(): string {
@@ -192,7 +192,7 @@ export async function signUp(formData: FormData): Promise<AuthError> {
   return {
     success: `We sent a 6-digit code to ${email}. It expires in 5 minutes — enter it soon to finish signing up.`,
     needsVerify: true,
-    redirectTo: `/auth/verify?email=${encodeURIComponent(email)}${afterRedirect !== '/dashboard' ? `&redirect=${encodeURIComponent(afterRedirect)}` : ''}`,
+    redirectTo: `/auth/verify?email=${encodeURIComponent(email)}${afterRedirect !== '/' ? `&redirect=${encodeURIComponent(afterRedirect)}` : ''}`,
   };
 }
 
@@ -206,7 +206,7 @@ export async function verifyEmailOtp(
   const purpose = (String(formData.get('purpose') ?? 'signup') || 'signup') as 'signup' | 'login';
   const nextPath = safeNext(formData.get('redirect'));
   const loginRedirect =
-    nextPath !== '/dashboard' ? `/auth/login?redirect=${encodeURIComponent(nextPath)}` : '/auth/login';
+    nextPath !== '/' ? `/auth/login?redirect=${encodeURIComponent(nextPath)}` : '/auth/login';
 
   if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
     return { error: { form: ['Enter a valid email address'] } };
@@ -331,7 +331,7 @@ export async function signIn(formData: FormData): Promise<AuthError> {
           const next = safeNext(formData.get('redirect'));
           const verifyQs =
             `/auth/verify?email=${encodeURIComponent(email)}` +
-            (next !== '/dashboard' ? `&redirect=${encodeURIComponent(next)}` : '');
+            (next !== '/' ? `&redirect=${encodeURIComponent(next)}` : '');
           return {
             success: `Please verify your email first. We sent a 6-digit code to ${email} (expires in 5 minutes).`,
             needsVerify: true,
@@ -350,7 +350,7 @@ export async function signIn(formData: FormData): Promise<AuthError> {
     return { error: { form: [friendly] } };
   }
 
-  revalidatePath('/dashboard');
+  revalidatePath('/');
   redirect(safeNext(formData.get('redirect')));
 }
 
@@ -505,7 +505,7 @@ export async function updatePassword(formData: FormData): Promise<AuthError> {
     return { error: { form: [error.message] } };
   }
 
-  redirect('/dashboard');
+  redirect('/');
 }
 
 export type PasswordChangeState = {
@@ -668,9 +668,9 @@ export async function uploadAvatar(
     data: { avatar_url: dataUrl },
   });
 
-  revalidatePath('/dashboard/profile');
-  revalidatePath('/dashboard');
-  revalidatePath('/dashboard/settings');
+  revalidatePath('/');
+  revalidatePath('/');
+  revalidatePath('/');
   return { success: 'Profile picture updated.' };
 }
 
@@ -711,9 +711,9 @@ export async function removeAvatar(): Promise<AvatarActionState> {
   }
 
   await supabase.auth.updateUser({ data: { avatar_url: null } });
-  revalidatePath('/dashboard/profile');
-  revalidatePath('/dashboard');
-  revalidatePath('/dashboard/settings');
+  revalidatePath('/');
+  revalidatePath('/');
+  revalidatePath('/');
   return { success: 'Profile picture removed.' };
 }
 
@@ -785,7 +785,7 @@ export async function createCircle(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    redirect('/auth/login?redirect=/dashboard/circles/new');
+    redirect('/auth/login');
   }
 
   const amountRaw = String(formData.get('contribution_amount') ?? '');
@@ -899,8 +899,8 @@ export async function createCircle(
     data: { circle_id: circle.id, event: 'CIRCLE_CREATED' },
   });
 
-  revalidatePath('/dashboard');
-  revalidatePath('/dashboard/circles');
+  revalidatePath('/');
+  revalidatePath('/');
   return { success: 'Circle created', circleId: circle.id };
 }
 
@@ -1028,7 +1028,7 @@ export async function inviteMember(
     console.error('[Invite] email send failed:', e);
   }
 
-  revalidatePath(`/dashboard/circles/${circle.id}`);
+  revalidatePath('/');
   return { success: `Invite created for ${parsed.data.invitee_email}` };
 }
 
@@ -1102,9 +1102,9 @@ export async function updateProfile(
     /* metadata optional */
   }
 
-  revalidatePath('/dashboard/profile');
-  revalidatePath('/dashboard/settings');
-  revalidatePath('/dashboard');
+  revalidatePath('/');
+  revalidatePath('/');
+  revalidatePath('/');
   return { success: 'Profile updated' };
 }
 
@@ -1178,7 +1178,7 @@ export async function updateCircleFees(
     data: { circle_id: circleId, event: 'SETTINGS_CHANGED' },
   });
 
-  revalidatePath(`/dashboard/circles/${circleId}`);
+  revalidatePath('/');
   return { success: 'Fee settings saved' };
 }
 
@@ -1213,8 +1213,8 @@ export async function markAllNotificationsRead(
     return { error: { form: ['Could not mark notifications as read.'] } };
   }
 
-  revalidatePath('/dashboard');
-  revalidatePath('/dashboard/notifications');
+  revalidatePath('/');
+  revalidatePath('/');
   return { success: 'All notifications marked as read' };
 }
 
@@ -1235,8 +1235,8 @@ export async function markNotificationRead(
     .eq('user_id', user.id);
 
   if (error) return { ok: false, error: error.message };
-  revalidatePath('/dashboard');
-  revalidatePath('/dashboard/notifications');
+  revalidatePath('/');
+  revalidatePath('/');
   return { ok: true };
 }
 
@@ -1422,10 +1422,10 @@ export async function acceptInvitation(
     }
   }
 
-  revalidatePath('/dashboard');
-  revalidatePath('/dashboard/circles');
-  revalidatePath('/dashboard/circles');
-  revalidatePath(`/dashboard/circles/${invite.circle_id}`);
+  revalidatePath('/');
+  revalidatePath('/');
+  revalidatePath('/');
+  revalidatePath('/');
   return {
     success: 'You have joined the circle',
     circleId: invite.circle_id,
@@ -1492,9 +1492,9 @@ export async function deleteCircle(
     data: { event: 'CIRCLE_DELETED', circle_id: circleId },
   });
 
-  revalidatePath('/dashboard');
-  revalidatePath('/dashboard/circles');
-  redirect('/dashboard/circles');
+  revalidatePath('/');
+  revalidatePath('/');
+  redirect('/');
 }
 
 export type DeleteAccountState = {

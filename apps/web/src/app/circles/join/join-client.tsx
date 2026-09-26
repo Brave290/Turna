@@ -112,10 +112,10 @@ export function JoinCircleClient({ sessionEmail }: { sessionEmail: string | null
         </h1>
         <p className="text-white/75 text-sm mb-8">{state.success}</p>
         <Link
-          href={`/dashboard/circles/${state.circleId}`}
+          href="/"
           className="btn-primary w-full inline-flex"
         >
-          View circle
+          Back to home
         </Link>
       </Shell>
     );

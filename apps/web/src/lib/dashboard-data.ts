@@ -238,7 +238,7 @@ export async function getCircleDetail(circleId: string) {
 
   const circle = circleRes.data as Circle | null;
   if (!circle) {
-    redirect('/dashboard/circles');
+    redirect('/');
   }
 
   const members = (membersRes.data ?? []) as unknown as (CircleMember & {
@@ -249,7 +249,7 @@ export async function getCircleDetail(circleId: string) {
   const isMember = members.some((m) => m.user_id === user.id && m.status === 'active');
 
   if (!isOwner && !isMember) {
-    redirect('/dashboard/circles');
+    redirect('/');
   }
 
   const cycleIds = ((cyclesRes.data ?? []) as ContributionCycle[]).map((c) => c.id);
@@ -416,8 +416,8 @@ export async function getMemberLedger(circleId: string) {
     .eq('id', circleId)
     .maybeSingle();
   const circle = circleRes.data as Circle | null;
-  if (!circle) redirect('/dashboard/circles');
-  if (circle.owner_id !== user.id) redirect(`/dashboard/circles/${circleId}`);
+  if (!circle) redirect('/');
+  if (circle.owner_id !== user.id) redirect('/');
 
   const [membersRes, cyclesRes, walletsRes] = await Promise.all([
     supabase

@@ -178,8 +178,8 @@ export default async function ReceiptPage({ params }: ReceiptParams) {
           <p className="text-sm text-muted mb-6">
             This reference does not match a Turna record.
           </p>
-          <Link href="/dashboard" className="btn-primary inline-flex">
-            Back to dashboard
+          <Link href="/" className="btn-primary inline-flex">
+            Back to home
           </Link>
         </div>
       </div>
@@ -196,7 +196,7 @@ export default async function ReceiptPage({ params }: ReceiptParams) {
       <header className="no-print border-b border-border bg-white/90">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <Link
-            href="/dashboard"
+            href="/"
             className="inline-flex items-center gap-2 text-forest/80 hover:text-forest"
           >
             <Logo variant="primary" size={24} />
@@ -333,7 +333,7 @@ export default async function ReceiptPage({ params }: ReceiptParams) {
             <Download className="w-4 h-4" />
             Download PDF
           </button>
-          <Link href="/dashboard" className="btn-outline justify-center">
+          <Link href="/" className="btn-outline justify-center">
             <ArrowLeft className="w-4 h-4" />
             Dashboard
           </Link>

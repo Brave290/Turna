@@ -24,7 +24,7 @@ export async function createSoloLedger(
 
   if (!name) return { error: { form: ['Give your ledger a name'] } };
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('solo_ledgers')
     .insert({
       user_id: user.id,
@@ -38,8 +38,8 @@ export async function createSoloLedger(
     .single();
 
   if (error) return { error: { form: [error.message] } };
-  revalidatePath('/dashboard/solo-ledger');
-  redirect(`/dashboard/solo-ledger/${data.id}`);
+  revalidatePath('/');
+  redirect('/');
 }
 
 export async function renameSoloLedger(
@@ -55,7 +55,7 @@ export async function renameSoloLedger(
     .update({ name, local_updated_at: new Date().toISOString(), updated_at: new Date().toISOString() })
     .eq('id', id);
   if (error) return { error: { form: [error.message] } };
-  revalidatePath(`/dashboard/solo-ledger/${id}`);
+  revalidatePath('/');
   return { success: 'Ledger renamed' };
 }
 
@@ -68,7 +68,7 @@ export async function deleteSoloLedger(
   if (!id) return { error: { form: ['Missing ledger'] } };
   const { error } = await supabase.from('solo_ledgers').delete().eq('id', id);
   if (error) return { error: { form: [error.message] } };
-  revalidatePath('/dashboard/solo-ledger');
+  revalidatePath('/');
   return { success: 'Ledger deleted' };
 }
 
@@ -106,7 +106,7 @@ export async function addSoloContributor(
     local_updated_at: new Date().toISOString(),
   });
   if (error) return { error: { form: [error.message] } };
-  revalidatePath(`/dashboard/solo-ledger/${ledgerId}`);
+  revalidatePath('/');
   return { success: `${name} added` };
 }
 
@@ -153,7 +153,7 @@ export async function updateSoloEntry(
     onConflict: 'contributor_id,period',
   });
   if (error) return { error: { form: [error.message] } };
-  revalidatePath(`/dashboard/solo-ledger/${ledgerId}`);
+  revalidatePath('/');
   return { success: status === 'paid' ? 'Marked paid' : status === 'unpaid' ? 'Marked unpaid' : 'Partial saved' };
 }
 
@@ -238,7 +238,6 @@ export async function archiveSoloContributor(
 ): Promise<SoloActionState> {
   const { supabase } = await requireUser();
   const id = String(formData.get('id') ?? '');
-  const ledgerId = String(formData.get('ledger_id') ?? '');
   const archived = String(formData.get('archived') ?? 'true') === 'true';
   if (!id) return { error: { form: ['Missing contributor'] } };
   const { error } = await supabase
@@ -246,6 +245,6 @@ export async function archiveSoloContributor(
     .update({ archived, local_updated_at: new Date().toISOString(), updated_at: new Date().toISOString() })
     .eq('id', id);
   if (error) return { error: { form: [error.message] } };
-  revalidatePath(`/dashboard/solo-ledger/${ledgerId}`);
+  revalidatePath('/');
   return { success: archived ? 'Archived' : 'Restored' };
 }

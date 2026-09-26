@@ -18,7 +18,7 @@ const actions = [
   {
     title: "Explore Turna",
     description:
-      "Take a look around the dashboard and see how your circles work.",
+      "Take a look around Turna and see how your circles work.",
     icon: Compass,
   },
 ];
@@ -40,7 +40,7 @@ export default function WelcomePage() {
         {actions.map((action) => (
           <Link
             key={action.title}
-            href="/dashboard"
+            href="/"
             className="card block text-forest group transition-all duration-200 hover:border-primary/50 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/10"
           >
             <div className="flex items-start gap-4">

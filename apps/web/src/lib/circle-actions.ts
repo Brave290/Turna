@@ -161,7 +161,7 @@ export async function requestPayoutSwap(
     });
   }
 
-  revalidatePath(`/dashboard/circles/${circleId}`);
+  revalidatePath('/');
   return { success: 'Swap request sent' };
 }
 
@@ -310,7 +310,7 @@ export async function decidePayoutSwap(
     });
   }
 
-  revalidatePath(`/dashboard/circles/${swap.circle_id}`);
+  revalidatePath('/');
   return { success: `Swap ${decision}` };
 }
 
@@ -415,7 +415,7 @@ export async function setCircleLifecycle(
     });
   }
 
-  revalidatePath(`/dashboard/circles/${circleId}`);
+  revalidatePath('/');
   return { success: `Circle ${action === 'start' ? 'started' : action + 'ed'}` };
 }
 
@@ -487,7 +487,7 @@ export async function advanceCycle(
     return { error: { form: ['Unknown cycle action'] } };
   }
 
-  revalidatePath(`/dashboard/circles/${circleId}`);
+  revalidatePath('/');
   return {
     success: action === 'close' ? 'Cycle closed — ready for payout' : 'Next cycle opened',
   };
@@ -533,8 +533,8 @@ export async function leaveCircle(
     });
   }
 
-  revalidatePath('/dashboard/circles');
-  redirect('/dashboard/circles');
+  revalidatePath('/');
+  redirect('/');
 }
 
 export async function removeMember(
@@ -581,7 +581,7 @@ export async function removeMember(
     data: { circle_id: circleId, event: 'MEMBER_REMOVED' },
   });
 
-  revalidatePath(`/dashboard/circles/${circleId}`);
+  revalidatePath('/');
   return { success: 'Member removed' };
 }
 
@@ -693,7 +693,7 @@ export async function reportContribution(
     });
   }
 
-  revalidatePath(`/dashboard/circles/${member.circle_id}`);
+  revalidatePath('/');
   return { success: 'Contribution reported' };
 }
 
@@ -834,8 +834,8 @@ export async function decideContribution(
     }
   }
 
-  revalidatePath(`/dashboard/circles/${circleId ?? ''}`);
-  revalidatePath('/dashboard/contributions');
+  revalidatePath('/');
+  revalidatePath('/');
   return { success: `Contribution ${decision}` };
 }
 
@@ -966,8 +966,8 @@ export async function recordPayout(
     });
   }
 
-  revalidatePath(`/dashboard/circles/${circleId}`);
-  revalidatePath('/dashboard/payments');
+  revalidatePath('/');
+  revalidatePath('/');
   return {
     success: step === 'sent' ? 'Payout marked as sent' : 'Payout receipt confirmed',
   };
@@ -984,7 +984,7 @@ export async function acceptTerms(): Promise<ActionState> {
   if (error && !error.message.includes('duplicate')) {
     return { error: { form: ['Could not save acceptance'] } };
   }
-  revalidatePath('/dashboard');
+  revalidatePath('/');
   return { success: 'Terms accepted' };
 }
 
@@ -1059,7 +1059,7 @@ export async function submitKyc(
     if (error) return { error: { form: ['Could not submit KYC'] } };
   }
 
-  revalidatePath('/dashboard/settings');
+  revalidatePath('/');
   return { success: 'KYC submitted for review' };
 }
 

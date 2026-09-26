@@ -100,7 +100,7 @@ export async function createShareInvite(
     // best-effort audit
   }
 
-  revalidatePath(`/dashboard/circles/${circleId}`);
+  revalidatePath('/');
   const url = `${BASE_URL}/join/${token}`;
   return { success: 'Share link created', token, url };
 }

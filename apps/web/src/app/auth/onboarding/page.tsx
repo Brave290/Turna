@@ -51,7 +51,7 @@ const SLIDES = [
 
 /**
  * First-run onboarding — branded motion slides (Blender-style gradient orbs).
- * Completes by setting user_metadata.onboarded = true then → dashboard.
+ * Completes by setting user_metadata.onboarded = true then → home.
  */
 export default function OnboardingPage() {
   const router = useRouter();
@@ -84,7 +84,7 @@ export default function OnboardingPage() {
       /* still continue — layout re-checks */
     }
     setTimeout(() => {
-      router.replace('/dashboard');
+      router.replace('/');
       router.refresh();
     }, 380);
   }
@@ -99,7 +99,7 @@ export default function OnboardingPage() {
       } catch {
         /* ignore */
       }
-      router.replace('/dashboard');
+      router.replace('/');
       router.refresh();
     })();
   }

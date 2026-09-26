@@ -116,8 +116,8 @@ export async function saveUserPreferences(
     // Theme also applied client-side via Appearance page; revalidate for SSR defaults
   }
 
-  revalidatePath('/dashboard/settings');
-  revalidatePath('/dashboard');
+  revalidatePath('/');
+  revalidatePath('/');
   return { success: 'Settings updated' };
 }
 
