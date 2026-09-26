@@ -14,6 +14,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/Button';
 import { Logo } from '../components/Logo';
+import { MicButton } from '../components/MicButton';
 import { Popup } from '../components/Popup';
 import { supabase } from '../lib/supabase';
 import { colors, radius, spacing, typography, type Palette } from '../theme';
@@ -175,16 +176,21 @@ export function AuthScreen({ onSwitch }: { onSwitch?: () => void }) {
 
         <View style={styles.field}>
           <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={styles.input}
-            value={email}
-            onChangeText={setEmail}
-            placeholder="you@example.com"
-            placeholderTextColor={p.textMuted}
-            autoCapitalize="none"
-            autoComplete="email"
-            keyboardType="email-address"
-          />
+          <View style={styles.pwWrap}>
+            <TextInput
+              style={[styles.input, styles.inputMic]}
+              value={email}
+              onChangeText={setEmail}
+              placeholder="you@example.com"
+              placeholderTextColor={p.textMuted}
+              autoCapitalize="none"
+              autoComplete="email"
+              keyboardType="email-address"
+              textContentType="emailAddress"
+              importantForAutofill="yes"
+            />
+            <MicButton value={email} onChangeText={setEmail} />
+          </View>
         </View>
 
         <View style={styles.field}>
@@ -444,6 +450,9 @@ const makeStyles = (p: Palette) => StyleSheet.create({
     lineHeight: 22,
   },
   field: { marginBottom: spacing.md },
+  inputMic: {
+    paddingRight: 52,
+  },
   pwWrap: { position: 'relative' },
   pwInput: { paddingRight: 52 },
   eyeBtn: {

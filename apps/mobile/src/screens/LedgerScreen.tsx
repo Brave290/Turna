@@ -12,6 +12,9 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { cacheGet, cacheSet, drainQueue } from '../lib/offline';
+import { useFastRefresh } from '../lib/useFastRefresh';
+import { useConnectivity } from '../lib/connectivity';
+import { OfflineScreen } from '../components/OfflineScreen';
 import { Card, Badge } from '../components/Card';
 import { Button } from '../components/Button';
 import { Screen } from '../components/Screen';
@@ -59,6 +62,7 @@ export function LedgerScreen({ onPush }: { onPush?: (screen: any) => void } = {}
   const { user } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const online = useConnectivity();
   const [refreshing, setRefreshing] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -147,6 +151,8 @@ export function LedgerScreen({ onPush }: { onPush?: (screen: any) => void } = {}
     }
   }, [user]);
 
+  useFastRefresh(load, { busy: refreshing });
+
   useEffect(() => {
     void load();
   }, [load]);
@@ -192,7 +198,14 @@ export function LedgerScreen({ onPush }: { onPush?: (screen: any) => void } = {}
         </View>
       </View>
 
-      {loading ? (
+      {!online && events.length === 0 ? (
+        <OfflineScreen
+          onRetry={() => {
+            setLoading(true);
+            void load();
+          }}
+        />
+      ) : loading ? (
         <ActivityIndicator color={p.primary} size="large" style={{ marginTop: spacing.xl }} />
       ) : (
         <FlatList

@@ -4,6 +4,9 @@ import { Users } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { cacheGet, cacheSet, drainQueue } from '../lib/offline';
+import { useFastRefresh } from '../lib/useFastRefresh';
+import { useConnectivity } from '../lib/connectivity';
+import { OfflineScreen } from '../components/OfflineScreen';
 import { Card, Badge } from '../components/Card';
 import { Screen } from '../components/Screen';
 import { formatCurrency } from '../lib/format';
@@ -39,6 +42,7 @@ export function CirclesScreen({ onPush, onNewCircle }: { onPush?: (screen: any) 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const online = useConnectivity();
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -101,6 +105,8 @@ export function CirclesScreen({ onPush, onNewCircle }: { onPush?: (screen: any) 
     }
   }, [user]);
 
+  useFastRefresh(load, { busy: refreshing });
+
   useEffect(() => {
     void load();
   }, [load]);
@@ -128,7 +134,14 @@ export function CirclesScreen({ onPush, onNewCircle }: { onPush?: (screen: any) 
           </Pressable>
         </View>
       </View>
-      {loading ? (
+      {!online && rows.length === 0 ? (
+        <OfflineScreen
+          onRetry={() => {
+            setLoading(true);
+            void load();
+          }}
+        />
+      ) : loading ? (
         <ActivityIndicator color={p.primary} size="large" style={{ marginTop: spacing.xl }} />
       ) : (
         <FlatList

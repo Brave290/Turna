@@ -45,6 +45,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase, APP_API_URL } from '../lib/supabase';
 import { enqueueOp, isOfflineError } from '../lib/offline';
 import { getPrefs, loadPrefs, savePrefs, subscribePrefs } from '../lib/prefs';
+import { getAppMeta, formatStamp } from '../lib/appmeta';
 import { Badge, Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { Screen } from '../components/Screen';
@@ -2547,6 +2548,10 @@ function LegalSection({ ctx }: { ctx: Ctx }) {
 
 function AboutSection({ ctx }: { ctx: Ctx }) {
   const { p, styles: s } = usePaletteStyles(makeS);
+  const [meta, setMeta] = useState<{ installedAt: string; updatedAt: string } | null>(null);
+  useEffect(() => {
+    void getAppMeta().then(setMeta);
+  }, []);
   return (
     <Panel title="About Turna" description="Version and product info.">
       <View style={s.aboutHead}>
@@ -2562,9 +2567,30 @@ function AboutSection({ ctx }: { ctx: Ctx }) {
       </View>
       <Text style={s.para}>
         Turna helps communities coordinate traditional savings circles digitally with transparent
-        records and clear contribution tracking.
+        records and clear contribution tracking. Personal solo sheets, contributions, payouts and
+        debt tracking — working online and offline.
       </Text>
       <Group>
+        <Row
+          icon={User}
+          label="Owner"
+          description="Akanji Musab · CEO/Founder"
+        />
+        <Row
+          icon={Info}
+          label="Package name"
+          description="com.hx.turna"
+        />
+        <Row
+          icon={Download}
+          label="Installed"
+          description={meta ? formatStamp(meta.installedAt) : '—'}
+        />
+        <Row
+          icon={Clock}
+          label="Last updated"
+          description={meta ? formatStamp(meta.updatedAt) : '—'}
+        />
         <Row
           icon={Globe}
           label="Website"
@@ -2600,7 +2626,7 @@ function AboutSection({ ctx }: { ctx: Ctx }) {
           }
         />
       </Group>
-      <Text style={s.hintSmall}>© 2026 Turna</Text>
+      <Text style={s.hintSmall}>Made with love by Akanji Musab, CEO/Founder · © 2026 Turna</Text>
     </Panel>
   );
 }

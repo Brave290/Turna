@@ -13,9 +13,12 @@ const QUEUE_KEY = 'turna:opqueue:v1';
 
 export async function cacheSet(key: string, data: unknown): Promise<void> {
   try {
+    const now = Date.now();
+    // `syncedAt` is when this payload last came from the server — screens show
+    // it as "Last synced: …". `t` is kept as an alias for older readers.
     await AsyncStorage.setItem(
       CACHE_PREFIX + key,
-      JSON.stringify({ t: Date.now(), data })
+      JSON.stringify({ t: now, syncedAt: now, data })
     );
   } catch {
     /* cache is best-effort */
@@ -28,6 +31,19 @@ export async function cacheGet<T>(key: string): Promise<T | null> {
     if (!raw) return null;
     const env = JSON.parse(raw) as { data: T };
     return env.data;
+  } catch {
+    return null;
+  }
+}
+
+/** Epoch ms of the last successful sync for `key` (null when never synced). */
+export async function cacheSyncedAt(key: string): Promise<number | null> {
+  try {
+    const raw = await AsyncStorage.getItem(CACHE_PREFIX + key);
+    if (!raw) return null;
+    const env = JSON.parse(raw) as { syncedAt?: number; t?: number };
+    const at = env.syncedAt ?? env.t;
+    return typeof at === 'number' && Number.isFinite(at) ? at : null;
   } catch {
     return null;
   }

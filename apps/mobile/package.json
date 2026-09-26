@@ -22,6 +22,7 @@
     "@babel/runtime": "^7.29.7",
     "@react-native-async-storage/async-storage": "^1.23.1",
     "@react-native-community/netinfo": "^12.0.1",
+    "@react-native-voice/voice": "^3.2.4",
     "@supabase/supabase-js": "^2.39.0",
     "@turna/config": "workspace:*",
     "lucide-react-native": "^1.48.0",

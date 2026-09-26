@@ -2,16 +2,21 @@ import React, { ReactNode, useEffect, useRef } from 'react';
 import {
   Animated,
   Easing,
+  Image,
   SafeAreaView,
   StatusBar,
   StyleProp,
   StyleSheet,
+  View,
   ViewStyle,
 } from 'react-native';
 import { colors, type Palette } from '../theme';
 import { useMotion } from '../context/MotionContext';
 import { usePaletteStyles, useTheme } from '../context/ThemeContext';
 import { OfflineBanner } from './OfflineBanner';
+
+const LOGO = require('../../assets/logo.png');
+const LOGO_ON_DARK = require('../../assets/logo-on-dark.png');
 
 const AView = Animated.View as unknown as React.ComponentType<{
   style?: StyleProp<ViewStyle>;
@@ -49,6 +54,13 @@ export function Screen({
 
   return (
     <SafeAreaView style={[styles.root, forest ? styles.forest : styles.cream, style]}>
+      <View style={styles.watermarkLayer} pointerEvents="none">
+        <Image
+          source={resolved === 'dark' ? LOGO_ON_DARK : LOGO}
+          style={styles.watermark}
+          resizeMode="contain"
+        />
+      </View>
       <StatusBar
         barStyle={forest || resolved === 'dark' ? 'light-content' : 'dark-content'}
         backgroundColor={forest ? p.brand : p.bg}
@@ -78,5 +90,19 @@ const makeStyles = (p: Palette) => StyleSheet.create({
   },
   cream: {
     backgroundColor: p.bg,
+  },
+  watermarkLayer: {
+    position: 'absolute',
+    top: '22%',
+    alignSelf: 'center',
+    width: '78%',
+    height: '46%',
+    opacity: 0.05,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  watermark: {
+    width: '100%',
+    height: '100%',
   },
 });

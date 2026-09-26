@@ -397,7 +397,8 @@ export function SettingsScreen({
         </View>
 
         <Text style={styles.footer}>
-          Turna · Version {LOCAL_VERSION_NAME} · © 2026
+          Turna · Version {LOCAL_VERSION_NAME} · Made with love by Akanji Musab, CEO/Founder · ©
+          2026
         </Text>
         {confirmNode}
       </ScrollView>

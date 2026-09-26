@@ -543,7 +543,7 @@ function Footer() {
             &copy; {currentYear} Turna. All rights reserved.
           </p>
           <p className="text-white/60">
-            Built by Akanji Mus&apos;ab
+            Made with love by Akanji Musab, CEO/Founder of Turna
           </p>
         </div>
       </div>

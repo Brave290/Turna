@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -17,6 +17,7 @@ import {
   Bell,
   CalendarDays,
   ChevronRight,
+  HandCoins,
   Home as HomeIcon,
   Moon,
   PiggyBank,
@@ -27,10 +28,16 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { cacheGet, cacheSet, drainQueue } from '../lib/offline';
+import { useFastRefresh } from '../lib/useFastRefresh';
+import { useConnectivity } from '../lib/connectivity';
 import { Card, Badge, Stat } from '../components/Card';
 import { Screen } from '../components/Screen';
+import { OfflineScreen } from '../components/OfflineScreen';
+import { StaggerItem } from '../components/Stagger';
+import { SyncedLine } from '../components/SyncedLine';
 import { colors, spacing, typography, type Palette } from '../theme';
 import { formatCurrency, formatRelativeTime } from '../lib/format';
+import { useMotion } from '../context/MotionContext';
 import { usePaletteStyles, useTheme } from '../context/ThemeContext';
 
 type CircleRow = {
@@ -80,6 +87,12 @@ type PayoutRow = {
   status: string;
 };
 
+/**
+ * "Continue with saved data" is remembered per offline session so the
+ * interstitial does not reappear every time the screen is reopened offline.
+ */
+let offlineSavedChosen = false;
+
 function greeting(name: string) {
   const h = new Date().getHours();
   if (h < 12) return `Good morning, ${name}`;
@@ -102,8 +115,9 @@ export function HomeScreen({
 } = {}) {
   const { p, styles } = usePaletteStyles(makeStyles);
   const { resolved, setMode } = useTheme();
+  const { reduceMotion } = useMotion();
   const { displayName, user } = useAuth();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!offlineSavedChosen);
   const [refreshing, setRefreshing] = useState(false);
   const [circles, setCircles] = useState<CircleRow[]>([]);
   const [memberships, setMemberships] = useState<MembershipRow[]>([]);
@@ -115,10 +129,16 @@ export function HomeScreen({
     totalContributed: 0,
   });
   const [error, setError] = useState<string | null>(null);
+  const [hasCache, setHasCache] = useState(false);
+  const [offlineFailed, setOfflineFailed] = useState(false);
+  const online = useConnectivity();
+  // First read may hydrate from cache — only that read may drop the spinner.
+  const booted = useRef(false);
 
   const load = useCallback(async () => {
     if (!user) return;
     setError(null);
+    setOfflineFailed(false);
     const ck = 'home:' + user.id;
     type HomeCache = {
       circles: CircleRow[];
@@ -138,6 +158,9 @@ export function HomeScreen({
       setNotifications(cached.notifications);
       setWallets(cached.wallets);
       setStats(cached.stats);
+      // Saved data renders instantly — the spinner is for first-time loads only.
+      setHasCache(true);
+      if (!booted.current) setLoading(false);
     }
     try {
       const [cRes, mRes, nRes, wRes] = await Promise.all([
@@ -234,6 +257,7 @@ export function HomeScreen({
       void drainQueue();
     } catch {
       if (!cached) setError('Could not load dashboard. Pull to retry.');
+      else setOfflineFailed(true);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -243,6 +267,24 @@ export function HomeScreen({
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Back online → the next outage offers the offline screen again.
+  useEffect(() => {
+    if (online) offlineSavedChosen = false;
+  }, [online]);
+
+  // Keep the dashboard fresh: app foreground, screen focus, every 30s, and
+  // whenever connectivity returns (never while a manual refresh is running).
+  useFastRefresh(load, { busy: refreshing });
+
+  const retry = () => {
+    setLoading(true);
+    void load();
+  };
+  // Offline while loading (or after a failed refresh) → the rich offline
+  // screen instead of a bare spinner; cached data is offered via Continue.
+  const showOffline =
+    !online && (loading || Boolean(error) || offlineFailed);
 
   const all = [
     ...circles,
@@ -275,6 +317,17 @@ export function HomeScreen({
   const recentCircles = all.slice(0, 4);
   const unread = notifications.filter((n) => n.status !== 'read').length;
 
+  if (showOffline) {
+    return (
+      <Screen tone="cream">
+        <OfflineScreen
+          onRetry={retry}
+          onContinue={hasCache ? () => { offlineSavedChosen = true; } : undefined}
+        />
+      </Screen>
+    );
+  }
+
   return (
     <Screen tone="cream">
       <ScrollView
@@ -296,6 +349,7 @@ export function HomeScreen({
             <Text style={styles.sub}>
               Here's what's happening with your savings circles.
             </Text>
+            <SyncedLine cacheKey={user ? `home:${user.id}` : null} />
           </View>
           <Pressable
             accessibilityRole="button"
@@ -478,7 +532,7 @@ export function HomeScreen({
                     View all ›
                   </Text>
                 </View>
-                {recentCircles.map((c) => {
+                {recentCircles.map((c, i) => {
                   const wallet = wallets.find((w) => w.circle_id === c.id);
                   const paid = Number(wallet?.paid_amount || 0);
                   const expected = Number(wallet?.expected_amount || 0);
@@ -490,67 +544,72 @@ export function HomeScreen({
                     (m) => m.circle_id === c.id
                   );
                   return (
-                    <Card key={c.id} style={styles.circleCard}>
-                      <Pressable
-                        onPress={() =>
-                          onPush?.({ name: 'circle-detail', circleId: c.id })
-                        }
-                      >
-                        <View style={styles.circleRow}>
-                          <View style={styles.circleMain}>
-                            <Text style={styles.circleName}>{c.name}</Text>
-                            <Text style={styles.circleMeta}>
-                              {formatCurrency(
-                                Number(c.contribution_amount || 0),
-                                c.currency
-                              )}{' '}
-                              / {c.frequency}
-                            </Text>
+                    <StaggerItem key={c.id} index={i}>
+                      <Card style={styles.circleCard}>
+                        <Pressable
+                          onPress={() =>
+                            onPush?.({ name: 'circle-detail', circleId: c.id })
+                          }
+                          style={({ pressed }) =>
+                            pressed && !reduceMotion ? styles.rowPressed : undefined
+                          }
+                        >
+                          <View style={styles.circleRow}>
+                            <View style={styles.circleMain}>
+                              <Text style={styles.circleName}>{c.name}</Text>
+                              <Text style={styles.circleMeta}>
+                                {formatCurrency(
+                                  Number(c.contribution_amount || 0),
+                                  c.currency
+                                )}{' '}
+                                / {c.frequency}
+                              </Text>
+                            </View>
+                            <Badge label={c.status} tone={toneFor(c.status)} />
                           </View>
-                          <Badge label={c.status} tone={toneFor(c.status)} />
-                        </View>
-                        <View style={styles.circleMetaRow}>
-                          {c.member_count != null && (
+                          <View style={styles.circleMetaRow}>
+                            {c.member_count != null && (
+                              <View style={styles.metaItem}>
+                                <Users size={14} color={p.textMuted} strokeWidth={1.75} />
+                                <Text style={styles.metaText}>
+                                  {c.member_count} members
+                                </Text>
+                              </View>
+                            )}
+                            {membership?.payout_position != null && (
+                              <View style={styles.metaItem}>
+                                <Clock size={14} color={p.textMuted} strokeWidth={1.75} />
+                                <Text style={styles.metaText}>
+                                  Position {membership.payout_position}
+                                </Text>
+                              </View>
+                            )}
                             <View style={styles.metaItem}>
-                              <Users size={14} color={p.textMuted} strokeWidth={1.75} />
+                              <FileText size={14} color={p.textMuted} strokeWidth={1.75} />
                               <Text style={styles.metaText}>
-                                {c.member_count} members
+                                Cycle {c.current_cycle || 0}
+                              </Text>
+                            </View>
+                          </View>
+                          {expected > 0 && (
+                            <View style={{ marginTop: spacing.sm }}>
+                              <View style={styles.progressTrack}>
+                                <View
+                                  style={[
+                                    styles.progressFill,
+                                    { width: `${progress}%` },
+                                  ]}
+                                />
+                              </View>
+                              <Text style={styles.progressLabel}>
+                                {formatCurrency(paid, c.currency)} of{' '}
+                                {formatCurrency(expected, c.currency)} settled
                               </Text>
                             </View>
                           )}
-                          {membership?.payout_position != null && (
-                            <View style={styles.metaItem}>
-                              <Clock size={14} color={p.textMuted} strokeWidth={1.75} />
-                              <Text style={styles.metaText}>
-                                Position {membership.payout_position}
-                              </Text>
-                            </View>
-                          )}
-                          <View style={styles.metaItem}>
-                            <FileText size={14} color={p.textMuted} strokeWidth={1.75} />
-                            <Text style={styles.metaText}>
-                              Cycle {c.current_cycle || 0}
-                            </Text>
-                          </View>
-                        </View>
-                        {expected > 0 && (
-                          <View style={{ marginTop: spacing.sm }}>
-                            <View style={styles.progressTrack}>
-                              <View
-                                style={[
-                                  styles.progressFill,
-                                  { width: `${progress}%` },
-                                ]}
-                              />
-                            </View>
-                            <Text style={styles.progressLabel}>
-                              {formatCurrency(paid, c.currency)} of{' '}
-                              {formatCurrency(expected, c.currency)} settled
-                            </Text>
-                          </View>
-                        )}
-                      </Pressable>
-                    </Card>
+                        </Pressable>
+                      </Card>
+                    </StaggerItem>
                   );
                 })}
               </>
@@ -573,12 +632,10 @@ export function HomeScreen({
                 </View>
               ) : (
                 recentActivity.map((n, i) => (
-                  <View
+                  <StaggerItem
                     key={n.id}
-                    style={[
-                      styles.activityRow,
-                      i > 0 && styles.activityRowBorder,
-                    ]}
+                    index={i}
+                    style={[styles.activityRow, i > 0 && styles.activityRowBorder]}
                   >
                     <View style={styles.activityIcon}>
                       <ArrowUpRight
@@ -598,14 +655,17 @@ export function HomeScreen({
                     <Text style={styles.activityWhen}>
                       {formatRelativeTime(n.created_at)}
                     </Text>
-                  </View>
+                  </StaggerItem>
                 ))
               )}
             </Card>
 
             <View style={styles.strip}>
               <Pressable
-                style={styles.stripCard}
+                style={({ pressed }) => [
+                  styles.stripCard,
+                  pressed && !reduceMotion && styles.stripPressed,
+                ]}
                 onPress={() => onNavigate?.('ledger')}
               >
                 <FileText
@@ -617,7 +677,25 @@ export function HomeScreen({
                 <Text style={styles.stripLabel}>Open ledger</Text>
               </Pressable>
               <Pressable
-                style={styles.stripCard}
+                style={({ pressed }) => [
+                  styles.stripCard,
+                  pressed && !reduceMotion && styles.stripPressed,
+                ]}
+                onPress={() => onPush?.({ name: 'debts' })}
+              >
+                <HandCoins
+                  size={18}
+                  color={p.primary}
+                  strokeWidth={2}
+                  style={{ marginBottom: spacing.sm }}
+                />
+                <Text style={styles.stripLabel}>Debts</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.stripCard,
+                  pressed && !reduceMotion && styles.stripPressed,
+                ]}
                 onPress={() => onPush?.({ name: 'insights' })}
               >
                 <TrendingUp
@@ -987,6 +1065,14 @@ const makeStyles = (p: Palette) => StyleSheet.create({
     fontSize: typography.body,
     fontWeight: '500',
     color: p.text,
+  },
+  stripPressed: {
+    opacity: 0.88,
+    transform: [{ scale: 0.97 }],
+  },
+  rowPressed: {
+    opacity: 0.92,
+    transform: [{ scale: 0.99 }],
   },
   tip: {
     fontSize: 12,

@@ -324,4 +324,30 @@ export const emailTemplates = {
       text: `Payout of ${amount} received for ${circleName}.\n\nHistory: ${historyUrl}\nReference: ${reference}`,
     };
   },
+
+  /** Platform-wide broadcast from the in-app admin dashboard. */
+  adminBroadcast(title: string, message: string) {
+    const safeTitle = title.replace(/[<>]/g, '');
+    const paragraphs = message
+      .split(/\n{2,}/)
+      .map(
+        (line) =>
+          `<p style="margin:0 0 14px;font-size:15px;color:${C.muted};line-height:1.6;">${line
+            .replace(/[<>]/g, '')
+            .replace(/\n/g, '<br>')}</p>`
+      )
+      .join('');
+    return {
+      subject: safeTitle,
+      html: shell(safeTitle, `
+        <h1 style="margin:0 0 12px;font-size:24px;font-weight:700;color:${C.forest};">${safeTitle}</h1>
+        ${paragraphs}
+        ${button(`${BASE_URL}/dashboard`, 'Open Turna')}
+        <p style="margin:24px 0 0;font-size:13px;color:${C.muted};line-height:1.5;">
+          This is a message from the Turna team. Need help? Reply to this email or contact ${SUPPORT_EMAIL}.
+        </p>
+      `),
+      text: `${safeTitle}\n\n${message}`,
+    };
+  },
 };

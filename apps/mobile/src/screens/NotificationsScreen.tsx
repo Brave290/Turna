@@ -12,10 +12,16 @@ import { Bell, CheckCheck } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { cacheGet, cacheSet, drainQueue } from '../lib/offline';
+import { useFastRefresh } from '../lib/useFastRefresh';
+import { useConnectivity } from '../lib/connectivity';
 import { formatRelativeTime } from '../lib/format';
 import { Button } from '../components/Button';
 import { Card, Badge, type BadgeTone } from '../components/Card';
 import { Screen } from '../components/Screen';
+import { OfflineScreen } from '../components/OfflineScreen';
+import { StaggerItem } from '../components/Stagger';
+import { SyncedLine } from '../components/SyncedLine';
+import { useMotion } from '../context/MotionContext';
 import { colors, radius, spacing, type Palette } from '../theme';
 import { usePaletteStyles } from '../context/ThemeContext';
 
@@ -25,6 +31,7 @@ type N = {
   body: string;
   status: string;
   created_at: string;
+  data?: { sender?: string } | null;
 };
 
 // Same map as web StatusBadge (status-badge.tsx): badge tones by status.
@@ -94,21 +101,32 @@ function MarkAllButton({
 
 export function NotificationsScreen({ onBack }: { onBack?: () => void } = {}) {
   const { p, styles } = usePaletteStyles(makeStyles);
+  const { reduceMotion } = useMotion();
   const { user } = useAuth();
   const [rows, setRows] = useState<N[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [marking, setMarking] = useState(false);
+  const [hasCache, setHasCache] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [dismissedOffline, setDismissedOffline] = useState(false);
+  const online = useConnectivity();
 
   const load = useCallback(async () => {
     if (!user) return;
+    setError(null);
     const ck = 'notifications:' + user.id;
     const cached = await cacheGet<N[]>(ck);
-    if (cached) setRows(cached);
+    if (cached) {
+      setRows(cached);
+      // Saved rows render instantly — the spinner is for first-time loads only.
+      setHasCache(true);
+      setLoading(false);
+    }
     try {
       const { data, error } = await supabase
         .from('notifications')
-        .select('id, title, body, status, created_at')
+        .select('id, title, body, status, created_at, data')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(100);
@@ -119,6 +137,7 @@ export function NotificationsScreen({ onBack }: { onBack?: () => void } = {}) {
       void drainQueue();
     } catch {
       /* offline — keep cached rows */
+      if (!cached) setError('Could not load notifications.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -128,6 +147,18 @@ export function NotificationsScreen({ onBack }: { onBack?: () => void } = {}) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useFastRefresh(load, { busy: refreshing || marking });
+
+  const retry = () => {
+    setDismissedOffline(false);
+    void load();
+  };
+  const showOffline =
+    !online &&
+    !dismissedOffline &&
+    (loading || Boolean(error)) &&
+    (!hasCache || Boolean(error));
 
   const unread = rows.filter((n) => n.status !== 'read').length;
 

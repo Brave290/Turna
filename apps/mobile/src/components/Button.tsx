@@ -19,6 +19,7 @@ export function Button({
   variant = 'primary',
   loading = false,
   disabled = false,
+  onDark = false,
   style,
 }: {
   label: string;
@@ -26,11 +27,13 @@ export function Button({
   variant?: Variant;
   loading?: boolean;
   disabled?: boolean;
+  /** Swap outline/ghost colours for light text on a dark surface. */
+  onDark?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
   const { p, styles } = usePaletteStyles(makeStyles);
-  const variantStyles = useMemo(() => makeVariantStyles(p), [p]);
-  const labelStyles = useMemo(() => makeLabelStyles(p), [p]);
+  const variantStyles = useMemo(() => makeVariantStyles(p, onDark), [p, onDark]);
+  const labelStyles = useMemo(() => makeLabelStyles(p, onDark), [p, onDark]);
   const { reduceMotion } = useMotion();
   const isDisabled = disabled || loading;
   return (
@@ -51,7 +54,9 @@ export function Button({
       {loading ? (
         <ActivityIndicator
           size="small"
-          color={variant === 'primary' ? colors.white : p.primary}
+          color={
+            variant === 'primary' || onDark ? colors.white : p.primary
+          }
         />
       ) : (
         <Text style={[styles.label, labelStyles[variant]]}>{label}</Text>
@@ -84,20 +89,21 @@ const makeStyles = (p: Palette) => StyleSheet.create({
   },
 });
 
-const makeVariantStyles = (p: Palette): Record<Variant, ViewStyle> => ({
+const makeVariantStyles = (p: Palette, onDark = false): Record<Variant, ViewStyle> => ({
   primary: { backgroundColor: p.primarySolid },
   outline: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: p.primary,
+    borderColor: onDark ? 'rgba(255,255,255,0.45)' : p.primary,
   },
   ghost: { backgroundColor: 'transparent' },
   danger: { backgroundColor: p.errorSolid },
 });
 
-const makeLabelStyles = (p: Palette) => StyleSheet.create({
-  primary: { color: colors.white },
-  outline: { color: p.primary },
-  ghost: { color: p.primary },
-  danger: { color: colors.white },
-});
+const makeLabelStyles = (p: Palette, onDark = false) =>
+  StyleSheet.create({
+    primary: { color: colors.white },
+    outline: { color: onDark ? colors.white : p.primary },
+    ghost: { color: onDark ? colors.white : p.primary },
+    danger: { color: colors.white },
+  });

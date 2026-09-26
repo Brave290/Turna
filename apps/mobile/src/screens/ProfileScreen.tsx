@@ -12,16 +12,19 @@ import {
   Settings,
   Users,
   Shield,
+  ShieldCheck,
   Bell,
   LifeBuoy,
   Palette,
   FileText,
+  Wallet,
   ChevronRight,
   MonitorSmartphone,
 } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { enqueueOp, isOfflineError } from '../lib/offline';
+import { isAdminEmail } from '../lib/config';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { Screen } from '../components/Screen';
@@ -267,6 +270,22 @@ export function ProfileScreen({
       description: 'Password, sessions, OTP',
       onPress: () => onPush?.({ name: 'settings-sub', route: 'settings/security' }),
     },
+    {
+      icon: Wallet,
+      label: 'My debts',
+      description: 'What you owe and what you are owed',
+      onPress: () => onPush?.({ name: 'debts' }),
+    },
+    ...(isAdminEmail(email)
+      ? [
+          {
+            icon: ShieldCheck,
+            label: 'Admin dashboard',
+            description: 'Broadcasts, KYC, platform overview',
+            onPress: () => onPush?.({ name: 'admin' }),
+          },
+        ]
+      : []),
     {
       icon: Bell,
       label: 'Notifications',
