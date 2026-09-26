@@ -61,7 +61,6 @@ function Gate() {
   const { status, user } = useAuth();
   const { resolved } = useTheme();
   const [tab, setTab] = useState<TabKey>('home');
-  const [guest, setGuest] = useState(false);
   const [soloId, setSoloId] = useState<string | null>(null);
   const [stack, setStack] = useState<StackScreen[]>([{ name: 'home' }]);
 
@@ -186,10 +185,7 @@ function Gate() {
       return <SplashAnimated />;
     }
     if (status === 'needsVerify' || status === 'signedOut') {
-      if (guest) {
-        return <AuthScreen onSwitch={() => setGuest(false)} />;
-      }
-      return <AuthScreen onSwitch={() => setGuest(true)} />;
+      return <AuthScreen />;
     }
     if (status === 'onboarding') {
       return <OnboardingScreen />;

@@ -22,8 +22,8 @@ const SLIDES = [
     body: 'Members see masked identities. Admins see the full ledger.',
   },
   {
-    title: 'Payouts to your account',
-    body: 'Save your bank details once — when it is your turn, the pot is sent to you.',
+    title: 'Payouts to you',
+    body: 'When it is your turn, the pot is sent straight to you and recorded right here.',
   },
 ];
 

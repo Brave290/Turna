@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Users,
   ShieldCheck,
-  Landmark,
+  Wallet,
   Sparkles,
   ArrowRight,
   Banknote,
@@ -41,9 +41,9 @@ const SLIDES = [
   },
   {
     key: 'payout',
-    title: 'Payouts to your account',
-    body: 'Save your bank account once. When it is your turn, the circle admin sends the pot straight to you and records it here.',
-    icon: Landmark,
+    title: 'Payouts to you',
+    body: 'When it is your turn, the circle admin sends the pot straight to you and records it right here.',
+    icon: Wallet,
     accent: 'text-primary',
     bg: 'from-primary/20 via-sky/5 to-transparent',
   },

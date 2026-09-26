@@ -44,7 +44,7 @@ async function writeRemember(email: string | null) {
 
 type Mode = 'login' | 'signup' | 'verify-pending';
 
-export function AuthScreen({ onSwitch }: { onSwitch?: () => void }) {
+export function AuthScreen() {
   const { p, styles } = usePaletteStyles(makeStyles);
   const { signIn, signUp } = useAuth();
   const [mode, setMode] = useState<Mode>('login');
@@ -287,9 +287,6 @@ export function AuthScreen({ onSwitch }: { onSwitch?: () => void }) {
             {mode === 'login' ? 'Create one' : 'Sign in'}
           </Text>
         </Text>
-        {onSwitch && (
-          <Button label="Continue as guest view" variant="outline" onPress={onSwitch} style={styles.switch} />
-        )}
 
         <Popup
           visible={resetOpen}

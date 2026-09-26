@@ -28,8 +28,8 @@ export default function PrivacyPage() {
             <h2 className="font-semibold text-white text-base mb-2">1. What we collect</h2>
             <p>
               Account details (name, email, optional profile fields), circle activity you create
-              or join, contribution and payout records, bank account details you add for payouts,
-              and technical data (device, logs) needed to run and secure the service.
+              or join, contribution and payout records, and technical data (device, logs) needed
+              to run and secure the service.
             </p>
           </section>
 

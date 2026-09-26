@@ -15,7 +15,6 @@ import {
   Clock,
   FileText,
   Info,
-  Landmark,
   Languages,
   LifeBuoy,
   Lock,
@@ -66,12 +65,6 @@ const ACCOUNT: Tile[] = [
     description: 'Password, OTP, sessions',
     icon: Shield,
     accent: true,
-  },
-  {
-    route: 'settings/payout-account',
-    label: 'Bank',
-    description: 'Payout account (locked)',
-    icon: Landmark,
   },
   {
     route: 'settings/kyc',

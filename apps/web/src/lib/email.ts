@@ -298,33 +298,6 @@ export const emailTemplates = {
     };
   },
 
-  payoutReceipt(
-    _email: string,
-    circleName: string,
-    amount: string,
-    reference: string,
-    bankName?: string
-  ) {
-    const historyUrl = `${BASE_URL}/`;
-    return {
-      subject: `Payout received — ${amount} · ${circleName}`,
-      html: shell('Payout received', `
-        <h1 style="margin:0 0 8px;font-size:24px;font-weight:700;color:${C.forest};">Payout received</h1>
-        <p style="margin:0 0 4px;font-size:15px;color:${C.muted};line-height:1.6;">
-          Your payout for <strong style="color:${C.forest};">${circleName}</strong>
-          has been delivered${bankName ? ` to ${bankName}` : ' to your bank account'}.
-        </p>
-        <p style="margin:16px 0;font-size:28px;font-weight:700;color:${C.primary};">${amount}</p>
-        <p style="margin:0 0 20px;font-size:13px;color:${C.muted};line-height:1.5;">
-          Reference: <code style="font-family:monospace;color:${C.forest};">${reference}</code>
-        </p>
-        ${button(historyUrl, 'View Payments history')}
-        ${spamHint()}
-      `),
-      text: `Payout of ${amount} received for ${circleName}.\n\nHistory: ${historyUrl}\nReference: ${reference}`,
-    };
-  },
-
   /** Platform-wide broadcast from the in-app admin dashboard. */
   adminBroadcast(title: string, message: string) {
     const safeTitle = title.replace(/[<>]/g, '');

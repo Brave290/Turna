@@ -681,3 +681,26 @@ Each session should append:
 2. When user ready to publish: `gh variable set RELEASE_PRERELEASE --body false`.
 3. When billing fixed: `gh repo edit Brave290/Turna --visibility private`.
 4. Local-only change right now: this file — do not push alone (a push cuts a new release); commit with the next feature push.
+
+#### Session 2026-09-26 (later): admin 403 fixed, v1.0.19 full release, repo private again, Vercel MCP live
+
+- **Admin "Forbidden" root cause**: Vercel `ADMIN_EMAILS` only had `legateakanjimusab@gmail.com`; the new `support.turna@gmail.com` account matched the mobile UI (`lib/config.ts` hardcoded) but failed the API allowlist → 403. Fixed: new shared `apps/web/src/lib/admin.ts` (`isAdminEmail` honours `ADMIN_EMAILS` + `ADMIN_EMAIL` and **always** includes `PRODUCT_ADMIN_EMAIL='support.turna@gmail.com'`), imported by all 4 admin routes (`api/mobile/admin`, `api/admin/kyc-review`, `api/admin/run-cron`, `api/circles/payout-order`); Vercel env now `support.turna@gmail.com,legateakanjimusab@gmail.com`; local `.env.local` synced. Admin works in the already-installed APK (server-side fix). Also: friendly 403 copy in `AdminDashboardScreen`, and `ensureNotificationPermission()` was unreachable after a `return` in App.tsx — now actually called on sign-in.
+- **GitHub Actions billing**: first private flip succeeded but Actions refused jobs ("recent account payments have failed"). Flipped **public** → reran both failed runs → green. **Flipped PRIVATE again** (final state) — **future pushes will fail to build until Billing & plans is fixed**; to resume builds without billing, flip public: `gh repo edit Brave290/Turna --visibility public --accept-visibility-change-consequences`.
+- **v1.0.19 = first FULL release** (`RELEASE_PRERELEASE=false` set via `gh variable set`): run 36250146448 success, commit `062553e`, prerelease=false, mirror `latest` non-prerelease, `/api/app/version` → 1.0.19 (versionCode 29840608).
+- Production deploy shipped via **Vercel CLI** (`vercel deploy --prod`, bypassing Actions) — `turnaapp.vercel.app` → dpl_7AQBEuQ9SbGvX53jMPjEjZK4GWKL.
+- **Vercel MCP fixed & authenticated**: `~/.config/opencode/opencode.jsonc` now has `"mcp": {"Vercel": {"type":"remote","url":"https://mcp.vercel.com"}}`; OAuth completed (`opencode mcp list` → ✓ connected). Restart opencode to load `mcp__Vercel__*` tools. OAuth URLs time out (~5 min) — issue `opencode mcp auth Vercel` only right before the user can click.
+- **Env quirk**: curl's c-ares DNS times out for `vercel.com` (glibc getent fine) → pinned `64.239.109.193 vercel.com` in `/etc/hosts` (hosts file). Also transient `api.github.com` outages — retry.
+- Still open (not selected this session): screen tidy/button-reduction + deep-link audit pass; iOS real-device builds (Apple account).
+- This continuity file is **uncommitted** — next push to main cuts v1.0.20 (and will fail while repo is private + billing broken).
+
+#### Standing order: repo visibility (user-approved, permanent)
+
+**When a build is needed → flip PUBLIC → push/rerun → after the release run finishes → flip PRIVATE.** Bash recipe each time:
+
+```bash
+gh repo edit Brave290/Turna --visibility public --accept-visibility-change-consequences
+# ...push or gh run rerun <id>, wait for Release run to COMPLETE green...
+gh repo edit Brave290/Turna --visibility private --accept-visibility-change-consequences
+```
+
+Never leave the repo public unattended. Private is the default/resting state. (Root cause remains GitHub billing — flip to private-first permanently if billing is ever fixed.)

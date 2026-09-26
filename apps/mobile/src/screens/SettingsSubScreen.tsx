@@ -22,7 +22,6 @@ import {
   FileText,
   Info,
   KeyRound,
-  Landmark,
   Languages,
   LifeBuoy,
   Lock,
@@ -63,7 +62,6 @@ export type SettingsRoute =
   | 'settings/personal-information'
   | 'settings/email'
   | 'settings/security'
-  | 'settings/payout-account'
   | 'settings/kyc'
   | 'settings/notifications'
   | 'settings/appearance'
@@ -140,7 +138,7 @@ function apiPut(
   return apiCall('PUT', path, body, opts);
 }
 
-async function requestSensitiveOtp(purpose: 'bank_change' | 'profile_change') {
+async function requestSensitiveOtp(purpose: 'profile_change') {
   return apiPost(
     '/api/auth/sensitive-otp',
     { purpose },
@@ -148,7 +146,7 @@ async function requestSensitiveOtp(purpose: 'bank_change' | 'profile_change') {
   );
 }
 
-async function verifySensitiveOtp(purpose: 'bank_change' | 'profile_change', code: string) {
+async function verifySensitiveOtp(purpose: 'profile_change', code: string) {
   return apiPut(
     '/api/auth/sensitive-otp',
     { purpose, code },
@@ -182,10 +180,6 @@ const ROUTE_META: Record<string, { title: string; sub: string }> = {
     sub: 'Sign-in email and verification status',
   },
   'settings/security': { title: 'Security', sub: 'Password, OTP, active sessions' },
-  'settings/payout-account': {
-    title: 'Payout account',
-    sub: 'Bank account for receiving payouts',
-  },
   'settings/kyc': { title: 'Identity (KYC)', sub: 'Verify identity for larger payouts' },
   'settings/notifications': {
     title: 'Notifications',
@@ -1411,378 +1405,6 @@ function SecuritySection({ ctx }: { ctx: Ctx }) {
   );
 }
 
-/* ─── Payout account ─── */
-
-type Bank = { code: string; name: string };
-
-type SavedAccount = {
-  id?: string;
-  bank_code: string;
-  bank_name: string;
-  account_number: string;
-  account_name: string;
-  is_default?: boolean;
-};
-
-function PayoutSection({ ctx }: { ctx: Ctx }) {
-  const { p, styles: s } = usePaletteStyles(makeS);
-  const { user } = useAuth();
-  const [account, setAccount] = useState<SavedAccount | null>(null);
-  const [loaded, setLoaded] = useState(false);
-  const [banks, setBanks] = useState<Bank[]>([]);
-  const [bankCode, setBankCode] = useState('');
-  const [accountNumber, setAccountNumber] = useState('');
-  const [resolvedName, setResolvedName] = useState('');
-  const [resolvedManually, setResolvedManually] = useState(false);
-  const [manualNeeded, setManualNeeded] = useState(false);
-  const [manualName, setManualName] = useState('');
-  const [resolving, setResolving] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [locked, setLocked] = useState(false);
-  const [otpStep, setOtpStep] = useState<'idle' | 'verify'>('idle');
-  const [otpMsg, setOtpMsg] = useState<string | null>(null);
-  const [otpBusy, setOtpBusy] = useState(false);
-
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        const { data } = await supabase
-          .from('bank_accounts')
-          .select('id, bank_code, bank_name, account_number, account_name, is_default')
-          .eq('user_id', user?.id ?? '')
-          .eq('is_default', true)
-          .maybeSingle();
-        if (!alive) return;
-        if (data) {
-          const saved = data as SavedAccount;
-          setAccount(saved);
-          setLocked(true);
-          setBankCode(saved.bank_code);
-          setAccountNumber(saved.account_number);
-          setResolvedName(saved.account_name);
-        }
-      } catch {
-        /* offline — start empty */
-      } finally {
-        if (alive) setLoaded(true);
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [user?.id]);
-
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        const res = await fetch(`${APP_API_URL}/api/banks`);
-        const data = await res.json();
-        if (alive && Array.isArray(data.banks)) {
-          const list = data.banks as Bank[];
-          setBanks(list);
-          setBankCode((current) => {
-            if (current) return current;
-            const gtb = list.find((b) => /guaranty|gtb/i.test(b.name));
-            return gtb?.code ?? list[0]?.code ?? '';
-          });
-        }
-      } catch {
-        /* ignore */
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-  const canResolve = /^\d{10}$/.test(accountNumber) && bankCode.length > 0;
-  const bankLabel = banks.find((b) => b.code === bankCode)?.name ?? '';
-
-  async function requestUnlockOtp() {
-    setOtpBusy(true);
-    setOtpMsg(null);
-    const res = await requestSensitiveOtp('bank_change');
-    setOtpBusy(false);
-    if (!res.ok) {
-      ctx.toast(res.error ?? 'Could not send code', 'error');
-      return;
-    }
-    setOtpStep('verify');
-    setOtpMsg(res.data?.message ?? 'We emailed a 6-digit code. Enter it to unlock.');
-    ctx.toast('Verification code sent to your email');
-  }
-
-  async function verifyUnlockOtp(code: string) {
-    if (!/^\d{6}$/.test(code)) {
-      ctx.toast('Enter the full 6-digit code', 'error');
-      return;
-    }
-    setOtpBusy(true);
-    const res = await verifySensitiveOtp('bank_change', code);
-    setOtpBusy(false);
-    if (!res.ok) {
-      ctx.toast(res.error ?? 'Invalid or expired code', 'error');
-      return;
-    }
-    setLocked(false);
-    setResolvedName('');
-    setResolvedManually(false);
-    setManualNeeded(false);
-    setManualName('');
-    setOtpStep('idle');
-    setOtpMsg(null);
-    ctx.toast('Bank details unlocked — you can edit now');
-  }
-
-  async function handleResolve() {
-    if (!canResolve) return;
-    setResolving(true);
-    setResolvedName('');
-    setResolvedManually(false);
-    try {
-      const { data } = await supabase.auth.getSession();
-      const token = data.session?.access_token;
-      const res = await fetch(`${APP_API_URL}/api/banks`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          account_number: accountNumber,
-          bank_code: bankCode,
-          ...(manualNeeded && manualName.trim()
-            ? { account_name: manualName.trim() }
-            : {}),
-        }),
-      });
-      const json = (await res.json().catch(() => ({}))) as {
-        account?: { account_name?: string };
-        error?: string;
-        manual?: boolean;
-      };
-      if (res.ok) {
-        const name = String(json.account?.account_name ?? '').trim();
-        setResolving(false);
-        if (!name) {
-          ctx.toast('Could not verify account', 'error');
-          return;
-        }
-        setResolvedName(name);
-        setResolvedManually(Boolean(json.manual));
-        setManualNeeded(false);
-        ctx.toast(json.manual ? 'Account name confirmed' : 'Account name verified');
-        return;
-      }
-      setResolving(false);
-      if (res.status === 503 && json.manual) {
-        setManualNeeded(true);
-        ctx.toast('Enter the account name to continue', 'error');
-        return;
-      }
-      ctx.toast(json.error ?? 'Could not verify account', 'error');
-    } catch {
-      setResolving(false);
-      ctx.toast('Network error resolving account', 'error');
-    }
-  }
-
-  async function handleSave() {
-    if (locked) return;
-    if (!resolvedName) {
-      ctx.toast('Confirm the account name first', 'error');
-      return;
-    }
-    setSaving(true);
-    const res = await apiPost(
-      '/api/bank-accounts',
-      {
-        bank_code: bankCode,
-        bank_name: bankLabel,
-        account_number: accountNumber,
-        account_name: resolvedName,
-      },
-      { networkError: 'Network error saving account', failError: 'Could not save account' }
-    );
-    setSaving(false);
-    if (!res.ok) {
-      ctx.toast(res.error ?? 'Could not save account', 'error');
-      return;
-    }
-    setLocked(true);
-    setAccount({
-      bank_code: bankCode,
-      bank_name: bankLabel,
-      account_number: accountNumber,
-      account_name: resolvedName,
-      is_default: true,
-    });
-    ctx.toast('Payout account saved and locked — future payouts go here');
-  }
-
-  if (!loaded) {
-    return (
-      <Panel
-        title="Payout account"
-        description="Bank account where circle payouts are sent. Transfers are arranged directly with the circle admin."
-      >
-        <LoadingRow />
-      </Panel>
-    );
-  }
-
-  if (locked && account) {
-    return (
-      <Panel
-        title="Payout account"
-        description="Bank account where circle payouts are sent. Transfers are arranged directly with the circle admin."
-      >
-        <View style={s.lockBox}>
-          <View style={s.lockIcon}>
-            <Lock size={20} color={colors.white} />
-          </View>
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={s.lockTitle} numberOfLines={2}>
-              Bank account locked <ShieldCheck size={14} color={p.primary} />
-            </Text>
-            <Text style={s.lockDesc}>
-              Saved details are protected. Unlock with an email code to edit.
-            </Text>
-            <View style={s.accountBox}>
-              <Text style={s.accountName}>{account.account_name}</Text>
-              <Text style={s.accountMeta}>
-                {account.bank_name} · {account.account_number}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {otpStep === 'idle' ? (
-          <Button
-            label="Edit bank details"
-            variant="outline"
-            onPress={() => void requestUnlockOtp()}
-            loading={otpBusy}
-            disabled={otpBusy}
-            style={s.blockBtn}
-          />
-        ) : (
-          <OtpEntry
-            message={otpMsg}
-            busy={otpBusy}
-            onVerify={(code) => void verifyUnlockOtp(code)}
-            onResend={() => void requestUnlockOtp()}
-            onCancel={() => {
-              setOtpStep('idle');
-              setOtpMsg(null);
-            }}
-          />
-        )}
-      </Panel>
-    );
-  }
-
-  return (
-    <Panel
-      title="Payout account"
-      description="Bank account where circle payouts are sent. Transfers are arranged directly with the circle admin."
-    >
-      <AppSelect
-        label="Bank"
-        value={bankCode}
-        onChange={(v) => {
-          setBankCode(v);
-          setResolvedName('');
-          setResolvedManually(false);
-          setManualNeeded(false);
-          setManualName('');
-        }}
-        options={
-          banks.length > 0
-            ? banks.map((b) => ({ value: b.code, label: b.name }))
-            : [{ value: '', label: 'Loading banks…' }]
-        }
-        placeholder="Select bank"
-        style={s.select}
-      />
-      <Field label="Account number">
-        <View style={s.inlineInput}>
-          <TextInput
-            style={[s.input, s.flexWide]}
-            value={accountNumber}
-            onChangeText={(v: string) => {
-              setAccountNumber(v.replace(/\D/g, '').slice(0, 10));
-              setResolvedName('');
-              setResolvedManually(false);
-              setManualNeeded(false);
-              setManualName('');
-            }}
-            keyboardType="numeric"
-            maxLength={10}
-            placeholder="0123456789"
-            placeholderTextColor={p.textMuted}
-          />
-          <Button
-            label={manualNeeded ? 'Confirm' : 'Verify'}
-            variant="outline"
-            onPress={() => void handleResolve()}
-            loading={resolving}
-            disabled={
-              !canResolve || resolving || (manualNeeded && !manualName.trim())
-            }
-            style={s.verifyBtn}
-          />
-        </View>
-      </Field>
-
-      {manualNeeded && !resolvedName ? (
-        <Field label="Account name">
-          <TextInput
-            style={s.input}
-            value={manualName}
-            onChangeText={(v: string) => setManualName(v.slice(0, 120))}
-            placeholder="Name exactly as on your statement"
-            placeholderTextColor={p.textMuted}
-            autoCapitalize="words"
-          />
-        </Field>
-      ) : null}
-
-      {resolvedName ? (
-        <View style={s.infoBox}>
-          <CheckCircle2 size={16} color={p.primary} />
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={s.infoTitle}>{resolvedName}</Text>
-            <Text style={s.infoMeta}>
-              {bankLabel} · {accountNumber}
-              {resolvedManually ? ' — confirmed by you' : ' — verified'}
-            </Text>
-          </View>
-        </View>
-      ) : resolving ? (
-        <View style={s.pendingBox}>
-          <ActivityIndicator size="small" color={p.primary} />
-          <Text style={s.pendingText}>Checking account name…</Text>
-        </View>
-      ) : null}
-
-      <Button
-        label={saving ? 'Saving…' : 'Save payout account'}
-        onPress={() => void handleSave()}
-        loading={saving}
-        disabled={!resolvedName || saving}
-        style={s.blockBtn}
-      />
-      <Text style={s.hintSmall}>
-        After saving, this account locks. You&apos;ll need an email code to change it later. We
-        only store bank code, number, and the account name.
-      </Text>
-    </Panel>
-  );
-}
-
 /* ─── Identity (KYC) ─── */
 
 type KycRow = {
@@ -2785,12 +2407,6 @@ function SettingsIndexSection({ ctx }: { ctx: Ctx }) {
           icon: Shield,
         },
         {
-          route: 'settings/payout-account',
-          label: 'Payout account',
-          description: 'Bank account for receiving payouts',
-          icon: Landmark,
-        },
-        {
           route: 'settings/kyc',
           label: 'Identity (KYC)',
           description: 'Verify identity for larger payouts',
@@ -2919,8 +2535,6 @@ function renderSection(route: string, ctx: Ctx) {
       return <EmailSection ctx={ctx} />;
     case 'settings/security':
       return <SecuritySection ctx={ctx} />;
-    case 'settings/payout-account':
-      return <PayoutSection ctx={ctx} />;
     case 'settings/kyc':
       return <KycSection ctx={ctx} />;
     case 'settings/notifications':

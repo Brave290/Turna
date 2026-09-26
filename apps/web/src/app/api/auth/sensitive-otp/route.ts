@@ -5,9 +5,9 @@ import { sendEmail, emailTemplates } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
 
-const ALLOWED = new Set(['bank_change', 'profile_change']);
+const ALLOWED = new Set(['profile_change']);
 
-/** POST — send OTP for a sensitive edit (bank / profile unlock). */
+/** POST — send OTP for a sensitive edit (profile unlock). */
 export async function POST(req: NextRequest) {
   try {
     const supabase = createServerSupabaseClientFromRequest(req);
