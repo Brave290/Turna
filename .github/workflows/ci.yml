@@ -52,3 +52,41 @@ jobs:
 
       - name: Dependency audit
         run: pnpm audit --audit-level=high || true
+
+  ios:
+    name: iOS Build
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: CocoaPods install
+        working-directory: apps/mobile/ios
+        run: pod install --repo-update
+
+      - name: Build iOS (simulator, unsigned)
+        working-directory: apps/mobile/ios
+        run: |
+          xcodebuild \
+            -workspace Turna.xcworkspace \
+            -scheme Turna \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            ONLY_ACTIVE_ARCH=NO \
+            build
