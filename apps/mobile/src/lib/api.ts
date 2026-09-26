@@ -1,19 +1,30 @@
-import { APP_API_URL } from './supabase';
+import { APP_API_URL, supabase } from './supabase';
 
 export type ApiResult<T = unknown> = {
   ok: boolean;
   data?: T;
   error?: string;
+  /** True when the request never reached the server (connectivity). */
+  offline?: boolean;
 };
 
 async function post<T = unknown>(
   path: string,
-  body: Record<string, unknown>
+  body: Record<string, unknown>,
+  opts?: { auth?: boolean }
 ): Promise<ApiResult<T>> {
   try {
+    let token: string | undefined;
+    if (opts?.auth) {
+      const { data } = await supabase.auth.getSession();
+      token = data.session?.access_token;
+    }
     const res = await fetch(`${APP_API_URL}${path}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify(body),
     });
     const json = (await res.json().catch(() => ({}))) as T & {
@@ -33,8 +44,20 @@ async function post<T = unknown>(
     }
     return { ok: true, data: json };
   } catch {
-    return { ok: false, error: 'Network error — check your connection' };
+    return {
+      ok: false,
+      error: 'Network error — check your connection',
+      offline: true,
+    };
   }
+}
+
+/** POST with the signed-in user's access token (`Authorization: Bearer …`). */
+export function postAuth<T = unknown>(
+  path: string,
+  body: Record<string, unknown>
+): Promise<ApiResult<T>> {
+  return post<T>(path, body, { auth: true });
 }
 
 /** Mobile auth calls into the same web API that powers email OTP + signup. */
@@ -58,5 +81,20 @@ export const mobileAuth = {
       email,
       password,
     });
+  },
+};
+
+/** Circle invitations — same backend as the web invite form (email included). */
+export const mobileInvites = {
+  send(input: {
+    circle_id: string;
+    invitee_email: string;
+    payout_position?: number;
+    token?: string;
+  }) {
+    return postAuth<{ success?: string; token?: string; expires_at?: string }>(
+      '/api/mobile/invite',
+      input
+    );
   },
 };

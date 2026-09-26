@@ -1,6 +1,7 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useMemo } from 'react';
 import { StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
-import { colors, radius, spacing, typography } from '../theme';
+import { radius, spacing, type Palette } from '../theme';
+import { usePaletteStyles } from '../context/ThemeContext';
 
 export function Card({
   children,
@@ -9,6 +10,7 @@ export function Card({
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
 }) {
+  const { styles } = usePaletteStyles(makeStyles);
   return <View style={[styles.card, style]}>{children}</View>;
 }
 
@@ -23,6 +25,9 @@ export function Badge({
   tone?: BadgeTone;
   style?: StyleProp<ViewStyle>;
 }) {
+  const { p, styles } = usePaletteStyles(makeStyles);
+  const badgeTone = useMemo(() => makeBadgeTone(p), [p]);
+  const badgeTextTone = useMemo(() => makeBadgeTextTone(p), [p]);
   return (
     <View style={[styles.badge, badgeTone[tone], style]}>
       <Text style={[styles.badgeText, badgeTextTone[tone]]}>{label}</Text>
@@ -41,13 +46,14 @@ export function Stat({
   sub?: string;
   icon?: React.ComponentType<any>;
 }) {
+  const { p, styles } = usePaletteStyles(makeStyles);
   return (
     <View style={styles.stat}>
       <View style={styles.statHead}>
         <Text style={styles.statLabel}>{label}</Text>
         {Icon ? (
           <View style={styles.statIcon}>
-            <Icon size={16} color={colors.primary} strokeWidth={2} />
+            <Icon size={16} color={p.primary} strokeWidth={2} />
           </View>
         ) : null}
       </View>
@@ -57,12 +63,12 @@ export function Stat({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (p: Palette) => StyleSheet.create({
   card: {
-    backgroundColor: colors.card,
+    backgroundColor: p.card,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: p.border,
     padding: 20,
     marginBottom: spacing.sm,
   },
@@ -79,22 +85,22 @@ const styles = StyleSheet.create({
   },
   stat: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: p.surface,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: p.border,
     padding: spacing.md,
     minWidth: 0,
   },
   statValue: {
-    color: colors.forest,
+    color: p.text,
     fontSize: 20,
     fontWeight: '700',
     marginTop: 4,
     letterSpacing: -0.3,
   },
   statLabel: {
-    color: colors.muted,
+    color: p.textMuted,
     fontSize: 13,
     fontWeight: '500',
     flex: 1,
@@ -115,13 +121,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   statSub: {
-    color: colors.muted,
+    color: p.textMuted,
     fontSize: 12,
     marginTop: 2,
   },
 });
 
-const badgeTone = StyleSheet.create({
+const makeBadgeTone = (p: Palette) => StyleSheet.create({
   active: { backgroundColor: 'rgba(0,122,101,0.10)' },
   pending: { backgroundColor: 'rgba(138,90,0,0.15)' },
   muted: { backgroundColor: 'rgba(74,93,115,0.15)' },
@@ -129,10 +135,10 @@ const badgeTone = StyleSheet.create({
   completed: { backgroundColor: 'rgba(10,22,40,0.10)' },
 });
 
-const badgeTextTone = StyleSheet.create({
-  active: { color: colors.primary },
-  pending: { color: colors.warning },
-  muted: { color: colors.muted },
-  error: { color: colors.error },
-  completed: { color: colors.forest },
+const makeBadgeTextTone = (p: Palette) => StyleSheet.create({
+  active: { color: p.primary },
+  pending: { color: p.warning },
+  muted: { color: p.muted },
+  error: { color: p.error },
+  completed: { color: p.text },
 });

@@ -6,7 +6,8 @@ import { Screen } from '../components/Screen';
 import { Logo } from '../components/Logo';
 import { Button } from '../components/Button';
 import { acceptInvitation, extractInviteToken } from '../lib/join';
-import { colors, spacing, typography } from '../theme';
+import { colors, spacing, typography, type Palette } from '../theme';
+import { usePaletteStyles } from '../context/ThemeContext';
 
 const YEAR = new Date().getFullYear();
 
@@ -17,6 +18,7 @@ export function JoinCircleScreen({
   onBack?: () => void;
   onJoined?: (circleId: string) => void;
 } = {}) {
+  const { p, styles } = usePaletteStyles(makeStyles);
   const { email } = useAuth();
   const [input, setInput] = useState('');
   const [token, setToken] = useState('');
@@ -75,7 +77,7 @@ export function JoinCircleScreen({
     return shell(
       <>
         <View style={styles.successIcon}>
-          <CheckCircle2 size={48} color={colors.primaryLight} strokeWidth={2} />
+          <CheckCircle2 size={48} color={p.primary} strokeWidth={2} />
         </View>
         <Text style={styles.title}>You're in!</Text>
         <Text style={styles.sub}>{result.message}</Text>
@@ -111,7 +113,7 @@ export function JoinCircleScreen({
         </Text>
 
         <View style={styles.infoCard}>
-          <Mail size={20} color={colors.primaryLight} strokeWidth={2} style={styles.infoIcon} />
+          <Mail size={20} color={p.primary} strokeWidth={2} style={styles.infoIcon} />
           <Text style={styles.infoText}>
             Use the email that received this invitation. Your place is reserved
             while you finish signing up.
@@ -176,7 +178,7 @@ export function JoinCircleScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (p: Palette) => StyleSheet.create({
   shell: {
     flex: 1,
   },
@@ -216,7 +218,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   email: {
-    color: colors.primaryLight,
+    color: p.primary,
     fontWeight: '600',
   },
   infoCard: {
@@ -263,13 +265,13 @@ const styles = StyleSheet.create({
   },
   error: {
     fontSize: typography.caption,
-    color: colors.error,
+    color: p.error,
     textAlign: 'center',
     marginTop: spacing.sm,
   },
   link: {
     fontSize: typography.caption,
-    color: colors.primaryLight,
+    color: p.primary,
     fontWeight: '600',
     textAlign: 'center',
     marginTop: spacing.xl,

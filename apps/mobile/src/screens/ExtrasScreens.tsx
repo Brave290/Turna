@@ -5,8 +5,9 @@ import { supabase } from '../lib/supabase';
 import { Card, Badge } from '../components/Card';
 import { Button } from '../components/Button';
 import { Screen } from '../components/Screen';
-import { colors, spacing, typography } from '../theme';
+import { colors, spacing, typography, type Palette } from '../theme';
 import { formatCurrency } from '../lib/format';
+import { usePaletteStyles } from '../context/ThemeContext';
 
 type Circle = {
   id: string;
@@ -33,6 +34,7 @@ function money(n: number, c = 'NGN') {
 }
 
 export function ContributionsScreen({ onBack }: { onBack?: () => void } = {}) {
+  const { p, styles } = usePaletteStyles(makeStyles);
   const { user } = useAuth();
   const [rows, setRows] = useState<
     { id: string; status: string; amount: number; currency: string; created_at: string; circle_name: string }[]
@@ -105,7 +107,7 @@ export function ContributionsScreen({ onBack }: { onBack?: () => void } = {}) {
                 setRefreshing(true);
                 void load();
               }}
-              tintColor={colors.primary}
+              tintColor={p.primary}
             />
           }
           ListEmptyComponent={
@@ -143,6 +145,7 @@ export function ContributionsScreen({ onBack }: { onBack?: () => void } = {}) {
 }
 
 export function PayoutsScreen({ onBack }: { onBack?: () => void } = {}) {
+  const { p, styles } = usePaletteStyles(makeStyles);
   const { user } = useAuth();
   const [rows, setRows] = useState<Payout[]>([]);
   const [loading, setLoading] = useState(true);
@@ -208,7 +211,7 @@ export function PayoutsScreen({ onBack }: { onBack?: () => void } = {}) {
                 setRefreshing(true);
                 void load();
               }}
-              tintColor={colors.primary}
+              tintColor={p.primary}
             />
           }
           ListEmptyComponent={
@@ -245,7 +248,7 @@ export function PayoutsScreen({ onBack }: { onBack?: () => void } = {}) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (p: Palette) => StyleSheet.create({
   header: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
@@ -259,16 +262,16 @@ const styles = StyleSheet.create({
   title: {
     fontSize: typography.title,
     fontWeight: '700',
-    color: colors.forest,
+    color: p.text,
     letterSpacing: -0.4,
   },
   sub: {
     fontSize: 15,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: 4,
   },
   loading: {
-    color: colors.muted,
+    color: p.textMuted,
     paddingHorizontal: spacing.lg,
     marginTop: spacing.lg,
   },
@@ -290,27 +293,27 @@ const styles = StyleSheet.create({
   name: {
     fontSize: typography.body,
     fontWeight: '600',
-    color: colors.forest,
+    color: p.text,
   },
   meta: {
     fontSize: typography.caption,
-    color: colors.muted,
+    color: p.textMuted,
   },
   section: {
     fontSize: typography.caption,
     fontWeight: '700',
-    color: colors.muted,
+    color: p.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginBottom: spacing.sm,
   },
   hint: {
     fontSize: typography.caption,
-    color: colors.muted,
+    color: p.textMuted,
     lineHeight: 20,
   },
   empty: {
-    color: colors.muted,
+    color: p.textMuted,
     textAlign: 'center',
     fontSize: typography.body,
   },

@@ -16,8 +16,9 @@ import { Button } from '../components/Button';
 import { Logo } from '../components/Logo';
 import { Popup } from '../components/Popup';
 import { supabase } from '../lib/supabase';
-import { colors, radius, spacing, typography } from '../theme';
+import { colors, radius, spacing, typography, type Palette } from '../theme';
 import { Eye, EyeOff } from 'lucide-react-native';
+import { usePaletteStyles } from '../context/ThemeContext';
 
 const REMEMBER_KEY = 'turna_remember_email';
 
@@ -43,6 +44,7 @@ async function writeRemember(email: string | null) {
 type Mode = 'login' | 'signup' | 'verify-pending';
 
 export function AuthScreen({ onSwitch }: { onSwitch?: () => void }) {
+  const { p, styles } = usePaletteStyles(makeStyles);
   const { signIn, signUp } = useAuth();
   const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
@@ -336,7 +338,7 @@ export function AuthScreen({ onSwitch }: { onSwitch?: () => void }) {
                   setResetError(null);
                 }}
                 placeholder="you@example.com"
-                placeholderTextColor={colors.muted}
+                placeholderTextColor={p.textMuted}
                 autoCapitalize="none"
                 autoComplete="email"
                 keyboardType="email-address"
@@ -351,6 +353,7 @@ export function AuthScreen({ onSwitch }: { onSwitch?: () => void }) {
 }
 
 function VerifyGate({ email, onBack }: { email: string; onBack: () => void }) {
+  const { p, styles } = usePaletteStyles(makeStyles);
   const { verifyOtp, resendOtp } = useAuth();
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -413,8 +416,8 @@ function VerifyGate({ email, onBack }: { email: string; onBack: () => void }) {
   );
 }
 
-const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: colors.forest },
+const makeStyles = (p: Palette) => StyleSheet.create({
+  flex: { flex: 1, backgroundColor: p.brand },
   scroll: {
     flexGrow: 1,
     justifyContent: 'center',
@@ -454,7 +457,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   forgot: {
-    color: colors.primaryLight,
+    color: p.primary,
     fontSize: typography.caption,
     fontWeight: '600',
     marginBottom: 6,
@@ -462,26 +465,26 @@ const styles = StyleSheet.create({
   resetLabel: {
     fontSize: typography.caption,
     fontWeight: '600',
-    color: colors.muted,
+    color: p.textMuted,
     marginBottom: 6,
   },
   resetInput: {
     minHeight: 48,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: p.border,
     borderRadius: radius.md,
     paddingHorizontal: spacing.lg,
     fontSize: typography.body,
-    color: colors.forest,
-    backgroundColor: colors.white,
+    color: p.text,
+    backgroundColor: p.surface,
   },
   resetError: {
-    color: colors.error,
+    color: p.error,
     fontSize: typography.caption,
     marginTop: 6,
   },
   resetDone: {
-    color: colors.muted,
+    color: p.textMuted,
     fontSize: typography.body,
     lineHeight: 22,
   },
@@ -529,8 +532,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   checkboxOn: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: p.primarySolid,
+    borderColor: p.primary,
   },
   checkMark: {
     color: colors.white,
@@ -538,7 +541,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   link: {
-    color: colors.primaryLight,
+    color: p.primary,
     textDecorationLine: 'underline',
   },
   error: {
@@ -548,7 +551,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   info: {
-    color: colors.primaryLight,
+    color: p.primary,
     fontSize: typography.caption,
     marginBottom: spacing.sm,
     textAlign: 'center',

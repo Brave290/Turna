@@ -1,6 +1,7 @@
 import React from 'react';
 import { Image, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
-import { colors, spacing } from '../theme';
+import { colors, spacing, type Palette } from '../theme';
+import { usePaletteStyles } from '../context/ThemeContext';
 
 const LOGO = require('../../assets/logo.png');
 const LOGO_ON_DARK = require('../../assets/logo-on-dark.png');
@@ -20,6 +21,7 @@ export function Logo({
   withWordmark?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
+  const { p, styles } = usePaletteStyles(makeStyles);
   const src = variant === 'on-dark' ? LOGO_ON_DARK : LOGO;
   if (!withWordmark) {
     return (
@@ -44,7 +46,7 @@ export function Logo({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (p: Palette) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -53,7 +55,7 @@ const styles = StyleSheet.create({
   word: {
     fontSize: 20,
     fontWeight: '700',
-    color: colors.forest,
+    color: p.text,
     letterSpacing: -0.4,
   },
   wordOnDark: {

@@ -8,7 +8,9 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import { colors, radius, spacing, typography } from '../theme';
+import { colors, radius, spacing, typography, type Palette } from '../theme';
+import { useMotion } from '../context/MotionContext';
+import { usePaletteStyles } from '../context/ThemeContext';
 
 type Tone = 'ok' | 'error';
 
@@ -19,6 +21,8 @@ const AnimatedView = Animated.View as unknown as React.ComponentType<{
 
 /** Branded toast — replaces native Alert for success/notice/error messages. */
 export function useToast() {
+  const { p, styles } = usePaletteStyles(makeStyles);
+  const { reduceMotion } = useMotion();
   const [state, setState] = useState<{ message: string; tone: Tone } | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const anim = useRef(new Animated.Value(0)).current;
@@ -26,13 +30,19 @@ export function useToast() {
   function show(message: string, tone: Tone = 'ok') {
     if (timer.current) clearTimeout(timer.current);
     setState({ message, tone });
-    anim.setValue(0);
-    Animated.timing(anim, {
-      toValue: 1,
-      duration: 220,
-      useNativeDriver: true,
-    }).start();
+    anim.setValue(reduceMotion ? 1 : 0);
+    if (!reduceMotion) {
+      Animated.timing(anim, {
+        toValue: 1,
+        duration: 220,
+        useNativeDriver: true,
+      }).start();
+    }
     timer.current = setTimeout(() => {
+      if (reduceMotion) {
+        setState(null);
+        return;
+      }
       Animated.timing(anim, {
         toValue: 0,
         duration: 180,
@@ -72,7 +82,7 @@ export function useToast() {
   return { show, node };
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (p: Palette) => StyleSheet.create({
   wrap: {
     flex: 1,
     alignItems: 'center',
@@ -94,7 +104,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   ok: {
-    backgroundColor: colors.forest,
+    backgroundColor: p.brand,
     borderColor: 'rgba(124,232,215,0.35)',
   },
   err: {

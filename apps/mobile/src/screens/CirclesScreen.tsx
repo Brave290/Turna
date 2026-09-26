@@ -7,7 +7,8 @@ import { cacheGet, cacheSet, drainQueue } from '../lib/offline';
 import { Card, Badge } from '../components/Card';
 import { Screen } from '../components/Screen';
 import { formatCurrency } from '../lib/format';
-import { colors, spacing, typography } from '../theme';
+import { colors, spacing, typography, type Palette } from '../theme';
+import { usePaletteStyles } from '../context/ThemeContext';
 
 type Circle = {
   id: string;
@@ -30,6 +31,7 @@ type Membership = {
 };
 
 export function CirclesScreen({ onPush, onNewCircle }: { onPush?: (screen: any) => void; onNewCircle?: () => void } = {}) {
+  const { p, styles } = usePaletteStyles(makeStyles);
   const { user } = useAuth();
   const [rows, setRows] = useState<
     (Circle & { role: string; payoutPosition: number | null })[]
@@ -127,7 +129,7 @@ export function CirclesScreen({ onPush, onNewCircle }: { onPush?: (screen: any) 
         </View>
       </View>
       {loading ? (
-        <ActivityIndicator color={colors.primary} size="large" style={{ marginTop: spacing.xl }} />
+        <ActivityIndicator color={p.primary} size="large" style={{ marginTop: spacing.xl }} />
       ) : (
         <FlatList
           data={rows}
@@ -140,13 +142,13 @@ export function CirclesScreen({ onPush, onNewCircle }: { onPush?: (screen: any) 
                 setRefreshing(true);
                 void load();
               }}
-              tintColor={colors.primary}
+              tintColor={p.primary}
             />
           }
           ListEmptyComponent={
             <Card style={styles.emptyCard}>
               <View style={styles.emptyIcon}>
-                <Users size={28} color={colors.primary} strokeWidth={2} />
+                <Users size={28} color={p.primary} strokeWidth={2} />
               </View>
               <Text style={styles.emptyTitle}>No circles yet</Text>
               <Text style={styles.emptyBody}>
@@ -210,7 +212,7 @@ export function CirclesScreen({ onPush, onNewCircle }: { onPush?: (screen: any) 
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (p: Palette) => StyleSheet.create({
   header: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
@@ -223,12 +225,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: typography.title,
     fontWeight: '700',
-    color: colors.forest,
+    color: p.text,
     letterSpacing: -0.4,
   },
   sub: {
     fontSize: 15,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: 4,
   },
   actionRow: {
@@ -245,7 +247,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   btnPrimary: {
-    backgroundColor: colors.primary,
+    backgroundColor: p.primarySolid,
   },
   btnPrimaryText: {
     color: colors.white,
@@ -254,10 +256,10 @@ const styles = StyleSheet.create({
   },
   btnOutline: {
     borderWidth: 1,
-    borderColor: colors.primary,
+    borderColor: p.primary,
   },
   btnOutlineText: {
-    color: colors.primary,
+    color: p.primary,
     fontSize: typography.body,
     fontWeight: '600',
   },
@@ -281,18 +283,18 @@ const styles = StyleSheet.create({
   name: {
     fontSize: typography.body,
     fontWeight: '600',
-    color: colors.forest,
+    color: p.text,
   },
   meta: {
     fontSize: typography.caption,
     marginTop: 4,
   },
   amount: {
-    color: colors.primary,
+    color: p.primary,
     fontWeight: '500',
   },
   metaNormal: {
-    color: colors.muted,
+    color: p.textMuted,
     fontWeight: '400',
   },
   badgeRow: {
@@ -311,11 +313,11 @@ const styles = StyleSheet.create({
   desc: {
     flex: 1,
     fontSize: 12,
-    color: colors.muted,
+    color: p.textMuted,
   },
   open: {
     fontSize: 12,
-    color: colors.primary,
+    color: p.primary,
     fontWeight: '500',
   },
   emptyCard: {
@@ -340,11 +342,11 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: typography.heading,
     fontWeight: '600',
-    color: colors.forest,
+    color: p.text,
   },
   emptyBody: {
     fontSize: typography.body,
-    color: colors.muted,
+    color: p.textMuted,
     textAlign: 'center',
     marginTop: spacing.sm,
     lineHeight: 22,

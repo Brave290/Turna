@@ -13,8 +13,10 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { cacheGet, cacheSet, drainQueue } from '../lib/offline';
 import { Card, Badge } from '../components/Card';
+import { Button } from '../components/Button';
 import { Screen } from '../components/Screen';
-import { colors, spacing, typography } from '../theme';
+import { colors, spacing, typography, type Palette } from '../theme';
+import { usePaletteStyles } from '../context/ThemeContext';
 
 type Event = {
   id: string;
@@ -53,6 +55,7 @@ function when(iso: string) {
 }
 
 export function LedgerScreen({ onPush }: { onPush?: (screen: any) => void } = {}) {
+  const { p, styles } = usePaletteStyles(makeStyles);
   const { user } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,30 +73,74 @@ export function LedgerScreen({ onPush }: { onPush?: (screen: any) => void } = {}
       setIsAdmin(cached.isAdmin);
     }
     try {
-      const [owned, feed] = await Promise.all([
+      // Web parity: same feed as getLedgerFeed() (`*, circles(id, name)`,
+      // newest first, RLS scopes rows to owned + active memberships).
+      const [ownedRes, memberRes, feedRes] = await Promise.all([
         supabase
           .from('circles')
           .select('id')
           .eq('owner_id', user.id)
           .limit(50),
         supabase
+          .from('circle_members')
+          .select('circle_id')
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .limit(50),
+        supabase
           .from('ledger_events')
-          .select('id, event_type, entity_type, created_at, circles(id, name)')
+          .select('*, circles(id, name)')
           .order('created_at', { ascending: false })
           .limit(100),
       ]);
-      const ownedCount = (owned.data ?? []).length;
-      setIsAdmin(ownedCount > 0);
-      let rows = (feed.data ?? []) as unknown as Event[];
-      if (ownedCount === 0) {
+
+      const owned = (ownedRes.data ?? []) as { id: string }[];
+      const memberships = (memberRes.data ?? []) as { circle_id: string }[];
+      const ownedCount = owned.length;
+      const admin = !ownedRes.error && ownedCount > 0;
+      setIsAdmin(admin);
+
+      let rows = (feedRes.data ?? []) as unknown as Event[];
+
+      // Fallback: if the global feed errored or came back empty while the
+      // user belongs to circles, read each circle directly so members still
+      // see their events instead of a silent empty list.
+      if (feedRes.error || rows.length === 0) {
+        const ids = Array.from(
+          new Set([...owned.map((c) => c.id), ...memberships.map((m) => m.circle_id)])
+        ).filter(Boolean);
+        if (ids.length > 0) {
+          const perCircle = await supabase
+            .from('ledger_events')
+            .select('*, circles(id, name)')
+            .in('circle_id', ids)
+            .order('created_at', { ascending: false })
+            .limit(200);
+          if (perCircle.data) {
+            const seen = new Set(rows.map((r) => r.id));
+            rows = rows.concat(
+              ((perCircle.data ?? []) as unknown as Event[]).filter((r) => !seen.has(r.id))
+            );
+          } else if (perCircle.error) {
+            setError(perCircle.error.message);
+          }
+        }
+      }
+
+      if (rows.length === 0) {
+        if (feedRes.error) setError(feedRes.error.message);
+        else if (memberRes.error) setError(memberRes.error.message);
+      }
+
+      if (!admin) {
         rows = rows.filter((e) => !MEMBER_HIDDEN.has(e.event_type));
       }
+      rows.sort((a, b) => b.created_at.localeCompare(a.created_at));
       setEvents(rows);
-      void cacheSet(ck, { events: rows, isAdmin: ownedCount > 0 });
+      void cacheSet(ck, { events: rows, isAdmin: admin });
       void drainQueue();
-      if (feed.error) setError(feed.error.message);
     } catch {
-      if (!cached) setError('Could not load ledger.');
+      if (!cached) setError('Could not load ledger. Pull to refresh to try again.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -146,7 +193,7 @@ export function LedgerScreen({ onPush }: { onPush?: (screen: any) => void } = {}
       </View>
 
       {loading ? (
-        <ActivityIndicator color={colors.primary} size="large" style={{ marginTop: spacing.xl }} />
+        <ActivityIndicator color={p.primary} size="large" style={{ marginTop: spacing.xl }} />
       ) : (
         <FlatList
           data={events}
@@ -159,7 +206,7 @@ export function LedgerScreen({ onPush }: { onPush?: (screen: any) => void } = {}
                 setRefreshing(true);
                 void load();
               }}
-              tintColor={colors.primary}
+              tintColor={p.primary}
             />
           }
           ListHeaderComponent={
@@ -173,6 +220,17 @@ export function LedgerScreen({ onPush }: { onPush?: (screen: any) => void } = {}
           ListEmptyComponent={
             <Card>
               <Text style={styles.emptyBody}>{error ?? 'No ledger events yet.'}</Text>
+              {error && (
+                <Button
+                  label="Try again"
+                  variant="outline"
+                  onPress={() => {
+                    setLoading(true);
+                    void load();
+                  }}
+                  style={{ marginTop: spacing.sm, alignSelf: 'stretch' }}
+                />
+              )}
             </Card>
           }
           renderItem={({ item }) => (
@@ -204,7 +262,7 @@ export function LedgerScreen({ onPush }: { onPush?: (screen: any) => void } = {}
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (p: Palette) => StyleSheet.create({
   header: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
@@ -213,12 +271,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: typography.title,
     fontWeight: '700',
-    color: colors.forest,
+    color: p.text,
     letterSpacing: -0.4,
   },
   sub: {
     fontSize: typography.body,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: 6,
     lineHeight: 20,
   },
@@ -234,12 +292,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.white,
+    borderColor: p.border,
+    backgroundColor: p.surface,
   },
   linkText: {
     fontSize: 12,
-    color: colors.primary,
+    color: p.primary,
     fontWeight: '600',
   },
   list: {
@@ -251,11 +309,11 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: p.border,
   },
   th: {
     fontSize: typography.caption,
-    color: colors.muted,
+    color: p.textMuted,
     fontWeight: '500',
   },
   tr: {
@@ -263,28 +321,28 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingVertical: spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
+    borderBottomColor: p.border,
     alignItems: 'flex-start',
   },
   td: {
     fontSize: typography.caption,
-    color: colors.forest,
+    color: p.text,
   },
   tdMuted: {
-    color: colors.muted,
+    color: p.textMuted,
   },
   tdMedium: {
     fontWeight: '600',
   },
   emptyBody: {
     fontSize: typography.caption,
-    color: colors.muted,
+    color: p.textMuted,
     lineHeight: 20,
     textAlign: 'center',
   },
   privacyNote: {
     fontSize: 12,
-    color: colors.muted,
+    color: p.textMuted,
     lineHeight: 18,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.lg,

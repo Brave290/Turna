@@ -5,7 +5,8 @@ import { supabase } from '../lib/supabase';
 import { Card, Badge } from '../components/Card';
 import { Button } from '../components/Button';
 import { Screen } from '../components/Screen';
-import { colors, spacing, typography } from '../theme';
+import { colors, spacing, typography, type Palette } from '../theme';
+import { usePaletteStyles } from '../context/ThemeContext';
 
 type Event = {
   id: string;
@@ -46,6 +47,7 @@ function when(iso: string) {
 }
 
 export function AuditLogScreen({ onBack }: { onBack?: () => void } = {}) {
+  const { p, styles } = usePaletteStyles(makeStyles);
   const { user } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
   const [approvals, setApprovals] = useState<
@@ -59,10 +61,14 @@ export function AuditLogScreen({ onBack }: { onBack?: () => void } = {}) {
     if (!user) return;
     try {
       const [owned, feed, ap] = await Promise.all([
-        supabase.from('circles').select('id').limit(50),
+        supabase
+          .from('circles')
+          .select('id')
+          .eq('owner_id', user.id)
+          .limit(50),
         supabase
           .from('ledger_events')
-          .select('id, event_type, entity_type, created_at, circles(id, name)')
+          .select('*, circles(id, name)')
           .order('created_at', { ascending: false })
           .limit(100),
         supabase
@@ -131,7 +137,7 @@ export function AuditLogScreen({ onBack }: { onBack?: () => void } = {}) {
                 setRefreshing(true);
                 void load();
               }}
-              tintColor={colors.primary}
+              tintColor={p.primary}
             />
           }
           ListHeaderComponent={
@@ -177,7 +183,7 @@ export function AuditLogScreen({ onBack }: { onBack?: () => void } = {}) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (p: Palette) => StyleSheet.create({
   header: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
@@ -191,17 +197,17 @@ const styles = StyleSheet.create({
   title: {
     fontSize: typography.title,
     fontWeight: '700',
-    color: colors.forest,
+    color: p.text,
     letterSpacing: -0.4,
   },
   sub: {
     fontSize: typography.body,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: 4,
     lineHeight: 20,
   },
   loading: {
-    color: colors.muted,
+    color: p.textMuted,
     paddingHorizontal: spacing.lg,
     marginTop: spacing.lg,
   },
@@ -213,7 +219,7 @@ const styles = StyleSheet.create({
   section: {
     fontSize: typography.caption,
     fontWeight: '700',
-    color: colors.muted,
+    color: p.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginTop: spacing.md,
@@ -230,21 +236,21 @@ const styles = StyleSheet.create({
   event: {
     fontSize: typography.body,
     fontWeight: '600',
-    color: colors.forest,
+    color: p.text,
     textTransform: 'capitalize',
   },
   meta: {
     fontSize: typography.caption,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: 4,
   },
   when: {
     fontSize: 12,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: 6,
   },
   empty: {
-    color: colors.muted,
+    color: p.textMuted,
     textAlign: 'center',
     fontSize: typography.body,
   },

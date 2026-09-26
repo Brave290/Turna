@@ -8,7 +8,9 @@ import {
   StyleSheet,
   ViewStyle,
 } from 'react-native';
-import { colors } from '../theme';
+import { colors, type Palette } from '../theme';
+import { useMotion } from '../context/MotionContext';
+import { usePaletteStyles, useTheme } from '../context/ThemeContext';
 
 const AView = Animated.View as unknown as React.ComponentType<{
   style?: StyleProp<ViewStyle>;
@@ -24,10 +26,17 @@ export function Screen({
   tone?: 'forest' | 'cream';
   style?: StyleProp<ViewStyle>;
 }) {
+  const { p, styles } = usePaletteStyles(makeStyles);
+  const { resolved } = useTheme();
+  const { reduceMotion } = useMotion();
   const forest = tone === 'forest';
   const fade = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    if (reduceMotion) {
+      fade.setValue(1);
+      return;
+    }
     fade.setValue(0);
     Animated.timing(fade, {
       toValue: 1,
@@ -35,11 +44,13 @@ export function Screen({
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start();
-  }, [fade]);
+  }, [fade, reduceMotion]);
 
   return (
     <SafeAreaView style={[styles.root, forest ? styles.forest : styles.cream, style]}>
-      <StatusBar barStyle={forest ? 'light-content' : 'dark-content'} />
+      <StatusBar
+        barStyle={forest || resolved === 'dark' ? 'light-content' : 'dark-content'}
+      />
       <AView
         style={{
           flex: 1,
@@ -55,14 +66,14 @@ export function Screen({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (p: Palette) => StyleSheet.create({
   root: {
     flex: 1,
   },
   forest: {
-    backgroundColor: colors.forest,
+    backgroundColor: p.brand,
   },
   cream: {
-    backgroundColor: colors.cream,
+    backgroundColor: p.bg,
   },
 });

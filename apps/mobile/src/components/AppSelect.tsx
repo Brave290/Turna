@@ -1,8 +1,17 @@
 import React, { useState } from 'react';
-import { Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import {
+  Pressable,
+  ScrollView,
+  StyleProp,
+  StyleSheet,
+  Text,
+  View,
+  ViewStyle,
+} from 'react-native';
 import { Check, ChevronDown } from 'lucide-react-native';
-import { colors, radius, spacing, typography } from '../theme';
+import { colors, radius, spacing, typography, type Palette } from '../theme';
 import { Popup } from './Popup';
+import { usePaletteStyles } from '../context/ThemeContext';
 
 export interface SelectOption {
   value: string;
@@ -27,6 +36,7 @@ export function AppSelect({
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
+  const { p, styles } = usePaletteStyles(makeStyles);
   const [open, setOpen] = useState(false);
   const selected = options.find((o) => o.value === value);
 
@@ -50,7 +60,7 @@ export function AppSelect({
         >
           {selected?.label ?? placeholder}
         </Text>
-        <ChevronDown size={16} color={colors.muted} />
+        <ChevronDown size={16} color={p.textMuted} />
       </Pressable>
 
       <Popup
@@ -58,7 +68,12 @@ export function AppSelect({
         onClose={() => setOpen(false)}
         title={label ?? 'Select'}
       >
-        <View style={styles.list}>
+        <ScrollView
+          style={styles.listScroll}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator
+          nestedScrollEnabled
+        >
           {options.map((o) => {
             const on = o.value === value;
             return (
@@ -80,24 +95,24 @@ export function AppSelect({
                   {o.label}
                 </Text>
                 {on ? (
-                  <Check size={16} color={colors.primary} strokeWidth={2.5} />
+                  <Check size={16} color={p.primary} strokeWidth={2.5} />
                 ) : (
                   <View style={{ width: 16 }} />
                 )}
               </Pressable>
             );
           })}
-        </View>
+        </ScrollView>
       </Popup>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (p: Palette) => StyleSheet.create({
   label: {
     fontSize: 13,
     fontWeight: '600',
-    color: colors.muted,
+    color: p.textMuted,
     marginBottom: spacing.xs + 2,
   },
   field: {
@@ -106,15 +121,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.sm,
-    backgroundColor: colors.card,
+    backgroundColor: p.card,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: p.border,
     borderRadius: radius.md,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm + 2,
   },
   fieldPressed: {
-    borderColor: colors.primary,
+    borderColor: p.primary,
     backgroundColor: '#F7FBFA',
   },
   fieldDisabled: {
@@ -123,16 +138,20 @@ const styles = StyleSheet.create({
   valueText: {
     flex: 1,
     fontSize: typography.body,
-    color: colors.forest,
+    color: p.text,
     fontWeight: '500',
   },
   placeholder: {
-    color: colors.muted,
+    color: p.textMuted,
     fontWeight: '400',
   },
-  list: {
+  listScroll: {
     marginTop: spacing.sm,
+    maxHeight: 320,
+  },
+  list: {
     gap: spacing.xs,
+    paddingBottom: spacing.xs,
   },
   option: {
     flexDirection: 'row',
@@ -143,11 +162,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md + 2,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
+    borderColor: p.border,
+    backgroundColor: p.card,
   },
   optionOn: {
-    borderColor: colors.primary,
+    borderColor: p.primary,
     backgroundColor: '#E8F6F3',
   },
   optionPressed: {
@@ -156,10 +175,10 @@ const styles = StyleSheet.create({
   optionText: {
     flex: 1,
     fontSize: typography.body,
-    color: colors.forest,
+    color: p.text,
   },
   optionTextOn: {
-    color: colors.primary,
+    color: p.primary,
     fontWeight: '700',
   },
 });

@@ -27,7 +27,8 @@ import { Button } from '../components/Button';
 import { Screen } from '../components/Screen';
 import { useConfirm } from '../components/Popup';
 import { useToast } from '../components/Toast';
-import { colors, spacing, typography } from '../theme';
+import { colors, spacing, typography, type Palette as ThemePalette } from '../theme';
+import { usePaletteStyles } from '../context/ThemeContext';
 
 type ProfileRow = {
   display_name?: string | null;
@@ -62,6 +63,7 @@ export function ProfileScreen({
   onNavigate?: (tab: string) => void;
   onPush?: (screen: any) => void;
 } = {}) {
+  const { p, styles } = usePaletteStyles(makeStyles);
   const { user, displayName, email, signOut } = useAuth();
   const [row, setRow] = useState<ProfileRow | null>(null);
   const [circleCount, setCircleCount] = useState(0);
@@ -337,7 +339,7 @@ export function ProfileScreen({
               }
             >
               <Text style={styles.editBtnText}>Edit profile</Text>
-              <ChevronRight size={16} color={colors.primary} strokeWidth={2} />
+              <ChevronRight size={16} color={p.primary} strokeWidth={2} />
             </Pressable>
           </View>
         </Card>
@@ -351,13 +353,13 @@ export function ProfileScreen({
             >
               <Pressable style={styles.hubInner} onPress={r.onPress}>
                 <View style={styles.hubIcon}>
-                  <r.icon size={16} color={colors.primary} strokeWidth={2} />
+                  <r.icon size={16} color={p.primary} strokeWidth={2} />
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={styles.rowLabel}>{r.label}</Text>
                   <Text style={styles.rowDesc}>{r.description}</Text>
                 </View>
-                <ChevronRight size={16} color={colors.muted} strokeWidth={2} />
+                <ChevronRight size={16} color={p.textMuted} strokeWidth={2} />
               </Pressable>
             </View>
           ))}
@@ -377,7 +379,7 @@ export function ProfileScreen({
               maxLength={100}
               autoComplete="name"
               placeholder="Full name"
-              placeholderTextColor={colors.muted}
+              placeholderTextColor={p.textMuted}
             />
           </Field>
 
@@ -401,7 +403,7 @@ export function ProfileScreen({
                   value={f.date_of_birth}
                   onChangeText={(v: string) => setF((s) => ({ ...s, date_of_birth: v }))}
                   placeholder="YYYY-MM-DD"
-                  placeholderTextColor={colors.muted}
+                  placeholderTextColor={p.textMuted}
                   maxLength={10}
                 />
               </Field>
@@ -413,7 +415,7 @@ export function ProfileScreen({
                   value={f.phone}
                   onChangeText={(v: string) => setF((s) => ({ ...s, phone: v }))}
                   placeholder="+234 800 000 0000"
-                  placeholderTextColor={colors.muted}
+                  placeholderTextColor={p.textMuted}
                   keyboardType="phone-pad"
                   maxLength={24}
                 />
@@ -429,7 +431,7 @@ export function ProfileScreen({
                   value={f.city}
                   onChangeText={(v: string) => setF((s) => ({ ...s, city: v }))}
                   placeholder="Lagos"
-                  placeholderTextColor={colors.muted}
+                  placeholderTextColor={p.textMuted}
                   maxLength={80}
                 />
               </Field>
@@ -442,7 +444,7 @@ export function ProfileScreen({
                   onChangeText={(v: string) => setF((s) => ({ ...s, country: v }))}
                   maxLength={56}
                   placeholder="NG"
-                  placeholderTextColor={colors.muted}
+                  placeholderTextColor={p.textMuted}
                 />
               </Field>
             </View>
@@ -456,7 +458,7 @@ export function ProfileScreen({
               multiline
               maxLength={500}
               placeholder="A short line about you (optional)"
-              placeholderTextColor={colors.muted}
+              placeholderTextColor={p.textMuted}
               textAlignVertical="top"
             />
           </Field>
@@ -480,7 +482,7 @@ export function ProfileScreen({
         <Card style={styles.card}>
           <View style={styles.ssoRow}>
             <View style={styles.hubIcon}>
-              <MonitorSmartphone size={16} color={colors.primary} strokeWidth={2} />
+              <MonitorSmartphone size={16} color={p.primary} strokeWidth={2} />
             </View>
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={styles.hubTitle}>Active sessions</Text>
@@ -530,6 +532,7 @@ function Field({
   error?: string | null;
   children: React.ReactNode;
 }) {
+  const { p, styles } = usePaletteStyles(makeStyles);
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>
@@ -540,7 +543,7 @@ function Field({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (p: ThemePalette) => StyleSheet.create({
   content: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
@@ -552,12 +555,12 @@ const styles = StyleSheet.create({
   pageTitle: {
     fontSize: typography.title,
     fontWeight: '700',
-    color: colors.forest,
+    color: p.text,
     letterSpacing: -0.4,
   },
   pageSub: {
     fontSize: 15,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: 4,
   },
   card: {
@@ -572,7 +575,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: colors.forest,
+    backgroundColor: p.brand,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -580,26 +583,26 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: colors.cream,
+    backgroundColor: p.bg,
   },
   avatarText: {
-    color: colors.primaryLight,
+    color: p.primary,
     fontSize: 22,
     fontWeight: '700',
   },
   name: {
     fontSize: typography.heading,
     fontWeight: '700',
-    color: colors.forest,
+    color: p.text,
   },
   email: {
     fontSize: typography.caption,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: 2,
   },
   since: {
     fontSize: 12,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: 6,
   },
   editBtn: {
@@ -607,20 +610,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     borderWidth: 1,
-    borderColor: colors.primary,
+    borderColor: p.primary,
     borderRadius: 12,
     paddingVertical: 8,
     paddingHorizontal: spacing.sm,
   },
   editBtnText: {
     fontSize: typography.caption,
-    color: colors.primary,
+    color: p.primary,
     fontWeight: '600',
   },
   section: {
     fontSize: typography.caption,
     fontWeight: '700',
-    color: colors.muted,
+    color: p.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginBottom: spacing.sm,
@@ -630,7 +633,7 @@ const styles = StyleSheet.create({
   },
   hubRowBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
+    borderBottomColor: p.border,
   },
   hubInner: {
     flexDirection: 'row',
@@ -648,29 +651,29 @@ const styles = StyleSheet.create({
   },
   rowLabel: {
     fontSize: typography.body,
-    color: colors.forest,
+    color: p.text,
     fontWeight: '500',
   },
   rowDesc: {
     fontSize: 12,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: 2,
   },
   hubTitle: {
     fontSize: typography.body,
     fontWeight: '600',
-    color: colors.forest,
+    color: p.text,
     marginBottom: 4,
   },
   hint: {
     fontSize: typography.caption,
-    color: colors.muted,
+    color: p.textMuted,
     lineHeight: 20,
     marginBottom: spacing.md,
   },
   hintSmall: {
     fontSize: 11,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: 6,
     lineHeight: 16,
   },
@@ -688,26 +691,26 @@ const styles = StyleSheet.create({
   label: {
     fontSize: typography.caption,
     fontWeight: '600',
-    color: colors.forest,
+    color: p.text,
     marginBottom: 6,
   },
   input: {
     minHeight: 46,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: p.border,
     borderRadius: 12,
-    backgroundColor: colors.white,
+    backgroundColor: p.surface,
     paddingHorizontal: spacing.md,
     paddingVertical: 10,
     fontSize: typography.body,
-    color: colors.forest,
+    color: p.text,
   },
   inputDisabled: {
     opacity: 0.7,
-    backgroundColor: colors.cream,
+    backgroundColor: p.bg,
   },
   inputError: {
-    borderColor: colors.error,
+    borderColor: p.error,
   },
   bio: {
     minHeight: 96,
@@ -715,7 +718,7 @@ const styles = StyleSheet.create({
   },
   fieldError: {
     fontSize: 12,
-    color: colors.error,
+    color: p.error,
     marginTop: 6,
   },
   errorBox: {
@@ -729,11 +732,11 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: typography.caption,
-    color: colors.error,
+    color: p.error,
   },
   savedText: {
     fontSize: typography.caption,
-    color: colors.primary,
+    color: p.primary,
     marginBottom: spacing.md,
   },
   saveBtn: {
@@ -746,23 +749,23 @@ const styles = StyleSheet.create({
   },
   ssoBtn: {
     borderWidth: 1,
-    borderColor: colors.primary,
+    borderColor: p.primary,
     borderRadius: 12,
     paddingVertical: 8,
     paddingHorizontal: spacing.sm,
-    backgroundColor: colors.white,
+    backgroundColor: p.surface,
   },
   ssoBtnBusy: {
     opacity: 0.6,
   },
   ssoBtnText: {
     fontSize: 12,
-    color: colors.primary,
+    color: p.primary,
     fontWeight: '600',
   },
   signOut: {
     marginTop: spacing.sm,
-    borderColor: colors.border,
+    borderColor: p.border,
   },
   deleteWrap: {
     alignItems: 'center',
@@ -771,7 +774,7 @@ const styles = StyleSheet.create({
   },
   delete: {
     textAlign: 'center',
-    color: colors.error,
+    color: p.error,
     fontSize: typography.body,
     fontWeight: '500',
   },

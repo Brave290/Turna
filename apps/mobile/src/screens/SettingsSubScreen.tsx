@@ -45,14 +45,16 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { supabase, APP_API_URL } from '../lib/supabase';
 import { enqueueOp, isOfflineError } from '../lib/offline';
+import { getPrefs, loadPrefs, savePrefs, subscribePrefs } from '../lib/prefs';
 import { Badge, Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { Screen } from '../components/Screen';
 import { Popup, useConfirm } from '../components/Popup';
 import { AppSelect } from '../components/AppSelect';
 import { useToast } from '../components/Toast';
-import { colors, spacing, typography } from '../theme';
+import { colors, spacing, typography, type Palette } from '../theme';
 import { LOCAL_VERSION_CODE, LOCAL_VERSION_NAME } from '../generated/version';
+import { usePaletteStyles } from '../context/ThemeContext';
 
 /** Settings sub-pages — same labels/copy as web settings nav-config. */
 export type SettingsRoute =
@@ -223,6 +225,7 @@ function Panel({
   description?: string;
   children?: React.ReactNode;
 }) {
+  const { p, styles: s } = usePaletteStyles(makeS);
   return (
     <Card>
       {title ? <Text style={s.panelTitle}>{title}</Text> : null}
@@ -233,10 +236,12 @@ function Panel({
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
+  const { p, styles: s } = usePaletteStyles(makeS);
   return <Text style={s.sectionLabel}>{children}</Text>;
 }
 
 function Group({ title, children }: { title?: string; children?: React.ReactNode }) {
+  const { p, styles: s } = usePaletteStyles(makeS);
   const items = React.Children.toArray(children).filter(Boolean);
   return (
     <View style={s.groupWrap}>
@@ -271,11 +276,12 @@ function Row({
   right?: React.ReactNode;
   disabled?: boolean;
 }) {
+  const { p, styles: s } = usePaletteStyles(makeS);
   const body = (
     <>
       {Icon ? (
         <View style={[s.rowIcon, danger && s.rowIconDanger]}>
-          <Icon size={18} color={danger ? colors.error : colors.primary} strokeWidth={2} />
+          <Icon size={18} color={danger ? p.error : p.primary} strokeWidth={2} />
         </View>
       ) : null}
       <View style={s.rowText}>
@@ -288,7 +294,7 @@ function Row({
         </Text>
       ) : null}
       {right}
-      {onPress ? <ChevronRight size={16} color={colors.muted} /> : null}
+      {onPress ? <ChevronRight size={16} color={p.textMuted} /> : null}
     </>
   );
   if (!onPress) return <View style={s.row}>{body}</View>;
@@ -319,6 +325,7 @@ function ToggleRow({
   disabled?: boolean;
   note?: string;
 }) {
+  const { p, styles: s } = usePaletteStyles(makeS);
   return (
     <Pressable
       accessibilityRole="switch"
@@ -356,6 +363,7 @@ function RadioRow({
   onPress: () => void;
   disabled?: boolean;
 }) {
+  const { p, styles: s } = usePaletteStyles(makeS);
   return (
     <Pressable
       accessibilityRole="radio"
@@ -388,6 +396,7 @@ function Field({
   error?: string | null;
   children: React.ReactNode;
 }) {
+  const { p, styles: s } = usePaletteStyles(makeS);
   return (
     <View style={s.field}>
       <Text style={s.label}>{label}</Text>
@@ -399,6 +408,7 @@ function Field({
 }
 
 function ErrorBox({ message }: { message: string }) {
+  const { p, styles: s } = usePaletteStyles(makeS);
   return (
     <View style={s.errorBox}>
       <Text style={s.errorText}>{message}</Text>
@@ -407,9 +417,10 @@ function ErrorBox({ message }: { message: string }) {
 }
 
 function LoadingRow({ label }: { label?: string }) {
+  const { p, styles: s } = usePaletteStyles(makeS);
   return (
     <View style={s.loadingRow}>
-      <ActivityIndicator size="small" color={colors.primary} />
+      <ActivityIndicator size="small" color={p.primary} />
       <Text style={s.loadingText}>{label ?? 'Loading…'}</Text>
     </View>
   );
@@ -429,6 +440,7 @@ function OtpEntry({
   onResend: () => void;
   onCancel: () => void;
 }) {
+  const { p, styles: s } = usePaletteStyles(makeS);
   const [code, setCode] = useState('');
   return (
     <View style={s.otpCard}>
@@ -441,7 +453,7 @@ function OtpEntry({
         keyboardType="numeric"
         maxLength={6}
         placeholder="000000"
-        placeholderTextColor={colors.muted}
+        placeholderTextColor={p.textMuted}
         accessibilityLabel="Verification code"
       />
       <Button
@@ -492,52 +504,22 @@ function isNum(v: unknown, fallback: number): number {
 
 function usePreferences(ctx: Ctx) {
   const { user } = useAuth();
-  const [prefs, setPrefs] = useState<Record<string, any>>({});
+  const [prefs, setPrefs] = useState<Record<string, any>>(() => getPrefs());
 
   useEffect(() => {
-    let alive = true;
-    (async () => {
-      if (!user?.id) return;
-      try {
-        const { data } = await supabase
-          .from('user_preferences')
-          .select('*')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        if (alive && data) setPrefs(data as Record<string, any>);
-      } catch {
-        /* offline — keep defaults */
-      }
-    })();
-    return () => {
-      alive = false;
-    };
+    void loadPrefs(user?.id);
+    setPrefs(getPrefs());
+    return subscribePrefs((p) => setPrefs(p as Record<string, any>));
   }, [user?.id]);
 
   async function save(patch: Record<string, unknown>) {
     if (!user?.id) return;
-    setPrefs((p) => ({ ...p, ...patch }));
-    const payload: Record<string, unknown> = {
-      ...patch,
-      updated_at: new Date().toISOString(),
-    };
-    try {
-      const { error } = await supabase
-        .from('user_preferences')
-        .upsert({ user_id: user.id, ...payload } as any);
-      if (error) throw new Error(error.message);
+    const res = await savePrefs(user.id, patch);
+    if (res === 'saved') {
       ctx.toast('Settings updated');
-    } catch (e) {
-      if (isOfflineError(e)) {
-        await enqueueOp({
-          table: 'user_preferences',
-          action: 'update',
-          match: { user_id: user.id },
-          payload,
-        });
-        ctx.toast('Saved — will sync when you’re back online.');
-        return;
-      }
+    } else if (res === 'offline') {
+      ctx.toast('Saved — will sync when you’re back online.');
+    } else {
       ctx.toast('Could not save settings', 'error');
     }
   }
@@ -614,6 +596,7 @@ function useProfile() {
 }
 
 function ProfileFormCard({ initial, ctx }: { initial: ProfileValues; ctx: Ctx }) {
+  const { p, styles: s } = usePaletteStyles(makeS);
   const { user } = useAuth();
   const [f, setF] = useState<ProfileValues>(initial);
   const [nameError, setNameError] = useState<string | null>(null);
@@ -718,7 +701,7 @@ function ProfileFormCard({ initial, ctx }: { initial: ProfileValues; ctx: Ctx })
           maxLength={100}
           autoComplete="name"
           placeholder="Full name"
-          placeholderTextColor={colors.muted}
+          placeholderTextColor={p.textMuted}
         />
       </Field>
       <Field label="Email" hint="Sign-in identity — cannot change here.">
@@ -737,7 +720,7 @@ function ProfileFormCard({ initial, ctx }: { initial: ProfileValues; ctx: Ctx })
               value={f.date_of_birth}
               onChangeText={set('date_of_birth')}
               placeholder="YYYY-MM-DD"
-              placeholderTextColor={colors.muted}
+              placeholderTextColor={p.textMuted}
               maxLength={10}
             />
           </Field>
@@ -749,7 +732,7 @@ function ProfileFormCard({ initial, ctx }: { initial: ProfileValues; ctx: Ctx })
               value={f.phone}
               onChangeText={set('phone')}
               placeholder="+234 800 000 0000"
-              placeholderTextColor={colors.muted}
+              placeholderTextColor={p.textMuted}
               keyboardType="phone-pad"
               maxLength={24}
             />
@@ -764,7 +747,7 @@ function ProfileFormCard({ initial, ctx }: { initial: ProfileValues; ctx: Ctx })
               value={f.city}
               onChangeText={set('city')}
               placeholder="Lagos"
-              placeholderTextColor={colors.muted}
+              placeholderTextColor={p.textMuted}
               maxLength={80}
             />
           </Field>
@@ -776,7 +759,7 @@ function ProfileFormCard({ initial, ctx }: { initial: ProfileValues; ctx: Ctx })
               value={f.country}
               onChangeText={set('country')}
               placeholder="NG"
-              placeholderTextColor={colors.muted}
+              placeholderTextColor={p.textMuted}
               maxLength={56}
             />
           </Field>
@@ -790,7 +773,7 @@ function ProfileFormCard({ initial, ctx }: { initial: ProfileValues; ctx: Ctx })
           multiline
           maxLength={500}
           placeholder="A short line about you (optional)"
-          placeholderTextColor={colors.muted}
+          placeholderTextColor={p.textMuted}
           textAlignVertical="top"
         />
       </Field>
@@ -816,6 +799,7 @@ function ProfileGate({
   ctx: Ctx;
   children: React.ReactNode;
 }) {
+  const { p, styles: s } = usePaletteStyles(makeS);
   const [locked, setLocked] = useState(initiallyLocked);
   const [step, setStep] = useState<'idle' | 'verify'>('idle');
   const [busy, setBusy] = useState(false);
@@ -881,7 +865,7 @@ function ProfileGate({
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={s.lockTitle} numberOfLines={2}>
-          Profile locked <ShieldCheck size={14} color={colors.primary} />
+          Profile locked <ShieldCheck size={14} color={p.primary} />
         </Text>
         <Text style={s.lockDesc}>
           Fields are protected after save. Unlock with an email code to edit.
@@ -900,6 +884,7 @@ function ProfileGate({
 }
 
 function ProfileSection({ ctx }: { ctx: Ctx }) {
+  const { p, styles: s } = usePaletteStyles(makeS);
   const { row, loaded, values, displayName, email, user } = useProfile();
   const [avatarBusy, setAvatarBusy] = useState(false);
 
@@ -1015,6 +1000,7 @@ function ProfileSection({ ctx }: { ctx: Ctx }) {
 }
 
 function PersonalInformationSection({ ctx }: { ctx: Ctx }) {
+  const { p, styles: s } = usePaletteStyles(makeS);
   const { row, loaded, values } = useProfile();
 
   return (
@@ -1041,6 +1027,7 @@ function PersonalInformationSection({ ctx }: { ctx: Ctx }) {
 /* ─── Email & verification ─── */
 
 function EmailSection({ ctx }: { ctx: Ctx }) {
+  const { p, styles: s } = usePaletteStyles(makeS);
   const { user } = useAuth();
   const [mode, setMode] = useState<'view' | 'change'>('view');
   const [newEmail, setNewEmail] = useState('');
@@ -1099,7 +1086,7 @@ function EmailSection({ ctx }: { ctx: Ctx }) {
       <Text style={s.emailValue}>{email}</Text>
       {verified ? (
         <View style={s.verifiedRow}>
-          <BadgeCheck size={16} color={colors.primary} />
+          <BadgeCheck size={16} color={p.primary} />
           <Text style={s.verifiedText}>Verified</Text>
         </View>
       ) : (
@@ -1134,7 +1121,7 @@ function EmailSection({ ctx }: { ctx: Ctx }) {
               value={newEmail}
               onChangeText={setNewEmail}
               placeholder="you@example.com"
-              placeholderTextColor={colors.muted}
+              placeholderTextColor={p.textMuted}
               autoCapitalize="none"
               keyboardType="email-address"
               autoComplete="email"
@@ -1178,6 +1165,7 @@ function EmailSection({ ctx }: { ctx: Ctx }) {
 /* ─── Security ─── */
 
 function SecuritySection({ ctx }: { ctx: Ctx }) {
+  const { p, styles: s } = usePaletteStyles(makeS);
   const { user, email, signOut } = useAuth();
   const [step, setStep] = useState<'request' | 'verify'>('request');
   const [sending, setSending] = useState(false);
@@ -1322,7 +1310,7 @@ function SecuritySection({ ctx }: { ctx: Ctx }) {
                 keyboardType="numeric"
                 maxLength={6}
                 placeholder="123456"
-                placeholderTextColor={colors.muted}
+                placeholderTextColor={p.textMuted}
                 autoComplete="one-time-code"
               />
             </Field>
@@ -1334,7 +1322,7 @@ function SecuritySection({ ctx }: { ctx: Ctx }) {
                   onChangeText={setPw}
                   secureTextEntry={!showPw}
                   placeholder="Min. 8 characters"
-                  placeholderTextColor={colors.muted}
+                  placeholderTextColor={p.textMuted}
                   autoComplete="new-password"
                 />
                 <Pressable
@@ -1344,9 +1332,9 @@ function SecuritySection({ ctx }: { ctx: Ctx }) {
                   style={s.pwEye}
                 >
                   {showPw ? (
-                    <EyeOff size={18} color={colors.muted} />
+                    <EyeOff size={18} color={p.textMuted} />
                   ) : (
-                    <Eye size={18} color={colors.muted} />
+                    <Eye size={18} color={p.textMuted} />
                   )}
                 </Pressable>
               </View>
@@ -1358,7 +1346,7 @@ function SecuritySection({ ctx }: { ctx: Ctx }) {
                 onChangeText={setPw2}
                 secureTextEntry={!showPw}
                 placeholder="Repeat password"
-                placeholderTextColor={colors.muted}
+                placeholderTextColor={p.textMuted}
                 autoComplete="new-password"
               />
             </Field>
@@ -1420,7 +1408,7 @@ function SecuritySection({ ctx }: { ctx: Ctx }) {
         description="Sensitive actions (payout order, account deletion) may ask for your password or email OTP again."
       >
         <View style={s.inlineHead}>
-          <ShieldCheck size={16} color={colors.primary} />
+          <ShieldCheck size={16} color={p.primary} />
           <Text style={s.inlineDesc}>
             Email OTP and password re-auth are enabled for high-risk changes.
           </Text>
@@ -1448,6 +1436,7 @@ type SavedAccount = {
 };
 
 function PayoutSection({ ctx }: { ctx: Ctx }) {
+  const { p, styles: s } = usePaletteStyles(makeS);
   const { user } = useAuth();
   const [account, setAccount] = useState<SavedAccount | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -1667,7 +1656,7 @@ function PayoutSection({ ctx }: { ctx: Ctx }) {
           </View>
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={s.lockTitle} numberOfLines={2}>
-              Bank account locked <ShieldCheck size={14} color={colors.primary} />
+              Bank account locked <ShieldCheck size={14} color={p.primary} />
             </Text>
             <Text style={s.lockDesc}>
               Saved details are protected. Unlock with an email code to edit.
@@ -1744,7 +1733,7 @@ function PayoutSection({ ctx }: { ctx: Ctx }) {
             keyboardType="numeric"
             maxLength={10}
             placeholder="0123456789"
-            placeholderTextColor={colors.muted}
+            placeholderTextColor={p.textMuted}
           />
           <Button
             label={manualNeeded ? 'Confirm' : 'Verify'}
@@ -1766,7 +1755,7 @@ function PayoutSection({ ctx }: { ctx: Ctx }) {
             value={manualName}
             onChangeText={(v: string) => setManualName(v.slice(0, 120))}
             placeholder="Name exactly as on your statement"
-            placeholderTextColor={colors.muted}
+            placeholderTextColor={p.textMuted}
             autoCapitalize="words"
           />
         </Field>
@@ -1774,7 +1763,7 @@ function PayoutSection({ ctx }: { ctx: Ctx }) {
 
       {resolvedName ? (
         <View style={s.infoBox}>
-          <CheckCircle2 size={16} color={colors.primary} />
+          <CheckCircle2 size={16} color={p.primary} />
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={s.infoTitle}>{resolvedName}</Text>
             <Text style={s.infoMeta}>
@@ -1785,7 +1774,7 @@ function PayoutSection({ ctx }: { ctx: Ctx }) {
         </View>
       ) : resolving ? (
         <View style={s.pendingBox}>
-          <ActivityIndicator size="small" color={colors.primary} />
+          <ActivityIndicator size="small" color={p.primary} />
           <Text style={s.pendingText}>Checking account name…</Text>
         </View>
       ) : null}
@@ -1816,6 +1805,7 @@ type KycRow = {
 };
 
 function KycSection({ ctx }: { ctx: Ctx }) {
+  const { p, styles: s } = usePaletteStyles(makeS);
   const { user } = useAuth();
   const [kyc, setKyc] = useState<KycRow | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -1958,7 +1948,7 @@ function KycSection({ ctx }: { ctx: Ctx }) {
             <Badge label={status ? `KYC ${status}` : 'KYC not submitted'} tone={tone as any} />
           </View>
           <View style={s.inlineHead}>
-            <ShieldCheck size={16} color={colors.primary} />
+            <ShieldCheck size={16} color={p.primary} />
             <Text style={s.inlineDesc}>Status: {status ?? 'not submitted'}</Text>
           </View>
           {kyc?.rejection_reason ? (
@@ -1984,7 +1974,7 @@ function KycSection({ ctx }: { ctx: Ctx }) {
               onChangeText={setDocNumber}
               editable={!approved}
               placeholder="11-digit number"
-              placeholderTextColor={colors.muted}
+              placeholderTextColor={p.textMuted}
               maxLength={30}
             />
           </Field>
@@ -1995,7 +1985,7 @@ function KycSection({ ctx }: { ctx: Ctx }) {
               onChangeText={setFullName}
               editable={!approved}
               placeholder="As it appears on your document"
-              placeholderTextColor={colors.muted}
+              placeholderTextColor={p.textMuted}
               maxLength={120}
               autoComplete="name"
             />
@@ -2104,6 +2094,7 @@ function NotificationsSection({ ctx }: { ctx: Ctx }) {
 }
 
 function AppearanceSection({ ctx }: { ctx: Ctx }) {
+  const { p, styles: s } = usePaletteStyles(makeS);
   const { prefs, save } = usePreferences(ctx);
   const theme = isStr(prefs.theme, 'system');
   const reduceMotion = isBool(prefs.reduce_motion, false);
@@ -2126,7 +2117,7 @@ function AppearanceSection({ ctx }: { ctx: Ctx }) {
             />
           ))}
         </Group>
-        <Text style={s.hintSmall}>Saved to your account. The app stays light for now.</Text>
+        <Text style={s.hintSmall}>Saved to your account and applied right away.</Text>
       </Panel>
 
       <Panel title="Motion">
@@ -2138,12 +2129,17 @@ function AppearanceSection({ ctx }: { ctx: Ctx }) {
             onValueChange={(next) => void save({ reduce_motion: next })}
           />
         </Group>
+        <Text style={s.hintSmall}>
+          Turns off entrance fades, button presses, and toast slides — including the system
+          motion setting when this is off.
+        </Text>
       </Panel>
     </>
   );
 }
 
 function LanguageSection({ ctx }: { ctx: Ctx }) {
+  const { p, styles: s } = usePaletteStyles(makeS);
   const { prefs, save } = usePreferences(ctx);
   const current = isStr(prefs.language, 'en');
   return (
@@ -2196,6 +2192,7 @@ function CurrencySection({ ctx }: { ctx: Ctx }) {
 }
 
 function CirclePreferencesSection({ ctx }: { ctx: Ctx }) {
+  const { p, styles: s } = usePaletteStyles(makeS);
   const { prefs, save } = usePreferences(ctx);
   const frequency = isStr(prefs.default_frequency, 'weekly');
   const lead = isNum(prefs.reminder_lead_hours, 24);
@@ -2330,6 +2327,7 @@ function RemindersSection({ ctx }: { ctx: Ctx }) {
 }
 
 function PrivacySection({ ctx }: { ctx: Ctx }) {
+  const { p, styles: s } = usePaletteStyles(makeS);
   const { prefs, save } = usePreferences(ctx);
   const profileVis = isStr(prefs.profile_visibility, 'members');
   const activityVis = isStr(prefs.activity_visibility, 'members');
@@ -2462,6 +2460,7 @@ const REPORT_CATEGORIES = [
 ];
 
 function ReportSection({ ctx }: { ctx: Ctx }) {
+  const { p, styles: s } = usePaletteStyles(makeS);
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('Technical issue');
   const [busy, setBusy] = useState(false);
@@ -2500,7 +2499,7 @@ function ReportSection({ ctx }: { ctx: Ctx }) {
           value={description}
           onChangeText={setDescription}
           placeholder="Describe the problem..."
-          placeholderTextColor={colors.muted}
+          placeholderTextColor={p.textMuted}
           maxLength={2000}
           multiline
           textAlignVertical="top"
@@ -2532,6 +2531,7 @@ const LEGAL_LINKS = [
 ];
 
 function LegalSection({ ctx }: { ctx: Ctx }) {
+  const { p, styles: s } = usePaletteStyles(makeS);
   return (
     <>
       <Panel title="Terms & privacy" description="Legal documents for Turna.">
@@ -2558,6 +2558,7 @@ function LegalSection({ ctx }: { ctx: Ctx }) {
 }
 
 function AboutSection({ ctx }: { ctx: Ctx }) {
+  const { p, styles: s } = usePaletteStyles(makeS);
   return (
     <Panel title="About Turna" description="Version and product info.">
       <View style={s.aboutHead}>
@@ -2617,6 +2618,7 @@ function AboutSection({ ctx }: { ctx: Ctx }) {
 }
 
 function DeleteSection({ ctx }: { ctx: Ctx }) {
+  const { p, styles: s } = usePaletteStyles(makeS);
   const { email, signOut } = useAuth();
   const [open, setOpen] = useState(false);
   const [confirmEmail, setConfirmEmail] = useState('');
@@ -2678,7 +2680,7 @@ function DeleteSection({ ctx }: { ctx: Ctx }) {
 
         <View style={s.dangerCard}>
           <View style={s.dangerIcon}>
-            <Trash2 size={20} color={colors.error} />
+            <Trash2 size={20} color={p.error} />
           </View>
           <Text style={s.dangerTitle}>Delete account</Text>
           <Text style={s.dangerDesc}>
@@ -2730,7 +2732,7 @@ function DeleteSection({ ctx }: { ctx: Ctx }) {
             value={confirmEmail}
             onChangeText={setConfirmEmail}
             placeholder="you@example.com"
-            placeholderTextColor={colors.muted}
+            placeholderTextColor={p.textMuted}
             autoCapitalize="none"
             keyboardType="email-address"
             autoComplete="off"
@@ -2945,6 +2947,7 @@ export function SettingsSubScreen({
   onBack: () => void;
   onPush?: (screen: any) => void;
 }) {
+  const { p, styles: s } = usePaletteStyles(makeS);
   const { confirm, node: confirmNode } = useConfirm();
   const { show, node: toastNode } = useToast();
   const [stack, setStack] = useState<string[]>([]);
@@ -2997,7 +3000,7 @@ export function SettingsSubScreen({
   );
 }
 
-const s = StyleSheet.create({
+const makeS = (p: Palette) => StyleSheet.create({
   content: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
@@ -3017,24 +3020,24 @@ const s = StyleSheet.create({
   title: {
     fontSize: typography.title,
     fontWeight: '700',
-    color: colors.forest,
+    color: p.text,
     letterSpacing: -0.4,
   },
   sub: {
     fontSize: typography.body,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: 4,
     lineHeight: 21,
   },
   panelTitle: {
     fontSize: typography.body + 1,
     fontWeight: '700',
-    color: colors.forest,
+    color: p.text,
     marginBottom: 2,
   },
   panelDesc: {
     fontSize: typography.caption,
-    color: colors.muted,
+    color: p.textMuted,
     lineHeight: 19,
     marginBottom: spacing.md,
   },
@@ -3043,7 +3046,7 @@ const s = StyleSheet.create({
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.55,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: spacing.sm,
     marginBottom: spacing.sm,
     paddingHorizontal: 4,
@@ -3058,7 +3061,7 @@ const s = StyleSheet.create({
   },
   groupDivider: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
+    borderBottomColor: p.border,
   },
   row: {
     flexDirection: 'row',
@@ -3093,25 +3096,25 @@ const s = StyleSheet.create({
   rowLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.forest,
+    color: p.text,
   },
   rowLabelDanger: {
-    color: colors.error,
+    color: p.error,
   },
   rowDesc: {
     fontSize: 12,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: 2,
     lineHeight: 16,
   },
   rowNote: {
     fontSize: 11,
-    color: colors.warning,
+    color: p.warning,
     marginTop: 4,
   },
   rowValue: {
     fontSize: 13,
-    color: colors.muted,
+    color: p.textMuted,
     flexShrink: 0,
     maxWidth: '40%',
   },
@@ -3126,13 +3129,13 @@ const s = StyleSheet.create({
     flexShrink: 0,
   },
   trackOn: {
-    backgroundColor: colors.primary,
+    backgroundColor: p.primarySolid,
   },
   thumb: {
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: colors.white,
+    backgroundColor: p.surface,
   },
   thumbOn: {
     alignSelf: 'flex-end',
@@ -3142,19 +3145,19 @@ const s = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: colors.border,
+    borderColor: p.border,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
   radioOn: {
-    borderColor: colors.primary,
+    borderColor: p.primary,
   },
   radioDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: colors.primary,
+    backgroundColor: p.primarySolid,
   },
   field: {
     marginTop: spacing.md,
@@ -3162,25 +3165,25 @@ const s = StyleSheet.create({
   label: {
     fontSize: 13,
     fontWeight: '600',
-    color: colors.muted,
+    color: p.textMuted,
     marginBottom: 6,
   },
   input: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: p.border,
     borderRadius: 12,
     paddingHorizontal: spacing.md,
     paddingVertical: 12,
-    color: colors.forest,
+    color: p.text,
     fontSize: typography.body,
-    backgroundColor: colors.white,
+    backgroundColor: p.surface,
   },
   inputDisabled: {
-    backgroundColor: colors.cream,
-    color: colors.muted,
+    backgroundColor: p.bg,
+    color: p.textMuted,
   },
   inputError: {
-    borderColor: colors.error,
+    borderColor: p.error,
   },
   inputArea: {
     minHeight: 120,
@@ -3189,13 +3192,13 @@ const s = StyleSheet.create({
   },
   hintSmall: {
     fontSize: 12,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: spacing.sm,
     lineHeight: 17,
   },
   fieldError: {
     fontSize: 12,
-    color: colors.error,
+    color: p.error,
     marginTop: 6,
   },
   fieldRow: {
@@ -3216,7 +3219,7 @@ const s = StyleSheet.create({
   },
   errorText: {
     fontSize: 13,
-    color: colors.error,
+    color: p.error,
     lineHeight: 18,
   },
   loadingRow: {
@@ -3227,7 +3230,7 @@ const s = StyleSheet.create({
   },
   loadingText: {
     fontSize: typography.caption,
-    color: colors.muted,
+    color: p.textMuted,
   },
   blockBtn: {
     marginTop: spacing.md,
@@ -3245,7 +3248,7 @@ const s = StyleSheet.create({
   },
   para: {
     fontSize: typography.caption,
-    color: colors.muted,
+    color: p.textMuted,
     lineHeight: 20,
     marginBottom: spacing.xs,
   },
@@ -3259,14 +3262,14 @@ const s = StyleSheet.create({
   inlineDesc: {
     flex: 1,
     fontSize: typography.caption,
-    color: colors.muted,
+    color: p.textMuted,
     lineHeight: 19,
   },
   otpCard: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: p.border,
     borderRadius: 16,
-    backgroundColor: colors.white,
+    backgroundColor: p.surface,
     padding: spacing.md,
     marginTop: spacing.sm,
     gap: spacing.sm,
@@ -3274,11 +3277,11 @@ const s = StyleSheet.create({
   otpTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.forest,
+    color: p.text,
   },
   otpMsg: {
     fontSize: 12,
-    color: colors.muted,
+    color: p.textMuted,
     lineHeight: 17,
   },
   otpInput: {
@@ -3321,7 +3324,7 @@ const s = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: colors.primary,
+    backgroundColor: p.primarySolid,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -3329,11 +3332,11 @@ const s = StyleSheet.create({
   lockTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: colors.forest,
+    color: p.text,
   },
   lockDesc: {
     fontSize: 12,
-    color: colors.muted,
+    color: p.textMuted,
     lineHeight: 17,
     marginTop: 4,
   },
@@ -3344,8 +3347,8 @@ const s = StyleSheet.create({
   },
   accountBox: {
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.white,
+    borderColor: p.border,
+    backgroundColor: p.surface,
     borderRadius: 12,
     padding: spacing.sm + 2,
     marginTop: spacing.sm,
@@ -3353,11 +3356,11 @@ const s = StyleSheet.create({
   accountName: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.forest,
+    color: p.text,
   },
   accountMeta: {
     fontSize: 12,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: 2,
   },
   avatarRow: {
@@ -3370,18 +3373,18 @@ const s = StyleSheet.create({
     height: 72,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: p.border,
   },
   avatarFallback: {
     width: 72,
     height: 72,
     borderRadius: 20,
-    backgroundColor: colors.forest,
+    backgroundColor: p.brand,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarInitials: {
-    color: colors.primaryLight,
+    color: p.primary,
     fontSize: 24,
     fontWeight: '700',
   },
@@ -3392,17 +3395,17 @@ const s = StyleSheet.create({
   },
   usernameLine: {
     fontSize: 12,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: spacing.md,
   },
   usernameValue: {
-    color: colors.forest,
+    color: p.text,
     fontWeight: '600',
   },
   emailValue: {
     fontSize: typography.body,
     fontWeight: '600',
-    color: colors.forest,
+    color: p.text,
     marginBottom: spacing.xs,
   },
   verifiedRow: {
@@ -3414,7 +3417,7 @@ const s = StyleSheet.create({
   verifiedText: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.primary,
+    color: p.primary,
   },
   warnBox: {
     borderWidth: 1,
@@ -3427,11 +3430,11 @@ const s = StyleSheet.create({
   warnTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.warning,
+    color: p.warning,
   },
   warnText: {
     fontSize: 12,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: 4,
     lineHeight: 17,
   },
@@ -3440,7 +3443,7 @@ const s = StyleSheet.create({
   },
   userId: {
     fontSize: 11,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: 2,
     marginBottom: spacing.xs,
   },
@@ -3470,19 +3473,19 @@ const s = StyleSheet.create({
   infoTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.forest,
+    color: p.text,
   },
   infoMeta: {
     fontSize: 12,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: 2,
   },
   pendingBox: {
     flexDirection: 'row',
     gap: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.cream,
+    borderColor: p.border,
+    backgroundColor: p.bg,
     borderRadius: 12,
     padding: spacing.md,
     marginTop: spacing.md,
@@ -3490,7 +3493,7 @@ const s = StyleSheet.create({
   },
   pendingText: {
     fontSize: typography.caption,
-    color: colors.muted,
+    color: p.textMuted,
   },
   statusRow: {
     flexDirection: 'row',
@@ -3501,16 +3504,16 @@ const s = StyleSheet.create({
   },
   statusLabel: {
     fontSize: typography.caption,
-    color: colors.muted,
+    color: p.textMuted,
   },
   rejectText: {
     fontSize: 12,
-    color: colors.error,
+    color: p.error,
     marginBottom: spacing.sm,
   },
   legalFoot: {
     fontSize: 12,
-    color: colors.muted,
+    color: p.textMuted,
     lineHeight: 18,
     marginTop: spacing.xs,
     paddingHorizontal: 4,
@@ -3525,23 +3528,23 @@ const s = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 16,
-    backgroundColor: colors.forest,
+    backgroundColor: p.brand,
     alignItems: 'center',
     justifyContent: 'center',
   },
   aboutLogoText: {
-    color: colors.primaryLight,
+    color: p.primary,
     fontSize: 22,
     fontWeight: '700',
   },
   aboutName: {
     fontSize: typography.heading,
     fontWeight: '700',
-    color: colors.forest,
+    color: p.text,
   },
   aboutVersion: {
     fontSize: typography.caption,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: 2,
   },
   dangerNote: {
@@ -3554,7 +3557,7 @@ const s = StyleSheet.create({
   },
   dangerNoteText: {
     fontSize: typography.caption,
-    color: colors.forest,
+    color: p.text,
     lineHeight: 19,
   },
   dangerCard: {
@@ -3576,11 +3579,11 @@ const s = StyleSheet.create({
   dangerTitle: {
     fontSize: typography.body + 1,
     fontWeight: '700',
-    color: colors.forest,
+    color: p.text,
   },
   dangerDesc: {
     fontSize: typography.caption,
-    color: colors.muted,
+    color: p.textMuted,
     lineHeight: 19,
     marginTop: 4,
   },

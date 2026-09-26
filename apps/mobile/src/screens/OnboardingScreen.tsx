@@ -5,7 +5,8 @@ import { Button } from '../components/Button';
 import { Card, Badge } from '../components/Card';
 import { Screen } from '../components/Screen';
 import { Logo } from '../components/Logo';
-import { colors, radius, spacing, typography } from '../theme';
+import { colors, radius, spacing, typography, type Palette } from '../theme';
+import { usePaletteStyles } from '../context/ThemeContext';
 
 const SLIDES = [
   {
@@ -27,6 +28,7 @@ const SLIDES = [
 ];
 
 export function OnboardingScreen() {
+  const { p, styles } = usePaletteStyles(makeStyles);
   const { completeOnboarding } = useAuth();
   const [i, setI] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -69,7 +71,7 @@ export function OnboardingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (p: Palette) => StyleSheet.create({
   logoWrap: {
     alignItems: 'center',
     marginTop: spacing.lg,
@@ -90,19 +92,19 @@ const styles = StyleSheet.create({
   },
   dotActive: {
     width: 24,
-    backgroundColor: colors.primary,
+    backgroundColor: p.primarySolid,
   },
   card: {
     borderColor: 'rgba(255,255,255,0.1)',
   },
   title: {
-    color: colors.forest,
+    color: p.text,
     fontSize: typography.title,
     fontWeight: '700',
     marginTop: spacing.md,
   },
   body: {
-    color: colors.muted,
+    color: p.textMuted,
     fontSize: typography.body,
     lineHeight: 24,
     marginTop: spacing.sm,

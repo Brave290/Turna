@@ -63,20 +63,39 @@ async function writeAll(map: Record<string, SoloLedger>) {
   await AsyncStorage.setItem(KEY, JSON.stringify(map));
 }
 
+/** Older/partial rows must never break the list — normalise before render. */
+function normalize(L: SoloLedger): SoloLedger {
+  return {
+    ...L,
+    id: String(L.id),
+    name: L.name || 'Ledger',
+    currency: L.currency || 'NGN',
+    default_amount: Number(L.default_amount) || 0,
+    contributors: Array.isArray(L.contributors) ? L.contributors : [],
+    entries: Array.isArray(L.entries) ? L.entries : [],
+    pendingEntries: Array.isArray(L.pendingEntries) ? L.pendingEntries : [],
+    pendingContributors: Array.isArray(L.pendingContributors)
+      ? L.pendingContributors
+      : [],
+    updated_at: typeof L.updated_at === 'string' ? L.updated_at : '',
+  };
+}
+
 export async function getSoloLedgers(): Promise<SoloLedger[]> {
   const map = await readAll();
-  return Object.values(map).sort((a, b) =>
-    b.updated_at.localeCompare(a.updated_at)
-  );
+  return Object.values(map)
+    .map(normalize)
+    .sort((a, b) => b.updated_at.localeCompare(a.updated_at));
 }
 
 export async function getSoloLedger(id: string): Promise<SoloLedger | null> {
-  return (await readAll())[id] ?? null;
+  const row = (await readAll())[id];
+  return row ? normalize(row) : null;
 }
 
 export async function putSoloLedger(ledger: SoloLedger) {
   const map = await readAll();
-  map[ledger.id] = { ...ledger, updated_at: new Date().toISOString() };
+  map[ledger.id] = { ...normalize(ledger), updated_at: new Date().toISOString() };
   await writeAll(map);
 }
 
@@ -166,6 +185,66 @@ export function formatPeriodLabel(period: string): string {
     month: 'long',
     year: 'numeric',
   });
+}
+
+const MONTHS_FULL = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+/** "June 2026" → "2026-06" (null when the label is not a month label). */
+function parseMonthLabel(label: string): string | null {
+  const m = label.trim().match(/^([A-Za-z]+)\s+(\d{4})$/);
+  if (!m) return null;
+  const mi = MONTHS_FULL.findIndex(
+    (x) => x.toLowerCase() === m[1].toLowerCase()
+  );
+  if (mi < 0) return null;
+  return `${m[2]}-${String(mi + 1).padStart(2, '0')}`;
+}
+
+/** Legacy sheets are named after a single month ("September 2026"). */
+export function parseStartPeriod(name: string): string | null {
+  return parseMonthLabel(name);
+}
+
+export function monthsBetween(a: string, b: string): number {
+  const [ay, am] = a.split('-').map(Number);
+  const [by, bm] = b.split('-').map(Number);
+  return (by - ay) * 12 + (bm - am);
+}
+
+/**
+ * Auto name — the range IS the name, nothing else is stored:
+ *   formatPeriodLabel(start) + ' – ' + formatPeriodLabel(end)
+ *   → "June – December 2026"
+ */
+export function deriveLedgerName(start: string, end: string): string {
+  return `${formatPeriodLabel(start)} – ${formatPeriodLabel(end)}`;
+}
+
+/** Parse an auto name back into its rotation window (null for legacy names). */
+export function parsePeriodRange(
+  name: string
+): { start: string; end: string } | null {
+  const parts = name.split(/\s*[-–—]\s*/);
+  if (parts.length !== 2) return null;
+  const start = parseMonthLabel(parts[0]);
+  const end = parseMonthLabel(parts[1]);
+  if (!start || !end) return null;
+  if (monthsBetween(start, end) < 0) return null;
+  return { start, end };
+}
+
+/** Keep a month inside the rotation window [start, end] (either may be null). */
+export function clampPeriod(
+  period: string,
+  start?: string | null,
+  end?: string | null
+): string {
+  if (start && monthsBetween(period, start) > 0) return start;
+  if (end && monthsBetween(period, end) < 0) return end;
+  return period;
 }
 
 /** Pull remote solo data into local cache (login / foreground). */

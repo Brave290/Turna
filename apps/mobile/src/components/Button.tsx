@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -7,7 +7,9 @@ import {
   Text,
   ViewStyle,
 } from 'react-native';
-import { colors, radius, spacing, typography } from '../theme';
+import { colors, radius, spacing, typography, type Palette } from '../theme';
+import { useMotion } from '../context/MotionContext';
+import { usePaletteStyles } from '../context/ThemeContext';
 
 type Variant = 'primary' | 'outline' | 'ghost' | 'danger';
 
@@ -26,6 +28,10 @@ export function Button({
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
+  const { p, styles } = usePaletteStyles(makeStyles);
+  const variantStyles = useMemo(() => makeVariantStyles(p), [p]);
+  const labelStyles = useMemo(() => makeLabelStyles(p), [p]);
+  const { reduceMotion } = useMotion();
   const isDisabled = disabled || loading;
   return (
     <Pressable
@@ -36,8 +42,8 @@ export function Button({
       style={({ pressed }) => [
         styles.base,
         variantStyles[variant],
-        pressed && !isDisabled && styles.pressed,
-        pressed && !isDisabled && styles.pressedScale,
+        pressed && !isDisabled && !reduceMotion && styles.pressed,
+        pressed && !isDisabled && !reduceMotion && styles.pressedScale,
         isDisabled && styles.disabled,
         style,
       ]}
@@ -45,7 +51,7 @@ export function Button({
       {loading ? (
         <ActivityIndicator
           size="small"
-          color={variant === 'primary' ? colors.white : colors.primary}
+          color={variant === 'primary' ? colors.white : p.primary}
         />
       ) : (
         <Text style={[styles.label, labelStyles[variant]]}>{label}</Text>
@@ -54,7 +60,7 @@ export function Button({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (p: Palette) => StyleSheet.create({
   base: {
     minHeight: 48,
     borderRadius: radius.md,
@@ -78,20 +84,20 @@ const styles = StyleSheet.create({
   },
 });
 
-const variantStyles: Record<Variant, ViewStyle> = {
-  primary: { backgroundColor: colors.primary },
+const makeVariantStyles = (p: Palette): Record<Variant, ViewStyle> => ({
+  primary: { backgroundColor: p.primarySolid },
   outline: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: colors.primary,
+    borderColor: p.primary,
   },
   ghost: { backgroundColor: 'transparent' },
-  danger: { backgroundColor: colors.error },
-};
+  danger: { backgroundColor: p.errorSolid },
+});
 
-const labelStyles = StyleSheet.create({
+const makeLabelStyles = (p: Palette) => StyleSheet.create({
   primary: { color: colors.white },
-  outline: { color: colors.primary },
-  ghost: { color: colors.primary },
+  outline: { color: p.primary },
+  ghost: { color: p.primary },
   danger: { color: colors.white },
 });

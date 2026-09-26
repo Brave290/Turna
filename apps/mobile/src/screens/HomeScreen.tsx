@@ -27,8 +27,9 @@ import { supabase } from '../lib/supabase';
 import { cacheGet, cacheSet, drainQueue } from '../lib/offline';
 import { Card, Badge, Stat } from '../components/Card';
 import { Screen } from '../components/Screen';
-import { colors, spacing, typography } from '../theme';
+import { colors, spacing, typography, type Palette } from '../theme';
 import { formatCurrency, formatRelativeTime } from '../lib/format';
+import { usePaletteStyles } from '../context/ThemeContext';
 
 type CircleRow = {
   id: string;
@@ -97,6 +98,7 @@ export function HomeScreen({
   onNavigate?: (tab: string) => void;
   onPush?: (screen: any) => void;
 } = {}) {
+  const { p, styles } = usePaletteStyles(makeStyles);
   const { displayName, user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -152,7 +154,7 @@ export function HomeScreen({
           .select('*')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
-          .limit(20),
+          .limit(100),
         supabase
           .from('wallet_balances' as never)
           .select(
@@ -268,6 +270,7 @@ export function HomeScreen({
 
   const recentActivity = notifications.slice(0, 6);
   const recentCircles = all.slice(0, 4);
+  const unread = notifications.filter((n) => n.status !== 'read').length;
 
   return (
     <Screen tone="cream">
@@ -280,20 +283,44 @@ export function HomeScreen({
               setRefreshing(true);
               void load();
             }}
-            tintColor={colors.primary}
+            tintColor={p.primary}
           />
         }
       >
-        <View style={styles.greetBlock}>
-          <Text style={styles.greeting}>{greeting(firstName)}</Text>
-          <Text style={styles.sub}>
-            Here's what's happening with your savings circles.
-          </Text>
+        <View style={styles.greetRow}>
+          <View style={styles.greetBlock}>
+            <Text style={styles.greeting}>{greeting(firstName)}</Text>
+            <Text style={styles.sub}>
+              Here's what's happening with your savings circles.
+            </Text>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+              unread > 0
+                ? `Notifications, ${unread} unread`
+                : 'Notifications, none unread'
+            }
+            onPress={() => onPush?.({ name: 'notifications' })}
+            style={({ pressed }) => [
+              styles.bellBtn,
+              pressed && styles.bellBtnPressed,
+            ]}
+          >
+            <Bell size={21} color={p.text} strokeWidth={2} />
+            {unread > 0 && (
+              <View style={styles.bellBadge}>
+                <Text style={styles.bellBadgeText}>
+                  {unread > 9 ? '9+' : String(unread)}
+                </Text>
+              </View>
+            )}
+          </Pressable>
         </View>
 
         {loading ? (
           <View style={styles.loading}>
-            <ActivityIndicator color={colors.primary} size="large" />
+            <ActivityIndicator color={p.primary} size="large" />
           </View>
         ) : (
           <>
@@ -383,7 +410,7 @@ export function HomeScreen({
             {!hasCircles && (
               <Card style={styles.emptyCard}>
                 <View style={styles.emptyIcon}>
-                  <HomeIcon size={24} color={colors.primary} strokeWidth={2} />
+                  <HomeIcon size={24} color={p.primary} strokeWidth={2} />
                 </View>
                 <Text style={styles.emptyTitle}>Your savings circles</Text>
                 <Text style={styles.emptyBody}>
@@ -413,13 +440,13 @@ export function HomeScreen({
                 onPress={() => onPush?.({ name: 'contributions' })}
               >
                 <View style={styles.dueIcon}>
-                  <CalendarDays size={18} color={colors.warning} strokeWidth={2} />
+                  <CalendarDays size={18} color={p.warning} strokeWidth={2} />
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={styles.dueTitle}>You have contributions waiting</Text>
                   <Text style={styles.dueBody}>{dueHint}</Text>
                 </View>
-                <ChevronRight size={16} color={colors.muted} strokeWidth={2} />
+                <ChevronRight size={16} color={p.textMuted} strokeWidth={2} />
               </Pressable>
             )}
 
@@ -468,7 +495,7 @@ export function HomeScreen({
                         <View style={styles.circleMetaRow}>
                           {c.member_count != null && (
                             <View style={styles.metaItem}>
-                              <Users size={14} color={colors.muted} strokeWidth={1.75} />
+                              <Users size={14} color={p.textMuted} strokeWidth={1.75} />
                               <Text style={styles.metaText}>
                                 {c.member_count} members
                               </Text>
@@ -476,14 +503,14 @@ export function HomeScreen({
                           )}
                           {membership?.payout_position != null && (
                             <View style={styles.metaItem}>
-                              <Clock size={14} color={colors.muted} strokeWidth={1.75} />
+                              <Clock size={14} color={p.textMuted} strokeWidth={1.75} />
                               <Text style={styles.metaText}>
                                 Position {membership.payout_position}
                               </Text>
                             </View>
                           )}
                           <View style={styles.metaItem}>
-                            <FileText size={14} color={colors.muted} strokeWidth={1.75} />
+                            <FileText size={14} color={p.textMuted} strokeWidth={1.75} />
                             <Text style={styles.metaText}>
                               Cycle {c.current_cycle || 0}
                             </Text>
@@ -524,7 +551,7 @@ export function HomeScreen({
             <Card style={styles.activityCard}>
               {recentActivity.length === 0 ? (
                 <View style={styles.activityEmpty}>
-                  <ArrowUpRight size={26} color={colors.muted} strokeWidth={1.75} />
+                  <ArrowUpRight size={26} color={p.textMuted} strokeWidth={1.75} />
                   <Text style={styles.emptyBody}>No recent activity yet.</Text>
                 </View>
               ) : (
@@ -539,7 +566,7 @@ export function HomeScreen({
                     <View style={styles.activityIcon}>
                       <ArrowUpRight
                         size={16}
-                        color={colors.primary}
+                        color={p.primary}
                         strokeWidth={2}
                       />
                     </View>
@@ -566,7 +593,7 @@ export function HomeScreen({
               >
                 <FileText
                   size={18}
-                  color={colors.primary}
+                  color={p.primary}
                   strokeWidth={2}
                   style={{ marginBottom: spacing.sm }}
                 />
@@ -578,7 +605,7 @@ export function HomeScreen({
               >
                 <TrendingUp
                   size={18}
-                  color={colors.primary}
+                  color={p.primary}
                   strokeWidth={2}
                   style={{ marginBottom: spacing.sm }}
                 />
@@ -598,24 +625,64 @@ export function HomeScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (p: Palette) => StyleSheet.create({
   content: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.xxl,
   },
-  greetBlock: {
+  greetRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
     marginBottom: spacing.lg,
+  },
+  greetBlock: {
+    flex: 1,
+    minWidth: 0,
+  },
+  bellBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: p.border,
+    backgroundColor: p.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  bellBtnPressed: {
+    backgroundColor: p.bg,
+  },
+  bellBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    paddingHorizontal: 4,
+    backgroundColor: colors.error,
+    borderWidth: 2,
+    borderColor: p.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bellBadgeText: {
+    color: colors.white,
+    fontSize: 10,
+    fontWeight: '700',
   },
   greeting: {
     fontSize: typography.title,
     fontWeight: '600',
-    color: colors.forest,
+    color: p.text,
     letterSpacing: -0.4,
   },
   sub: {
     fontSize: 15,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: 4,
   },
   loading: {
@@ -623,7 +690,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   hero: {
-    backgroundColor: colors.forest,
+    backgroundColor: p.brand,
     borderRadius: 20,
     padding: spacing.lg + 4,
     marginBottom: spacing.md,
@@ -650,7 +717,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   heroMint: {
-    color: colors.primaryLight,
+    color: p.primary,
     fontSize: typography.caption,
     fontWeight: '600',
   },
@@ -682,7 +749,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   btnPrimary: {
-    backgroundColor: colors.primary,
+    backgroundColor: p.primarySolid,
   },
   btnPrimaryText: {
     color: colors.white,
@@ -691,10 +758,10 @@ const styles = StyleSheet.create({
   },
   btnOutline: {
     borderWidth: 1,
-    borderColor: colors.primary,
+    borderColor: p.primary,
   },
   btnOutlineText: {
-    color: colors.primary,
+    color: p.primary,
     fontSize: typography.body,
     fontWeight: '600',
   },
@@ -727,11 +794,11 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: typography.heading,
     fontWeight: '600',
-    color: colors.forest,
+    color: p.text,
   },
   emptyBody: {
     fontSize: typography.body,
-    color: colors.muted,
+    color: p.textMuted,
     textAlign: 'center',
     marginTop: spacing.sm,
     lineHeight: 22,
@@ -759,11 +826,11 @@ const styles = StyleSheet.create({
   dueTitle: {
     fontSize: typography.body,
     fontWeight: '500',
-    color: colors.forest,
+    color: p.text,
   },
   dueBody: {
     fontSize: 12,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: 2,
   },
   sectionHead: {
@@ -776,11 +843,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: typography.body,
     fontWeight: '600',
-    color: colors.forest,
+    color: p.text,
   },
   viewAll: {
     fontSize: typography.caption,
-    color: colors.primary,
+    color: p.primary,
     fontWeight: '500',
   },
   circleCard: {
@@ -801,11 +868,11 @@ const styles = StyleSheet.create({
   circleName: {
     fontSize: typography.body,
     fontWeight: '500',
-    color: colors.forest,
+    color: p.text,
   },
   circleMeta: {
     fontSize: typography.caption,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: 2,
   },
   circleMetaRow: {
@@ -820,7 +887,7 @@ const styles = StyleSheet.create({
   },
   metaText: {
     fontSize: 12,
-    color: colors.muted,
+    color: p.textMuted,
   },
   progressTrack: {
     height: 6,
@@ -831,11 +898,11 @@ const styles = StyleSheet.create({
   progressFill: {
     height: '100%',
     borderRadius: 3,
-    backgroundColor: colors.primary,
+    backgroundColor: p.primarySolid,
   },
   progressLabel: {
     fontSize: 12,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: 6,
   },
   activityCard: {
@@ -874,16 +941,16 @@ const styles = StyleSheet.create({
   activityTitle: {
     fontSize: typography.body,
     fontWeight: '500',
-    color: colors.forest,
+    color: p.text,
   },
   activityBody: {
     fontSize: 12,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: 2,
   },
   activityWhen: {
     fontSize: 11,
-    color: colors.muted,
+    color: p.textMuted,
   },
   strip: {
     flexDirection: 'row',
@@ -893,30 +960,30 @@ const styles = StyleSheet.create({
   stripCard: {
     flex: 1,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: p.border,
     borderRadius: 18,
-    backgroundColor: colors.white,
+    backgroundColor: p.surface,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
   },
   stripLabel: {
     fontSize: typography.body,
     fontWeight: '500',
-    color: colors.forest,
+    color: p.text,
   },
   tip: {
     fontSize: 12,
-    color: colors.muted,
+    color: p.textMuted,
     textAlign: 'center',
     marginTop: spacing.lg,
     paddingBottom: spacing.sm,
   },
   errorCard: {
-    borderColor: colors.error,
+    borderColor: p.error,
     marginBottom: spacing.sm,
   },
   errorText: {
-    color: colors.error,
+    color: p.error,
     fontSize: typography.caption,
   },
 });

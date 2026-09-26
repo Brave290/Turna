@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
   Pressable,
@@ -15,7 +15,7 @@ import { Card, Badge } from '../components/Card';
 import { Button } from '../components/Button';
 import { LoadingOverlay } from '../components/Loading';
 import { Popup, useConfirm } from '../components/Popup';
-import { colors, spacing, typography } from '../theme';
+import { colors, spacing, typography, type Palette } from '../theme';
 import { Trash2 } from 'lucide-react-native';
 import {
   getSoloLedgers,
@@ -27,29 +27,49 @@ import {
   shiftPeriod,
   periodKey,
   formatPeriodLabel,
+  deriveLedgerName,
+  monthsBetween,
+  parsePeriodRange,
   type SoloLedger,
 } from '../lib/solo-store';
 import { supabase } from '../lib/supabase';
 import { formatCurrency } from '../lib/format';
+import { usePaletteStyles } from '../context/ThemeContext';
 
 function money(n: number, currency = 'NGN') {
   return formatCurrency(n, currency);
 }
 
 export function SoloLedgersScreen({ onOpen, onPush }: { onOpen?: (id: string) => void; onPush?: (screen: any) => void } = {}) {
+  const { p, styles } = usePaletteStyles(makeStyles);
   const { user } = useAuth();
   const { confirm, node: confirmNode } = useConfirm();
   const [rows, setRows] = useState<SoloLedger[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [month, setMonth] = useState(periodKey());
+  const [start, setStart] = useState(periodKey());
+  const [end, setEnd] = useState(shiftPeriod(periodKey(), 6));
   const [amount, setAmount] = useState('5000');
 
+  // Same 15-month window the old single-month picker used.
+  const monthOptions = useMemo(
+    () => Array.from({ length: 15 }, (_, i) => shiftPeriod(periodKey(), i - 1)),
+    []
+  );
+  const duration = monthsBetween(start, end) + 1;
+  const derivedName = deriveLedgerName(start, end);
+
   const load = useCallback(async () => {
-    const local = await getSoloLedgers();
-    setRows(local);
-    setLoading(false);
+    try {
+      const local = await getSoloLedgers();
+      setRows(local);
+    } catch {
+      setRows([]);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
     if (user) {
       try {
         await pullSoloFromServer();
@@ -68,7 +88,7 @@ export function SoloLedgersScreen({ onOpen, onPush }: { onOpen?: (id: string) =>
   async function create() {
     if (!user) return;
     const id = offlineUuid();
-    const sheetName = formatPeriodLabel(month);
+    const sheetName = derivedName;
     const defaultAmount = Math.round(Number(amount.replace(/[^\d.]/g, '') || '0') * 100);
     await putSoloLedger({
       id,
@@ -97,10 +117,45 @@ export function SoloLedgersScreen({ onOpen, onPush }: { onOpen?: (id: string) =>
       /* will sync later — local already saved */
     }
     setAmount('5000');
-    setMonth(periodKey());
+    setStart(periodKey());
+    setEnd(shiftPeriod(periodKey(), 6));
     setCreating(false);
     await load();
     onOpen?.(id);
+  }
+
+  function pickStart(m: string) {
+    setStart(m);
+    if (monthsBetween(m, end) < 0) setEnd(m); // end can never precede start
+  }
+
+  function pickEnd(m: string) {
+    setEnd(monthsBetween(start, m) > 0 ? start : m);
+  }
+
+  function chipRow(value: string, onPick: (m: string) => void) {
+    return (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.monthChips}
+      >
+        {monthOptions.map((m) => {
+          const on = m === value;
+          return (
+            <Pressable
+              key={m}
+              onPress={() => onPick(m)}
+              style={[styles.monthChip, on && styles.monthChipOn]}
+            >
+              <Text style={[styles.monthChipText, on && styles.monthChipTextOn]}>
+                {formatPeriodLabel(m)}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    );
   }
 
   async function remove(id: string, ledgerName: string) {
@@ -137,7 +192,7 @@ export function SoloLedgersScreen({ onOpen, onPush }: { onOpen?: (id: string) =>
         visible={creating}
         onClose={() => setCreating(false)}
         title="New solo sheet"
-        subtitle="Pick the month — the sheet is named after it."
+        subtitle="Pick the first and last month — the name and rotation follow them."
         footer={
           <View style={styles.createActions}>
             <Button label="Create sheet" onPress={create} style={{ flex: 1 }} />
@@ -150,26 +205,20 @@ export function SoloLedgersScreen({ onOpen, onPush }: { onOpen?: (id: string) =>
           </View>
         }
       >
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.monthChips}
-        >
-          {Array.from({ length: 15 }, (_, i) => shiftPeriod(periodKey(), i - 1)).map((m) => {
-            const on = m === month;
-            return (
-              <Pressable
-                key={m}
-                onPress={() => setMonth(m)}
-                style={[styles.monthChip, on && styles.monthChipOn]}
-              >
-                <Text style={[styles.monthChipText, on && styles.monthChipTextOn]}>
-                  {formatPeriodLabel(m)}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+        <Text style={styles.label}>Start month</Text>
+        {chipRow(start, pickStart)}
+
+        <Text style={styles.label}>End month</Text>
+        {chipRow(end, pickEnd)}
+
+        <Text style={styles.label}>Sheet name (auto)</Text>
+        <View style={styles.namePreview}>
+          <Text style={styles.namePreviewText}>{derivedName}</Text>
+          <Text style={styles.durationLine}>
+            {duration} month{duration === 1 ? '' : 's'} · collectors rotate once a
+            month
+          </Text>
+        </View>
 
         <Text style={styles.label}>Default monthly amount</Text>
         <TextInput
@@ -178,7 +227,7 @@ export function SoloLedgersScreen({ onOpen, onPush }: { onOpen?: (id: string) =>
           onChangeText={setAmount}
           keyboardType="numeric"
           placeholder="5000"
-          placeholderTextColor={colors.muted}
+          placeholderTextColor={p.textMuted}
         />
       </Popup>
 
@@ -199,7 +248,7 @@ export function SoloLedgersScreen({ onOpen, onPush }: { onOpen?: (id: string) =>
                 await load();
                 setRefreshing(false);
               }}
-              tintColor={colors.primary}
+              tintColor={p.primary}
             />
           }
           ListFooterComponent={
@@ -221,15 +270,24 @@ export function SoloLedgersScreen({ onOpen, onPush }: { onOpen?: (id: string) =>
               />
             </Card>
           }
-          renderItem={({ item }) => (
+          renderItem={({ item }) => {
+            const pendingCount =
+              (item.pendingEntries?.length ?? 0) +
+              (item.pendingContributors?.length ?? 0);
+            const range = parsePeriodRange(item.name);
+            const months = range ? monthsBetween(range.start, range.end) + 1 : 0;
+            return (
             <Pressable onPress={() => onOpen?.(item.id)}>
               <Card style={styles.card}>
                 <View style={styles.cardTop}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.name}>{item.name}</Text>
                     <Text style={styles.meta}>
+                      {months > 0 ? `${months} months · ` : ''}
                       Default {money(item.default_amount, item.currency)} · updated{' '}
-                      {new Date(item.updated_at).toLocaleDateString('en-NG')}
+                      {item.updated_at
+                        ? new Date(item.updated_at).toLocaleDateString('en-NG')
+                        : 'just now'}
                     </Text>
                   </View>
                   <Pressable
@@ -239,34 +297,27 @@ export function SoloLedgersScreen({ onOpen, onPush }: { onOpen?: (id: string) =>
                     accessibilityRole="button"
                     accessibilityLabel={`Delete ${item.name}`}
                   >
-                    <Trash2 size={16} color={colors.muted} />
+                    <Trash2 size={16} color={p.textMuted} />
                   </Pressable>
                 </View>
                 <View style={styles.cardFoot}>
                   <Badge
-                    label={
-                      item.pendingEntries.length + item.pendingContributors.length > 0
-                        ? 'pending'
-                        : 'synced'
-                    }
-                    tone={
-                      item.pendingEntries.length + item.pendingContributors.length > 0
-                        ? 'pending'
-                        : 'active'
-                    }
+                    label={pendingCount > 0 ? 'pending' : 'synced'}
+                    tone={pendingCount > 0 ? 'pending' : 'active'}
                   />
                   <Text style={styles.openHint}>Tap to open ›</Text>
                 </View>
               </Card>
             </Pressable>
-          )}
+            );
+          }}
         />
       )}
     </Screen>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (p: Palette) => StyleSheet.create({
   header: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
@@ -278,12 +329,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: typography.title,
     fontWeight: '700',
-    color: colors.forest,
+    color: p.text,
     letterSpacing: -0.4,
   },
   sub: {
     fontSize: typography.body,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: 6,
     lineHeight: 20,
   },
@@ -301,17 +352,17 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     borderRadius: 11,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.cream,
+    borderColor: p.border,
+    backgroundColor: p.bg,
   },
   monthChipOn: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: p.primarySolid,
+    borderColor: p.primary,
   },
   monthChipText: {
     fontSize: typography.caption,
     fontWeight: '600',
-    color: colors.forest,
+    color: p.text,
   },
   monthChipTextOn: {
     color: colors.white,
@@ -319,19 +370,38 @@ const styles = StyleSheet.create({
   label: {
     fontSize: typography.caption,
     fontWeight: '500',
-    color: colors.muted,
+    color: p.textMuted,
     marginBottom: 6,
     marginTop: spacing.sm,
   },
+  namePreview: {
+    borderWidth: 1,
+    borderColor: p.border,
+    borderRadius: 12,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    backgroundColor: p.surface,
+  },
+  namePreviewText: {
+    fontSize: typography.body,
+    fontWeight: '700',
+    color: p.text,
+  },
+  durationLine: {
+    fontSize: typography.caption,
+    color: p.textMuted,
+    marginTop: 4,
+    fontWeight: '600',
+  },
   input: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: p.border,
     borderRadius: 12,
     paddingHorizontal: spacing.md,
     paddingVertical: 12,
-    color: colors.forest,
+    color: p.text,
     fontSize: typography.body,
-    backgroundColor: colors.white,
+    backgroundColor: p.surface,
   },
   createActions: {
     flexDirection: 'row',
@@ -347,7 +417,7 @@ const styles = StyleSheet.create({
   name: {
     fontSize: typography.body,
     fontWeight: '600',
-    color: colors.forest,
+    color: p.text,
   },
   cardTop: {
     flexDirection: 'row',
@@ -366,16 +436,16 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.cream,
+    backgroundColor: p.bg,
   },
   openHint: {
     fontSize: 12,
-    color: colors.primary,
+    color: p.primary,
     fontWeight: '600',
   },
   meta: {
     fontSize: typography.caption,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: 6,
   },
   cardActions: {
@@ -396,19 +466,19 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: typography.heading,
     fontWeight: '600',
-    color: colors.forest,
+    color: p.text,
     textAlign: 'center',
   },
   emptyBody: {
     fontSize: typography.body,
-    color: colors.muted,
+    color: p.textMuted,
     textAlign: 'center',
     marginTop: spacing.sm,
     lineHeight: 22,
   },
   footNote: {
     fontSize: 12,
-    color: colors.muted,
+    color: p.textMuted,
     lineHeight: 18,
     marginTop: spacing.md,
     paddingHorizontal: spacing.xs,

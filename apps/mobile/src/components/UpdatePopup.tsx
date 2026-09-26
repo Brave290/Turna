@@ -2,9 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { Modal, StyleSheet, Text, View, Linking } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/Button';
-import { colors, spacing, typography } from '../theme';
+import { colors, spacing, typography, type Palette } from '../theme';
 import { APP_API_URL } from '../lib/supabase';
 import { LOCAL_VERSION_CODE } from '../generated/version';
+import { usePaletteStyles } from '../context/ThemeContext';
 
 type VersionInfo = {
   versionCode: number;
@@ -50,6 +51,7 @@ async function setDismissCount(count: number) {
  * Policy: Later allowed twice; third notification is forced (no dismiss).
  */
 export function UpdatePopup() {
+  const { p, styles } = usePaletteStyles(makeStyles);
   const { status } = useAuth();
   const [info, setInfo] = useState<VersionInfo | null>(null);
   const [forced, setForced] = useState(false);
@@ -125,7 +127,7 @@ export function UpdatePopup() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (p: Palette) => StyleSheet.create({
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(10,22,40,0.55)',
@@ -133,31 +135,31 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   card: {
-    backgroundColor: colors.white,
+    backgroundColor: p.surface,
     borderRadius: 16,
     padding: spacing.xl,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: p.border,
   },
   title: {
     fontSize: typography.heading,
     fontWeight: '700',
-    color: colors.forest,
+    color: p.text,
   },
   version: {
     fontSize: typography.caption,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: 4,
   },
   body: {
     fontSize: typography.body,
-    color: colors.muted,
+    color: p.textMuted,
     lineHeight: 22,
     marginVertical: spacing.md,
   },
   hint: {
     fontSize: 12,
-    color: colors.muted,
+    color: p.textMuted,
     textAlign: 'center',
     marginTop: spacing.sm,
   },

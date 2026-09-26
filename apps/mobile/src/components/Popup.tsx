@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, radius, spacing, typography } from '../theme';
+import { colors, radius, spacing, typography, type Palette } from '../theme';
 import { Button } from './Button';
+import { usePaletteStyles } from '../context/ThemeContext';
 
 /** Branded popup shell — the app's one way to open a dialog. */
 export function Popup({
@@ -19,6 +20,7 @@ export function Popup({
   children?: React.ReactNode;
   footer?: React.ReactNode;
 }) {
+  const { p, styles } = usePaletteStyles(makeStyles);
   return (
     <Modal
       visible={visible}
@@ -44,6 +46,7 @@ export function Popup({
  * const { confirm, node } = useConfirm(); … if (await confirm({...})) …; render {node}
  */
 export function useConfirm() {
+  const { p, styles } = usePaletteStyles(makeStyles);
   const [state, setState] = useState<{
     title: string;
     message: string;
@@ -101,7 +104,7 @@ export function useConfirm() {
   return { confirm, node };
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (p: Palette) => StyleSheet.create({
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(10, 22, 40, 0.55)',
@@ -112,10 +115,10 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 440,
-    backgroundColor: colors.card,
+    backgroundColor: p.card,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: p.border,
     padding: spacing.xl,
     shadowColor: '#0A1628',
     shadowOpacity: 0.18,
@@ -126,13 +129,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: typography.heading,
     fontWeight: '700',
-    color: colors.forest,
+    color: p.text,
     marginBottom: spacing.xs,
   },
   subtitle: {
     fontSize: typography.caption + 1,
     lineHeight: 20,
-    color: colors.muted,
+    color: p.textMuted,
     marginBottom: spacing.sm,
   },
   footer: {

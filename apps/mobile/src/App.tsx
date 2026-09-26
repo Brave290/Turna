@@ -21,7 +21,9 @@ import { SettingsSubScreen } from './screens/SettingsSubScreen';
 import { TabBar } from './navigation/TabBar';
 import { UpdatePopup } from './components/UpdatePopup';
 import { Logo } from './components/Logo';
-import { colors, spacing, typography } from './theme';
+import { colors, spacing, typography, type Palette } from './theme';
+import { usePaletteStyles, ThemeProvider } from './context/ThemeContext';
+import { MotionProvider } from './context/MotionContext';
 
 type TabKey = 'home' | 'circles' | 'ledger' | 'solo' | 'profile';
 
@@ -46,6 +48,7 @@ type StackScreen =
   | { name: 'help' };
 
 function Gate() {
+  const { p, styles } = usePaletteStyles(makeStyles);
   const { status } = useAuth();
   const [tab, setTab] = useState<TabKey>('home');
   const [guest, setGuest] = useState(false);
@@ -162,7 +165,7 @@ function Gate() {
       return <OnboardingScreen />;
     }
     return renderCurrent();
-  }, [status, current, soloId]);
+  }, [status, current, soloId, styles]);
 
   const showTabs = status === 'signedIn';
 
@@ -187,15 +190,19 @@ function Gate() {
 export default function App() {
   return (
     <AuthProvider>
-      <Gate />
+      <ThemeProvider>
+        <MotionProvider>
+          <Gate />
+        </MotionProvider>
+      </ThemeProvider>
     </AuthProvider>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (p: Palette) => StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.forest,
+    backgroundColor: p.brand,
   },
   body: {
     flex: 1,
@@ -204,7 +211,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.forest,
+    backgroundColor: p.brand,
   },
   loadingText: {
     color: colors.white,

@@ -1,27 +1,29 @@
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { colors, spacing, typography } from '../theme';
+import { colors, spacing, typography, type Palette } from '../theme';
+import { usePaletteStyles } from '../context/ThemeContext';
 
 /**
  * Centered spinner over a soft blurred veil — used while a screen loads so
  * the content underneath reads as "blurred until ready".
  */
 export function LoadingOverlay({ label }: { label?: string }) {
+  const { p, styles } = usePaletteStyles(makeStyles);
   return (
     <View style={styles.wrap}>
       <View style={styles.veil} />
       <View style={styles.center}>
-        <ActivityIndicator size="large" color={colors.primary} />
+        <ActivityIndicator size="large" color={p.primary} />
         {label ? <Text style={styles.label}>{label}</Text> : null}
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (p: Palette) => StyleSheet.create({
   wrap: {
     flex: 1,
-    backgroundColor: colors.cream,
+    backgroundColor: p.bg,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -32,7 +34,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(244,247,251,0.72)',
+    backgroundColor: p.bg,
+    opacity: 0.72,
   },
   center: {
     alignItems: 'center',
@@ -40,7 +43,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: typography.caption,
-    color: colors.muted,
+    color: p.textMuted,
     fontWeight: '500',
   },
 });

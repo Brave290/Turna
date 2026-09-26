@@ -13,8 +13,9 @@ import { supabase } from '../lib/supabase';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { Screen } from '../components/Screen';
-import { colors, radius, spacing } from '../theme';
+import { colors, radius, spacing, type Palette } from '../theme';
 import { formatCurrency, formatDate } from '../lib/format';
+import { usePaletteStyles } from '../context/ThemeContext';
 
 type Circle = {
   id: string;
@@ -47,12 +48,13 @@ function Metric({
   value: string;
   sub: string;
 }) {
+  const { p, styles } = usePaletteStyles(makeStyles);
   return (
     <View style={styles.metric}>
       <View style={styles.metricHead}>
         <Text style={styles.metricLabel}>{label}</Text>
         <View style={styles.metricIcon}>
-          <Icon size={16} color={colors.primary} strokeWidth={2} />
+          <Icon size={16} color={p.primary} strokeWidth={2} />
         </View>
       </View>
       <Text style={styles.metricValue}>{value}</Text>
@@ -62,6 +64,7 @@ function Metric({
 }
 
 export function InsightsScreen({ onBack }: { onBack?: () => void } = {}) {
+  const { p, styles } = usePaletteStyles(makeStyles);
   const { user } = useAuth();
   const [circles, setCircles] = useState<Circle[]>([]);
   const [owned, setOwned] = useState<Circle[]>([]);
@@ -276,7 +279,7 @@ export function InsightsScreen({ onBack }: { onBack?: () => void } = {}) {
               setRefreshing(true);
               void load();
             }}
-            tintColor={colors.primary}
+            tintColor={p.primary}
           />
         }
       >
@@ -426,7 +429,7 @@ export function InsightsScreen({ onBack }: { onBack?: () => void } = {}) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (p: Palette) => StyleSheet.create({
   list: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
@@ -445,15 +448,15 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 30,
     fontWeight: '700',
-    color: colors.forest,
+    color: p.text,
     letterSpacing: -0.75,
   },
   sub: {
     fontSize: 16,
-    color: colors.muted,
+    color: p.textMuted,
   },
   loading: {
-    color: colors.muted,
+    color: p.textMuted,
     paddingHorizontal: spacing.lg,
     marginTop: spacing.lg,
   },
@@ -464,10 +467,10 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   metric: {
-    backgroundColor: colors.card,
+    backgroundColor: p.card,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: p.border,
     padding: 20,
   },
   metricHead: {
@@ -479,7 +482,7 @@ const styles = StyleSheet.create({
   },
   metricLabel: {
     fontSize: 14,
-    color: colors.muted,
+    color: p.textMuted,
   },
   metricIcon: {
     width: 36,
@@ -492,12 +495,12 @@ const styles = StyleSheet.create({
   metricValue: {
     fontSize: 24,
     fontWeight: '700',
-    color: colors.forest,
+    color: p.text,
     letterSpacing: -0.6,
   },
   metricSub: {
     fontSize: 12,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: 4,
   },
   card: {
@@ -506,12 +509,12 @@ const styles = StyleSheet.create({
   section: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.forest,
+    color: p.text,
     marginBottom: 16,
   },
   hint: {
     fontSize: 14,
-    color: colors.muted,
+    color: p.textMuted,
   },
   bars: {
     gap: 12,
@@ -524,7 +527,7 @@ const styles = StyleSheet.create({
   barLabel: {
     width: 112,
     fontSize: 14,
-    color: colors.forest,
+    color: p.text,
     textTransform: 'capitalize',
   },
   barTrack: {
@@ -537,18 +540,18 @@ const styles = StyleSheet.create({
   barFill: {
     height: '100%',
     borderRadius: 4,
-    backgroundColor: colors.primary,
+    backgroundColor: p.primarySolid,
   },
   barCount: {
     width: 24,
     textAlign: 'right',
     fontSize: 14,
     fontWeight: '500',
-    color: colors.forest,
+    color: p.text,
   },
   memberships: {
     fontSize: 12,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: 12,
   },
 
@@ -561,7 +564,7 @@ const styles = StyleSheet.create({
   },
   circleRowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: p.border,
   },
   circleInfo: {
     flex: 1,
@@ -570,17 +573,17 @@ const styles = StyleSheet.create({
   circleName: {
     fontSize: 16,
     fontWeight: '500',
-    color: colors.forest,
+    color: p.text,
   },
   circleMeta: {
     fontSize: 12,
-    color: colors.muted,
+    color: p.textMuted,
     textTransform: 'capitalize',
     marginTop: 2,
   },
   circleAmt: {
     fontSize: 14,
     fontWeight: '500',
-    color: colors.forest,
+    color: p.text,
   },
 });

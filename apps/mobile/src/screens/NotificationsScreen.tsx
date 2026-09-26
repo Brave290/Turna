@@ -16,7 +16,8 @@ import { formatRelativeTime } from '../lib/format';
 import { Button } from '../components/Button';
 import { Card, Badge, type BadgeTone } from '../components/Card';
 import { Screen } from '../components/Screen';
-import { colors, radius, spacing } from '../theme';
+import { colors, radius, spacing, type Palette } from '../theme';
+import { usePaletteStyles } from '../context/ThemeContext';
 
 type N = {
   id: string;
@@ -66,6 +67,7 @@ function MarkAllButton({
   onPress: () => void;
   busy: boolean;
 }) {
+  const { p, styles } = usePaletteStyles(makeStyles);
   return (
     <Pressable
       accessibilityRole="button"
@@ -79,9 +81,9 @@ function MarkAllButton({
       ]}
     >
       {busy ? (
-        <ActivityIndicator size="small" color={colors.forest} />
+        <ActivityIndicator size="small" color={p.text} />
       ) : (
-        <CheckCheck size={16} color={colors.forest} strokeWidth={2} />
+        <CheckCheck size={16} color={p.text} strokeWidth={2} />
       )}
       <Text style={styles.markBtnText}>
         {busy ? 'Marking…' : 'Mark all as read'}
@@ -91,6 +93,7 @@ function MarkAllButton({
 }
 
 export function NotificationsScreen({ onBack }: { onBack?: () => void } = {}) {
+  const { p, styles } = usePaletteStyles(makeStyles);
   const { user } = useAuth();
   const [rows, setRows] = useState<N[]>([]);
   const [loading, setLoading] = useState(true);
@@ -176,12 +179,12 @@ export function NotificationsScreen({ onBack }: { onBack?: () => void } = {}) {
                 setRefreshing(true);
                 void load();
               }}
-              tintColor={colors.primary}
+              tintColor={p.primary}
             />
           }
           ListEmptyComponent={
             <Card style={styles.emptyCard}>
-              <Bell size={32} color={colors.muted} strokeWidth={2} />
+              <Bell size={32} color={p.textMuted} strokeWidth={2} />
               <Text style={styles.empty}>No notifications yet.</Text>
             </Card>
           }
@@ -189,7 +192,7 @@ export function NotificationsScreen({ onBack }: { onBack?: () => void } = {}) {
             <Card style={styles.card}>
               <View style={styles.row}>
                 <View style={styles.iconBox}>
-                  <Bell size={20} color={colors.primary} strokeWidth={2} />
+                  <Bell size={20} color={p.primary} strokeWidth={2} />
                 </View>
                 <View style={styles.content}>
                   <View style={styles.titleRow}>
@@ -213,7 +216,7 @@ export function NotificationsScreen({ onBack }: { onBack?: () => void } = {}) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (p: Palette) => StyleSheet.create({
   header: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
@@ -228,13 +231,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 30,
     fontWeight: '700',
-    color: colors.forest,
+    color: p.text,
     letterSpacing: -0.75,
     marginTop: spacing.xs,
   },
   sub: {
     fontSize: 16,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: -spacing.xs,
   },
   markBtn: {
@@ -243,8 +246,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.white,
+    borderColor: p.border,
+    backgroundColor: p.surface,
     borderRadius: radius.md,
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -252,7 +255,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   markBtnPressed: {
-    backgroundColor: colors.cream,
+    backgroundColor: p.bg,
   },
   markBtnBusy: {
     opacity: 0.6,
@@ -260,10 +263,10 @@ const styles = StyleSheet.create({
   markBtnText: {
     fontSize: 14,
     fontWeight: '500',
-    color: colors.forest,
+    color: p.text,
   },
   loading: {
-    color: colors.muted,
+    color: p.textMuted,
     paddingHorizontal: spacing.lg,
     marginTop: spacing.lg,
   },
@@ -302,17 +305,17 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     fontWeight: '500',
-    color: colors.forest,
+    color: p.text,
   },
   nBody: {
     fontSize: 14,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: 4,
     lineHeight: 20,
   },
   nWhen: {
     fontSize: 12,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: 8,
   },
   emptyCard: {
@@ -321,7 +324,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   empty: {
-    color: colors.muted,
+    color: p.textMuted,
     textAlign: 'center',
     fontSize: 15,
     marginTop: 12,

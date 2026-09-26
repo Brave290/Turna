@@ -1,7 +1,8 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Home, Users, FileText, NotebookPen, User } from 'lucide-react-native';
-import { colors, spacing } from '../theme';
+import { colors, spacing, type Palette } from '../theme';
+import { usePaletteStyles } from '../context/ThemeContext';
 
 type TabKey = 'home' | 'circles' | 'ledger' | 'solo' | 'profile';
 
@@ -23,6 +24,7 @@ export function TabBar({
   active: TabKey;
   onChange: (k: TabKey) => void;
 }) {
+  const { p, styles } = usePaletteStyles(makeStyles);
   return (
     <View style={styles.bar} accessibilityRole="tablist">
       {TABS.map((t) => {
@@ -40,7 +42,7 @@ export function TabBar({
             <Icon
               size={20}
               strokeWidth={on ? 2.25 : 1.75}
-              color={on ? colors.primary : colors.muted}
+              color={on ? p.primary : p.textMuted}
             />
             <Text style={[styles.label, on && styles.labelOn]}>{t.label}</Text>
           </Pressable>
@@ -50,12 +52,12 @@ export function TabBar({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (p: Palette) => StyleSheet.create({
   bar: {
     flexDirection: 'row',
-    backgroundColor: colors.white,
+    backgroundColor: p.surface,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: p.border,
     paddingBottom: spacing.sm,
   },
   tab: {
@@ -73,15 +75,15 @@ const styles = StyleSheet.create({
     left: '50%',
     marginLeft: -16,
     borderRadius: 2,
-    backgroundColor: colors.primary,
+    backgroundColor: p.primarySolid,
   },
   label: {
     fontSize: 11,
-    color: colors.muted,
+    color: p.textMuted,
     fontWeight: '500',
   },
   labelOn: {
-    color: colors.primary,
+    color: p.primary,
     fontWeight: '600',
   },
 });

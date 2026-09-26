@@ -32,8 +32,9 @@ import { supabase } from '../lib/supabase';
 import { Button } from '../components/Button';
 import { useConfirm } from '../components/Popup';
 import { Screen } from '../components/Screen';
-import { colors, spacing } from '../theme';
+import { colors, spacing, type Palette } from '../theme';
 import { LOCAL_VERSION_NAME } from '../generated/version';
+import { usePaletteStyles } from '../context/ThemeContext';
 
 type Tile = {
   route: string;
@@ -165,6 +166,7 @@ function getInitials(name: string): string {
 }
 
 function TileCard({ item, onPress }: { item: Tile; onPress: () => void }) {
+  const { p, styles } = usePaletteStyles(makeStyles);
   const Icon = item.icon;
   return (
     <Pressable
@@ -179,7 +181,7 @@ function TileCard({ item, onPress }: { item: Tile; onPress: () => void }) {
       <View style={[styles.tileIcon, item.accent && styles.tileIconAccent]}>
         <Icon
           size={20}
-          color={item.accent ? colors.white : colors.primary}
+          color={item.accent ? colors.white : p.primary}
           strokeWidth={2}
         />
       </View>
@@ -204,11 +206,12 @@ function SectionBlock({
   tiles: Tile[];
   onNavigate?: (route: string) => void;
 }) {
+  const { p, styles } = usePaletteStyles(makeStyles);
   return (
     <View style={styles.section}>
       <View style={styles.sectionHead}>
         <Text style={styles.sectionTitle}>{title}</Text>
-        <ChevronRight size={16} color="rgba(74,93,115,0.5)" />
+        <ChevronRight size={16} color={p.textMuted} style={{ opacity: 0.5 }} />
       </View>
       <View style={styles.grid}>
         {tiles.map((t) => (
@@ -230,6 +233,7 @@ export function SettingsScreen({
   onNavigate?: (route: string) => void;
   onBack?: () => void;
 } = {}) {
+  const { p, styles } = usePaletteStyles(makeStyles);
   const { signOut, email, user } = useAuth();
   const [profile, setProfile] = useState<{
     display_name?: string | null;
@@ -297,7 +301,7 @@ export function SettingsScreen({
               setRefreshing(true);
               void load();
             }}
-            tintColor={colors.primary}
+            tintColor={p.primary}
           />
         }
       >
@@ -345,7 +349,7 @@ export function SettingsScreen({
           </View>
           <View style={styles.editLink}>
             <Text style={styles.editText}>Edit</Text>
-            <ChevronRight size={16} color={colors.primary} />
+            <ChevronRight size={16} color={p.primary} />
           </View>
         </Pressable>
 
@@ -366,7 +370,7 @@ export function SettingsScreen({
             style={({ pressed }) => [styles.dangerRow, pressed && styles.tilePressed]}
           >
             <View style={styles.dangerIcon}>
-              <LogOut size={18} color={colors.primary} strokeWidth={2} />
+              <LogOut size={18} color={p.primary} strokeWidth={2} />
             </View>
             <View style={styles.dangerText}>
               <Text style={styles.dangerLabel}>
@@ -381,12 +385,12 @@ export function SettingsScreen({
             style={({ pressed }) => [styles.deleteRow, pressed && styles.deletePressed]}
           >
             <View style={styles.deleteIcon}>
-              <Lock size={18} color={colors.error} strokeWidth={2} />
+              <Lock size={18} color={p.error} strokeWidth={2} />
             </View>
             <Text style={styles.deleteLabel}>Delete account</Text>
             <ChevronRight
               size={16}
-              color={colors.error}
+              color={p.error}
               style={styles.deleteChevron}
             />
           </Pressable>
@@ -401,7 +405,7 @@ export function SettingsScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (p: Palette) => StyleSheet.create({
   list: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
@@ -418,12 +422,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 30,
     fontWeight: '700',
-    color: colors.forest,
+    color: p.text,
     letterSpacing: -0.75,
   },
   titleSub: {
     fontSize: 16,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: 4,
   },
   profileCard: {
@@ -432,8 +436,8 @@ const styles = StyleSheet.create({
     gap: 16,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.white,
+    borderColor: p.border,
+    backgroundColor: p.surface,
     padding: 16,
   },
   tilePressed: {
@@ -444,18 +448,18 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: p.border,
   },
   avatarFallback: {
     width: 56,
     height: 56,
     borderRadius: 16,
-    backgroundColor: colors.forest,
+    backgroundColor: p.brand,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarInitials: {
-    color: colors.primaryLight,
+    color: p.primary,
     fontSize: 18,
     fontWeight: '700',
   },
@@ -466,11 +470,11 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: 18,
     fontWeight: '700',
-    color: colors.forest,
+    color: p.text,
   },
   profileEmail: {
     fontSize: 14,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: 2,
   },
   editLink: {
@@ -482,7 +486,7 @@ const styles = StyleSheet.create({
   editText: {
     fontSize: 14,
     fontWeight: '500',
-    color: colors.primary,
+    color: p.primary,
   },
   section: {
     marginBottom: -8,
@@ -498,7 +502,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.55,
-    color: colors.muted,
+    color: p.textMuted,
   },
   grid: {
     flexDirection: 'row',
@@ -512,8 +516,8 @@ const styles = StyleSheet.create({
     minHeight: 112,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.white,
+    borderColor: p.border,
+    backgroundColor: p.surface,
     padding: 16,
     justifyContent: 'space-between',
   },
@@ -530,7 +534,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   tileIconAccent: {
-    backgroundColor: colors.primary,
+    backgroundColor: p.primarySolid,
   },
   tileText: {
     marginTop: 12,
@@ -538,12 +542,12 @@ const styles = StyleSheet.create({
   tileLabel: {
     fontSize: 15,
     fontWeight: '600',
-    color: colors.forest,
+    color: p.text,
     lineHeight: 18,
   },
   tileDesc: {
     fontSize: 12,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: 2,
     lineHeight: 16,
   },
@@ -580,11 +584,11 @@ const styles = StyleSheet.create({
   dangerLabel: {
     fontSize: 14,
     fontWeight: '500',
-    color: colors.forest,
+    color: p.text,
   },
   dangerDesc: {
     fontSize: 12,
-    color: colors.muted,
+    color: p.textMuted,
     marginTop: 2,
   },
   deleteRow: {
@@ -612,14 +616,14 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontWeight: '500',
-    color: colors.error,
+    color: p.error,
   },
   deleteChevron: {
     marginLeft: 'auto',
   },
   footer: {
     fontSize: 12,
-    color: colors.muted,
+    color: p.textMuted,
     textAlign: 'center',
   },
 });
