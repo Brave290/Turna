@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { authorizeCron } from '@/lib/cron-auth';
+import { isAdminEmail } from '@/lib/admin';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,15 +12,6 @@ const JOBS = {
 } as const;
 
 export type CronJobName = keyof typeof JOBS;
-
-function isAdminEmail(email: string | null | undefined): boolean {
-  if (!email) return false;
-  const list = (process.env.ADMIN_EMAILS ?? '')
-    .split(',')
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean);
-  return list.includes(email.toLowerCase());
-}
 
 /**
  * POST /api/admin/run-cron

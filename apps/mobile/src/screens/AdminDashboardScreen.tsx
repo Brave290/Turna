@@ -90,7 +90,13 @@ export function AdminDashboardScreen({ onBack }: { onBack?: () => void }) {
     setError(null);
     const res = await mobileAdmin.overview();
     if (res.ok && res.data) setData(res.data);
-    else if (!res.offline) setError(res.error ?? 'Could not load the dashboard.');
+    else if (!res.offline) {
+      setError(
+        res.error === 'Forbidden'
+          ? 'This account is not on the admin allowlist yet.'
+          : (res.error ?? 'Could not load the dashboard.')
+      );
+    }
     setLoading(false);
     setRefreshing(false);
   }, []);

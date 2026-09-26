@@ -2,20 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClientFromRequest } from '@/lib/supabase-request';
 import { createAdminSupabaseClient } from '@/lib/supabase-admin';
 import { emailTemplates, sendEmail } from '@/lib/email';
+import { isAdminEmail } from '@/lib/admin';
 
 export const dynamic = 'force-dynamic';
 
 const ACTIONS = ['overview', 'kyc', 'contribution', 'broadcast', 'deleteUser'] as const;
 type Action = (typeof ACTIONS)[number];
-
-function isAdminEmail(email: string | null | undefined): boolean {
-  if (!email) return false;
-  const list = (process.env.ADMIN_EMAILS ?? '')
-    .split(',')
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean);
-  return list.includes(email.toLowerCase());
-}
 
 function flatten<T>(v: T | T[] | null | undefined): T | null {
   if (!v) return null;

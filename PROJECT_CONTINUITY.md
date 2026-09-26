@@ -656,3 +656,28 @@ Each session should append:
 1. Watch CI `c12b11f` → green; verify live: `/api/app/version`, receipt page print view, no gateway links.
 2. Screen tidy/button-reduction + deep-link audit pass (user asked; partially open).
 3. When user confirms done: flip repo back to private (step above) + note Actions minutes revert to free-2000/mo.
+
+### Session 2026-09-26 (v1.0.13–v1.0.18: dashboard removed, in-app admin, voice fix, iOS CI)
+
+**Goal**: Mobile = the whole product; delete web dashboard; debts + in-app admin; offline UX polish; voice typing works; background art; mirror full version history; iOS builds in CI; fix Vercel MCP error.
+
+**Completed**:
+- **Releases v1.0.13 → v1.0.18** (all auto on push; Pre-release while `RELEASE_PRERELEASE=true` repo var; ≤v1.0.15 left full). Release `672343b` = v1.0.18. iOS Build job first went red (xcodebuild pod issue) → green after iOS target bump.
+- **Web dashboard fully deleted** (v1.0.15, −13,051 lines): all `dashboard/**` routes + dashboard components except `status-badge`/`share-receipt-button`; every `/dashboard` link/redirect/revalidatePaths → `/`; email CTA "Go to Dashboard"→"Open Turna"; sw.js precache + next.config headers cleaned; web typecheck+lint green. Landing remains the only web surface.
+- **Debts section** (v1.0.14): `DebtsScreen` + `lib/debt-store.ts` (per-user AsyncStorage), Owed-to-me / I-owe + Net, MicButton + Stagger; entry via Home quick action, Profile row, and 6th bottom-nav tab (HandCoins; 5→6 tabs).
+- **In-app admin** for `support.turna@gmail.com`: `AdminDashboardScreen` (overview/KYC/contribution/broadcast/delete-user) + `api/mobile/admin/route.ts` (caller email ∈ `ADMIN_EMAILS`, service-role client); auto-offer popup on sign-in.
+- **Offline UX**: `OfflineScreen` (animated, Try again / Continue with saved data) on Home/Notifications/Circles/Ledger load-errors; `SyncedLine` last-synced; `lib/useFastRefresh.ts` (AppState + 30s + `notifyScreenFocus()`) on main screens.
+- **Voice typing fixed**: AndroidManifest `RECORD_AUDIO` + `<queries>` speech service; `lib/voice.ts` rewritten (final-results only, error toasts, 60s auto-stop); MicButton captures baseRef at press.
+- **Visual/branding**: `assets/bg-screen.jpg` full-screen cover in `Screen.tsx` (opacity 0.12/0.22, inline — makeStyles gets only palette); single `SplashAnimated` (cream bg = native splash, icon spring + name stagger, reduce-motion static), Logo splash route removed; About rows (Owner/Package/Installed/Last updated) + "Made with love by Akanji Musab, CEO/Founder" (app + landing); `lib/appmeta.ts` install/update timestamps.
+- **Landing** `force-dynamic` + `/api/app/version` serving 1.0.18; **download modal rewritten** (real streamed byte progress → MB counter/progress bar → browser-download fallback + shimmer → 30-piece confetti + "Turna is ready!" + 3 install steps); new `/api/download/info` (5-min cache).
+- **Mirror** `Brave290/Turna-Downloads`: legacy v1.0.12–v1.0.15 backfilled as version tags, rolling `latest` is the GitHub "Latest" marker (immutable version tags `--latest=false`), release.yml now archives `v${VERSION}` tag on mirror every release.
+- **iOS**: `ios/` committed (workspace + shared scheme), deployment target 13.4→14.0 (netinfo min), CI **iOS Build job green** (macOS, pod install, unsigned simulator build). Real-device installs still need Apple Developer account ($99/yr).
+- **Vercel MCP fixed**: `McpServerNotFoundError: Vercel` because no `mcp` block existed; added `~/.config/opencode/opencode.jsonc` → `"mcp": {"Vercel": {"type":"remote","url":"https://mcp.vercel.com"}}` (official endpoint, remote+OAuth auto-detect); `opencode mcp list` shows "Vercel needs authentication" → `opencode mcp auth Vercel` OAuth URL issued (callback 127.0.0.1:19876). Config is not hot-reloaded — restart opencode after auth.
+
+**Blocked**: private-repo flip (GitHub billing payment failed — user must fix Billing & plans); iOS distribution (needs Apple Developer account).
+
+**Next Session**:
+1. Confirm Vercel MCP OAuth completed (`opencode mcp list` → authenticated); restart opencode; tools = `mcp__Vercel__*`.
+2. When user ready to publish: `gh variable set RELEASE_PRERELEASE --body false`.
+3. When billing fixed: `gh repo edit Brave290/Turna --visibility private`.
+4. Local-only change right now: this file — do not push alone (a push cuts a new release); commit with the next feature push.

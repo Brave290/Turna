@@ -78,15 +78,13 @@ function Gate() {
       return;
     }
     void drainQueue();
+    void ensureNotificationPermission();
     if (isStaff && !offerShown.current) {
       offerShown.current = true;
       const id = setTimeout(() => setOfferAdmin(true), 900);
       return () => clearTimeout(id);
     }
     return undefined;
-    // Ask once, right after sign-in (Android 13+ POST_NOTIFICATIONS; no-op on
-    // iOS and older Android). The helper one-shots itself via AsyncStorage.
-    void ensureNotificationPermission();
   }, [status, isStaff]);
 
   // Android back: step backwards through the stack; only exit at the root.
