@@ -5,6 +5,9 @@ import { Reveal, AnimatedCounter, Tilt } from "@/components/animated";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { AppDownloadModal } from "@/components/app-download-modal";
 
+// Always serve the freshest landing — never cache/ISR stale content.
+export const dynamic = "force-dynamic";
+
 /* ─── Icons (SVG only, no emojis) ─── */
 const IconShield = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-6 h-6" aria-hidden>

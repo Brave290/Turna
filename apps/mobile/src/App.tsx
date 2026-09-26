@@ -27,12 +27,12 @@ import { TabBar } from './navigation/TabBar';
 import { Popup } from './components/Popup';
 import { Button } from './components/Button';
 import { UpdatePopup } from './components/UpdatePopup';
-import { Logo } from './components/Logo';
-import { colors, spacing, typography, type Palette } from './theme';
+import { SplashAnimated } from './components/SplashAnimated';
+import { spacing, typography, type Palette } from './theme';
 import { usePaletteStyles, useTheme, ThemeProvider } from './context/ThemeContext';
 import { MotionProvider } from './context/MotionContext';
 
-type TabKey = 'home' | 'circles' | 'ledger' | 'solo' | 'profile';
+type TabKey = 'home' | 'circles' | 'ledger' | 'debts' | 'solo' | 'profile';
 
 type StackScreen =
   | { name: 'home' }
@@ -126,6 +126,7 @@ function Gate() {
   const replace = (screen: StackScreen) => setStack((s) => [...s.slice(0, -1), screen]);
 
   const renderCurrent = () => {
+    if (!current) return <HomeScreen onNavigate={goTab} onPush={push} />;
     switch (current.name) {
       case 'home':
         return <HomeScreen onNavigate={goTab} onPush={push} />;
@@ -175,20 +176,16 @@ function Gate() {
       case 'help':
         return <HelpScreen onBack={pop} />;
       case 'debts':
-        return <DebtsScreen onBack={pop} />;
+        // Tab root (stack length 1) → back goes Home; pushed on top → pop back.
+        return <DebtsScreen onBack={stack.length > 1 ? pop : () => goTab('home')} />;
       case 'admin':
-        return <AdminDashboardScreen onBack={pop} />;
+        return <AdminDashboardScreen onBack={stack.length > 1 ? pop : () => goTab('home')} />;
     }
   };
 
   const body = useMemo(() => {
     if (status === 'loading') {
-      return (
-        <View style={styles.loading}>
-          <Logo variant="on-dark" size={72} />
-          <Text style={styles.loadingText}>Turna</Text>
-        </View>
-      );
+      return <SplashAnimated />;
     }
     if (status === 'needsVerify' || status === 'signedOut') {
       if (guest) {
@@ -284,12 +281,6 @@ const makeStyles = (p: Palette) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: p.brand,
-  },
-  loadingText: {
-    color: colors.white,
-    fontSize: typography.title,
-    fontWeight: '700',
-    marginTop: spacing.md,
   },
   offerActions: {
     flexDirection: 'row',

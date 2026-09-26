@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import { Pressable, StyleProp, StyleSheet, ViewStyle } from 'react-native';
 import { Mic, Square } from 'lucide-react-native';
 import { type Palette } from '../theme';
@@ -26,16 +26,17 @@ export function MicButton({
   const { p, styles } = usePaletteStyles(makeStyles);
   const { reduceMotion } = useMotion();
   const { show: toast, node: toastNode } = useToast();
-  const hadText = useRef(value.length > 0);
-
-  useEffect(() => {
-    hadText.current = value.length > 0;
-  }, [value.length]);
+  // Value as it stood when dictation began — the final result is appended
+  // exactly once onto this base (partials are never committed).
+  const baseRef = useRef(value);
 
   const { listening, supported, toggle } = useVoiceTyping({
-    onTranscript: (text) => {
-      const base = value.trim();
+    onResult: (text) => {
+      const base = baseRef.current.trim();
       onChangeText(base ? `${base} ${text}` : text);
+    },
+    onError: (message) => {
+      toast(message, 'error');
     },
     onUnavailable: (reason) => {
       toast(reason, 'error');
@@ -52,7 +53,10 @@ export function MicButton({
         accessibilityState={{ disabled, busy: listening }}
         disabled={disabled}
         hitSlop={8}
-        onPress={() => void toggle()}
+        onPress={() => {
+          if (!listening) baseRef.current = value;
+          void toggle();
+        }}
         style={({ pressed }) => [
           styles.btn,
           { backgroundColor: listening ? p.primarySolid : p.bg },

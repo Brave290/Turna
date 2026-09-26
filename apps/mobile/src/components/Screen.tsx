@@ -15,8 +15,7 @@ import { useMotion } from '../context/MotionContext';
 import { usePaletteStyles, useTheme } from '../context/ThemeContext';
 import { OfflineBanner } from './OfflineBanner';
 
-const LOGO = require('../../assets/logo.png');
-const LOGO_ON_DARK = require('../../assets/logo-on-dark.png');
+const BG_IMAGE = require('../../assets/bg-screen.jpg');
 
 const AView = Animated.View as unknown as React.ComponentType<{
   style?: StyleProp<ViewStyle>;
@@ -54,12 +53,11 @@ export function Screen({
 
   return (
     <SafeAreaView style={[styles.root, forest ? styles.forest : styles.cream, style]}>
-      <View style={styles.watermarkLayer} pointerEvents="none">
-        <Image
-          source={resolved === 'dark' ? LOGO_ON_DARK : LOGO}
-          style={styles.watermark}
-          resizeMode="contain"
-        />
+      <View
+        style={[styles.bgLayer, { opacity: resolved === 'dark' ? 0.22 : 0.12 }]}
+        pointerEvents="none"
+      >
+        <Image source={BG_IMAGE} style={styles.bgImage} resizeMode="cover" />
       </View>
       <StatusBar
         barStyle={forest || resolved === 'dark' ? 'light-content' : 'dark-content'}
@@ -91,17 +89,14 @@ const makeStyles = (p: Palette) => StyleSheet.create({
   cream: {
     backgroundColor: p.bg,
   },
-  watermarkLayer: {
+  bgLayer: {
     position: 'absolute',
-    top: '22%',
-    alignSelf: 'center',
-    width: '78%',
-    height: '46%',
-    opacity: 0.05,
-    alignItems: 'center',
-    justifyContent: 'center',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
-  watermark: {
+  bgImage: {
     width: '100%',
     height: '100%',
   },

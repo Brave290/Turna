@@ -1,18 +1,19 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Home, Users, FileText, NotebookPen, User } from 'lucide-react-native';
+import { Home, Users, FileText, HandCoins, NotebookPen, User } from 'lucide-react-native';
 import { colors, spacing, type Palette } from '../theme';
 import { usePaletteStyles } from '../context/ThemeContext';
 
-type TabKey = 'home' | 'circles' | 'ledger' | 'solo' | 'profile';
+type TabKey = 'home' | 'circles' | 'ledger' | 'debts' | 'solo' | 'profile';
 
 type TabIcon = React.ComponentType<any>;
 
-/** Same order/icons as web bottomNav in dashboard/nav.tsx: Home, Circles, Ledger, Solo, Profile */
+/** Bottom nav: Home, Circles, Ledger, Debts, Solo, Profile */
 const TABS: { key: TabKey; label: string; icon: TabIcon }[] = [
   { key: 'home', label: 'Home', icon: Home },
   { key: 'circles', label: 'Circles', icon: Users },
   { key: 'ledger', label: 'Ledger', icon: FileText },
+  { key: 'debts', label: 'Debts', icon: HandCoins },
   { key: 'solo', label: 'Solo', icon: NotebookPen },
   { key: 'profile', label: 'Profile', icon: User },
 ];

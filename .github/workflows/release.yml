@@ -200,19 +200,27 @@ jobs:
           RELEASE_NAME: ${{ steps.version.outputs.release_name }}
           CODE: ${{ steps.version.outputs.code }}
           CHANGELOG: ${{ steps.changelog.outputs.changelog }}
+          # Flip repo variable RELEASE_PRERELEASE to 'true' while a build is
+          # NOT ready for full publish → GitHub marks it Pre-release.
+          PRERELEASE: ${{ vars.RELEASE_PRERELEASE || 'false' }}
         run: |
           set -euo pipefail
           BUILT_BY="Akanji Mus'ab • Brave hx Technology • Founda Technologies"
           NOTES=$(printf '## Turna %s\n\n### Changes\n%s\n\n### Downloads\n- **Android APK (direct install)**: `turna.apk`\n- **Android App Bundle (Play Store)**: `turna.aab`\n- **Full release bundle (APK + AAB + source + checksums)**: `turna-bundle.zip`\n- **Source Code**: `turna-source.tar.gz`\n\nBuild %s · versionCode %s\n\n### Verification\nAll artifacts include SHA256 checksums (`.sha256` files).\n\n### Built by\n%s' \
             "$VERSION" "$CHANGELOG" "${GITHUB_SHA::7}" "$CODE" "$BUILT_BY")
 
+          if [ "$PRERELEASE" = "true" ]; then
+            PRE_ARGS=(--prerelease=true --latest=false)
+          else
+            PRE_ARGS=(--prerelease=false --latest)
+          fi
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || {
             gh release create "$TAG" \
               --repo "$GITHUB_REPOSITORY" \
               --target "$GITHUB_SHA" \
-              --latest \
               --title "$RELEASE_NAME" \
-              --notes "$NOTES"
+              --notes "$NOTES" \
+              "${PRE_ARGS[@]}"
           }
           gh release upload "$TAG" \
             --repo "$GITHUB_REPOSITORY" \
@@ -228,8 +236,7 @@ jobs:
             --clobber
           gh release edit "$TAG" \
             --repo "$GITHUB_REPOSITORY" \
-            --latest \
-            --prerelease=false \
+            "${PRE_ARGS[@]}" \
             --title "$RELEASE_NAME" \
             --notes "$NOTES"
           echo "Published ${TAG} → ${GITHUB_REPOSITORY} (v${VERSION})"
@@ -258,8 +265,14 @@ jobs:
           DOWNLOADS_REPO: ${{ vars.DOWNLOADS_REPO || 'Brave290/Turna-Downloads' }}
           VERSION: ${{ steps.version.outputs.version }}
           VERSION_CODE: ${{ steps.version.outputs.code }}
+          PRERELEASE: ${{ vars.RELEASE_PRERELEASE || 'false' }}
         run: |
           set -euo pipefail
+          if [ "$PRERELEASE" = "true" ]; then
+            PRE_ARGS=(--prerelease=true --latest=false)
+          else
+            PRE_ARGS=(--prerelease=false --latest)
+          fi
           cd release-artifacts
           APK_SHA=$(sha256sum turna.apk | awk '{print $1}')
           AAB_SHA=$(sha256sum turna.aab | awk '{print $1}')
@@ -290,6 +303,17 @@ jobs:
             "release-artifacts/turna.aab" \
             "release-artifacts/version.json" \
             --repo "$DOWNLOADS_REPO" --clobber
+          # Immutable legacy copy — keeps the mirror's full former-release list.
+          if ! gh release view "v${VERSION}" --repo "$DOWNLOADS_REPO" >/dev/null 2>&1; then
+            gh release create "v${VERSION}" \
+              --repo "$DOWNLOADS_REPO" \
+              --title "v${VERSION}" \
+              --notes "$NOTES" \
+              --prerelease="$PRERELEASE" \
+              "release-artifacts/turna.apk" \
+              "release-artifacts/turna.aab" \
+              "release-artifacts/version.json"
+          fi
           gh release edit "$RTAG" \
             --repo "$DOWNLOADS_REPO" \
             --latest \
