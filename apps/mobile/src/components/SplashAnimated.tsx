@@ -77,7 +77,7 @@ export function SplashAnimated() {
           },
         ]}
       >
-        Animated Turna
+        Turna
       </Animated.Text>
     </View>
   );

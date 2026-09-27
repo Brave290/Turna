@@ -34,6 +34,7 @@ import { codeInputProps, noteInputProps } from '../lib/input-props';
 import { formatDate } from '../lib/format';
 import { colors, radius, spacing, typography, type Palette } from '../theme';
 import { usePaletteStyles } from '../context/ThemeContext';
+import { LogOut } from 'lucide-react-native';
 
 function initials(name: string) {
   return (
@@ -53,7 +54,7 @@ const EMPTY: AdminOverview = {
 
 export function AdminDashboardScreen({ onBack }: { onBack?: () => void }) {
   const { p, styles } = usePaletteStyles(makeStyles);
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { confirm, node: confirmNode } = useConfirm();
   const { show: toast, node: toastNode } = useToast();
 
@@ -189,6 +190,14 @@ export function AdminDashboardScreen({ onBack }: { onBack?: () => void }) {
               style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
             >
               <RefreshCw size={16} color={p.primary} strokeWidth={2} />
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Sign out"
+              onPress={() => void signOut()}
+              style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
+            >
+              <LogOut size={16} color={p.textMuted} strokeWidth={2} />
             </Pressable>
           </View>
         </View>

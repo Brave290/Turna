@@ -184,6 +184,7 @@ export async function POST(req: NextRequest) {
     return bad('Unknown action');
   } catch (e) {
     console.error('[mobile admin]', e);
-    return bad('Request failed. Try again.', 400);
+    const msg = e instanceof Error ? e.message : 'Request failed. Try again.';
+    return bad(msg, 500);
   }
 }
