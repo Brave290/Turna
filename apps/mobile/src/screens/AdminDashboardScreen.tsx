@@ -29,6 +29,7 @@ import {
   mobileAdmin,
   type AdminOverview,
   type AdminUserRow,
+  type CronExecution,
 } from '../lib/api';
 import { codeInputProps, noteInputProps } from '../lib/input-props';
 import { formatDate } from '../lib/format';
@@ -68,6 +69,9 @@ export function AdminDashboardScreen({ onBack }: { onBack?: () => void }) {
   const [broadcastTitle, setBroadcastTitle] = useState('');
   const [broadcastBody, setBroadcastBody] = useState('');
   const [sending, setSending] = useState(false);
+  const [cronHistory, setCronHistory] = useState<CronExecution[]>([]);
+  const [cronLoading, setCronLoading] = useState(false);
+  const [cronRunning, setCronRunning] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -141,6 +145,25 @@ export function AdminDashboardScreen({ onBack }: { onBack?: () => void }) {
     toast(`Sent to ${count} users (email + in-app)`);
     setBroadcastTitle('');
     setBroadcastBody('');
+  }
+
+  async function loadCronHistory() {
+    setCronLoading(true);
+    const res = await mobileAdmin.cronHistory();
+    setCronLoading(false);
+    if (res.ok && res.data) setCronHistory(res.data.history ?? []);
+  }
+
+  async function runCronJob(jobName: string) {
+    setCronRunning(jobName);
+    const res = await mobileAdmin.runCron(jobName);
+    setCronRunning(null);
+    if (!res.ok) {
+      toast(res.error ?? `Could not run ${jobName}`, 'error');
+      return;
+    }
+    toast(`${jobName} completed`);
+    await loadCronHistory();
   }
 
   const c = data.counts;
@@ -335,6 +358,66 @@ export function AdminDashboardScreen({ onBack }: { onBack?: () => void }) {
               <Text style={styles.broadcastNote}>
                 Delivered by email and as an in-app notification.
               </Text>
+            </Card>
+
+            <Text style={styles.section}>Cron jobs</Text>
+            <Card style={styles.panel}>
+              <View style={styles.cronRow}>
+                <Text style={styles.cronLabel}>Reminders</Text>
+                <Button
+                  label="Run"
+                  onPress={() => void runCronJob('reminders')}
+                  loading={cronRunning === 'reminders'}
+                  disabled={cronRunning !== null}
+                  style={styles.cronBtn}
+                />
+              </View>
+              <View style={styles.cronRow}>
+                <Text style={styles.cronLabel}>Digest</Text>
+                <Button
+                  label="Run"
+                  onPress={() => void runCronJob('digest')}
+                  loading={cronRunning === 'digest'}
+                  disabled={cronRunning !== null}
+                  style={styles.cronBtn}
+                />
+              </View>
+              <View style={styles.cronRow}>
+                <Text style={styles.cronLabel}>DB ping</Text>
+                <Button
+                  label="Run"
+                  onPress={() => void runCronJob('db-ping')}
+                  loading={cronRunning === 'db-ping'}
+                  disabled={cronRunning !== null}
+                  style={styles.cronBtn}
+                />
+              </View>
+              <Button
+                label="Refresh history"
+                variant="ghost"
+                onPress={() => void loadCronHistory()}
+                loading={cronLoading}
+                style={{ marginTop: spacing.sm }}
+              />
+              {cronHistory.length === 0 ? (
+                <Text style={styles.emptyLine}>No cron runs yet.</Text>
+              ) : (
+                cronHistory.slice(0, 10).map((job, i) => (
+                  <View key={job.id} style={[styles.cronHistoryRow, i > 0 && styles.rowBorder]}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.rowTitle}>{job.job_name}</Text>
+                      <Text style={styles.rowMeta}>
+                        {formatDate(job.started_at)} · {job.status}
+                      </Text>
+                      {job.error ? <Text style={styles.reason}>{job.error}</Text> : null}
+                    </View>
+                    <Badge
+                      label={job.status}
+                      tone={job.status === 'success' ? 'active' : job.status === 'failed' ? 'error' : 'pending'}
+                    />
+                  </View>
+                ))
+              )}
             </Card>
           </>
         )}
@@ -557,5 +640,28 @@ const makeStyles = (p: Palette) =>
     errorText: {
       color: p.error,
       fontSize: typography.caption,
+    },
+    cronRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+    },
+    cronLabel: {
+      fontSize: typography.body,
+      fontWeight: '600',
+      color: p.text,
+    },
+    cronBtn: {
+      minHeight: 36,
+      paddingHorizontal: 16,
+    },
+    cronHistoryRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
     },
   });

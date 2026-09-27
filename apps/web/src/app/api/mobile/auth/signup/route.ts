@@ -25,7 +25,7 @@ async function issueOtp(
     html: tmpl.html,
     text: tmpl.text,
   });
-  if (!sent.success) return { ok: false, error: 'Could not send verification email' };
+  if (!sent.success) return { ok: false, error: sent.error ?? 'Could not send verification email' };
   void displayName;
   return { ok: true };
 }

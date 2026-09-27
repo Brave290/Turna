@@ -116,6 +116,17 @@ export const mobileAdmin = {
       user_id: userId,
     });
   },
+  cronHistory() {
+    return postAuth<{ history: CronExecution[] }>('/api/mobile/admin', {
+      action: 'cron_history',
+    });
+  },
+  runCron(jobName: string) {
+    return postAuth<{ ok: boolean; result?: Record<string, unknown> }>(
+      '/api/mobile/admin',
+      { action: 'run_cron', job_name: jobName }
+    );
+  },
 };
 
 export type AdminUserRow = {
@@ -133,4 +144,14 @@ export type AdminOverview = {
     memberships: number;
   };
   recentUsers: AdminUserRow[];
+};
+
+export type CronExecution = {
+  id: string;
+  job_name: string;
+  started_at: string;
+  finished_at: string | null;
+  status: 'running' | 'success' | 'failed';
+  result: Record<string, unknown> | null;
+  error: string | null;
 };

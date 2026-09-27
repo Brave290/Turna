@@ -159,6 +159,63 @@ async function deleteUser(admin: AdminClient, body: Record<string, unknown>, act
   return NextResponse.json({ ok: true });
 }
 
+async function cronHistory(admin: AdminClient) {
+  const { data, error } = await admin
+    .from('cron_executions')
+    .select('id, job_name, started_at, finished_at, status, result, error')
+    .order('started_at', { ascending: false })
+    .limit(50);
+  if (error) return bad('Could not load cron history');
+  return NextResponse.json({ history: data ?? [] });
+}
+
+async function runCron(admin: AdminClient, body: Record<string, unknown>) {
+  const jobName = String(body.job_name ?? '');
+  const validJobs = ['reminders', 'digest', 'db-ping'];
+  if (!validJobs.includes(jobName)) return bad('Invalid job name');
+
+  const started = new Date().toISOString();
+  const { data: execRow, error: insertErr } = await admin
+    .from('cron_executions')
+    .insert({ job_name: jobName, status: 'running', started_at: started })
+    .select('id')
+    .maybeSingle();
+  if (insertErr || !execRow) return bad('Could not start cron job');
+
+  try {
+    const secret = process.env.CRON_SECRET ?? '';
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://turnaapp.vercel.app';
+    const res = await fetch(`${baseUrl}/api/cron/${jobName}`, {
+      headers: { Authorization: `Bearer ${secret}` },
+    });
+    const result = await res.json().catch(() => ({}));
+    const ok = res.ok;
+
+    await admin
+      .from('cron_executions')
+      .update({
+        finished_at: new Date().toISOString(),
+        status: ok ? 'success' : 'failed',
+        result: result as never,
+        error: ok ? null : (result?.error ?? `HTTP ${res.status}`),
+      })
+      .eq('id', execRow.id);
+
+    return NextResponse.json({ ok, result });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Cron failed';
+    await admin
+      .from('cron_executions')
+      .update({
+        finished_at: new Date().toISOString(),
+        status: 'failed',
+        error: msg,
+      })
+      .eq('id', execRow.id);
+    return bad(msg, 500);
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const supabase = createServerSupabaseClientFromRequest(req);
@@ -180,6 +237,10 @@ export async function POST(req: NextRequest) {
         return await broadcast(admin, body);
       case 'deleteUser':
         return await deleteUser(admin, body, user.id);
+      case 'cron_history':
+        return await cronHistory(admin);
+      case 'run_cron':
+        return await runCron(admin, body);
     }
     return bad('Unknown action');
   } catch (e) {

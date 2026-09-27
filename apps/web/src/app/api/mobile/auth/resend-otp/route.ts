@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
       text: tmpl.text,
     });
     if (!sent.success) {
-      return NextResponse.json({ error: 'Could not send verification email' }, { status: 500 });
+      return NextResponse.json({ error: sent.error ?? 'Could not send verification email' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, message: `New code sent to ${email}.` });
