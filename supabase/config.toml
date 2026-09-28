@@ -43,11 +43,13 @@ provider = "email"
 external_email_enabled = true
 external_phone_enabled = false
 
-[auth.external]
-email_enabled = true
-google_enabled = true
-google_client_id = "your-google-client-id"
-google_secret = "your-google-client-secret"
+[auth.external.email]
+enabled = true
+
+[auth.external.google]
+enabled = true
+client_id = "your-google-client-id"
+secret = "your-google-client-secret"
 
 [realtime]
 enabled = true

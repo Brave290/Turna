@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import {
+  Copy,
   Megaphone,
   RefreshCw,
   Search,
@@ -33,6 +34,8 @@ import {
 } from '../lib/api';
 import { codeInputProps, noteInputProps } from '../lib/input-props';
 import { formatDate } from '../lib/format';
+import { APP_API_URL } from '../lib/supabase';
+import Clipboard from '@react-native-clipboard/clipboard';
 import { colors, radius, spacing, typography, type Palette } from '../theme';
 import { usePaletteStyles } from '../context/ThemeContext';
 import { LogOut } from 'lucide-react-native';
@@ -52,6 +55,13 @@ const EMPTY: AdminOverview = {
   counts: { users: 0, circles: 0, memberships: 0 },
   recentUsers: [],
 };
+
+/** Cron endpoints the platform runs on Vercel — copyable for manual triggers. */
+const CRON_JOBS = [
+  { name: 'reminders', label: 'Contribution reminders', url: `${APP_API_URL}/api/cron/reminders` },
+  { name: 'digest', label: 'Money digest', url: `${APP_API_URL}/api/cron/digest` },
+  { name: 'db-ping', label: 'Database keep-alive', url: `${APP_API_URL}/api/cron/db-ping` },
+] as const;
 
 export function AdminDashboardScreen({ onBack }: { onBack?: () => void }) {
   const { p, styles } = usePaletteStyles(makeStyles);
@@ -152,6 +162,20 @@ export function AdminDashboardScreen({ onBack }: { onBack?: () => void }) {
     const res = await mobileAdmin.cronHistory();
     setCronLoading(false);
     if (res.ok && res.data) setCronHistory(res.data.history ?? []);
+    else toast(res.error ?? 'Could not load cron history', 'error');
+  }
+
+  async function copyOne(url: string) {
+    try {
+      await Clipboard.setString(url);
+      toast('Endpoint copied');
+    } catch {
+      toast('Could not copy', 'error');
+    }
+  }
+
+  async function copyCronEndpoints() {
+    await copyOne(CRON_JOBS.map((j) => j.url).join('\n'));
   }
 
   async function runCronJob(jobName: string) {
@@ -362,47 +386,50 @@ export function AdminDashboardScreen({ onBack }: { onBack?: () => void }) {
 
             <Text style={styles.section}>Cron jobs</Text>
             <Card style={styles.panel}>
-              <View style={styles.cronRow}>
-                <Text style={styles.cronLabel}>Reminders</Text>
+              <View style={styles.cronHead}>
+                <Text style={styles.cronLabel}>Endpoints</Text>
                 <Button
-                  label="Run"
-                  onPress={() => void runCronJob('reminders')}
-                  loading={cronRunning === 'reminders'}
-                  disabled={cronRunning !== null}
+                  label="Copy all"
+                  variant="ghost"
+                  onPress={() => void copyCronEndpoints()}
                   style={styles.cronBtn}
                 />
               </View>
-              <View style={styles.cronRow}>
-                <Text style={styles.cronLabel}>Digest</Text>
-                <Button
-                  label="Run"
-                  onPress={() => void runCronJob('digest')}
-                  loading={cronRunning === 'digest'}
-                  disabled={cronRunning !== null}
-                  style={styles.cronBtn}
-                />
-              </View>
-              <View style={styles.cronRow}>
-                <Text style={styles.cronLabel}>DB ping</Text>
-                <Button
-                  label="Run"
-                  onPress={() => void runCronJob('db-ping')}
-                  loading={cronRunning === 'db-ping'}
-                  disabled={cronRunning !== null}
-                  style={styles.cronBtn}
-                />
-              </View>
+              {CRON_JOBS.map((job) => (
+                <View key={job.name} style={styles.cronEndpointRow}>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={styles.rowTitle}>{job.label}</Text>
+                    <Text style={styles.cronUrl} numberOfLines={1} ellipsizeMode="middle">
+                      {job.url}
+                    </Text>
+                  </View>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Copy ${job.label} endpoint`}
+                    onPress={() => void copyOne(job.url)}
+                    style={({ pressed }) => [styles.copyBtn, pressed && styles.iconBtnPressed]}
+                  >
+                    <Copy size={15} color={p.primary} strokeWidth={2} />
+                  </Pressable>
+                  <Button
+                    label="Run"
+                    onPress={() => void runCronJob(job.name)}
+                    loading={cronRunning === job.name}
+                    disabled={cronRunning !== null}
+                    style={styles.cronBtn}
+                  />
+                </View>
+              ))}
               <Button
                 label="Refresh history"
                 variant="ghost"
                 onPress={() => void loadCronHistory()}
                 loading={cronLoading}
-                style={{ marginTop: spacing.sm }}
+                style={{ marginTop: spacing.sm, marginHorizontal: spacing.md }}
               />
               {cronHistory.length === 0 ? (
                 <Text style={styles.emptyLine}>No cron runs yet.</Text>
-              ) : (
-                cronHistory.slice(0, 10).map((job, i) => (
+              ) : (                cronHistory.slice(0, 10).map((job, i) => (
                   <View key={job.id} style={[styles.cronHistoryRow, i > 0 && styles.rowBorder]}>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.rowTitle}>{job.job_name}</Text>
@@ -418,6 +445,11 @@ export function AdminDashboardScreen({ onBack }: { onBack?: () => void }) {
                   </View>
                 ))
               )}
+              <View style={styles.diagRow}>
+                <Text style={styles.diagText} numberOfLines={1} ellipsizeMode="middle">
+                  API base: {APP_API_URL}
+                </Text>
+              </View>
             </Card>
           </>
         )}
@@ -647,6 +679,48 @@ const makeStyles = (p: Palette) =>
       justifyContent: 'space-between',
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.sm,
+    },
+    cronHead: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.md,
+      paddingTop: spacing.md,
+    },
+    cronEndpointRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+    },
+    cronUrl: {
+      fontSize: 11,
+      color: p.textMuted,
+      marginTop: 2,
+    },
+    copyBtn: {
+      width: 34,
+      height: 34,
+      borderRadius: radius.sm,
+      borderWidth: 1,
+      borderColor: p.border,
+      backgroundColor: p.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    diagRow: {
+      paddingHorizontal: spacing.md,
+      paddingTop: spacing.sm,
+    },
+    diagText: {
+      fontSize: 10,
+      color: p.textMuted,
+    },
+    reason: {
+      fontSize: 11,
+      color: p.error,
+      marginTop: 3,
     },
     cronLabel: {
       fontSize: typography.body,

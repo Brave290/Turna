@@ -120,8 +120,16 @@ jobs:
           fi
           echo "Keystore restored ($SIZE bytes, magic $MAGIC)"
 
+      # Force a full rebuild — Gradle otherwise treats the generated JS bundle
+      # as up-to-date and can ship a stale bundle inside a fresh versionCode.
+      - name: Purge previous build outputs and JS bundle
+        run: |
+          rm -rf app/build build .gradle/configuration-cache
+          rm -f app/src/main/assets/index.android.bundle
+        working-directory: apps/mobile/android
+
       - name: Build Android Release AAB
-        run: ./gradlew bundleRelease --no-daemon
+        run: ./gradlew clean bundleRelease --no-daemon --no-build-cache
         working-directory: apps/mobile/android
         env:
           VERSION_NAME: ${{ steps.version.outputs.version }}
@@ -132,7 +140,7 @@ jobs:
           SIGNING_STORE_FILE: ${{ secrets.ANDROID_SIGNING_STORE_FILE }}
 
       - name: Build Android Release APK
-        run: ./gradlew assembleRelease --no-daemon
+        run: ./gradlew assembleRelease --no-daemon --no-build-cache
         working-directory: apps/mobile/android
         env:
           VERSION_NAME: ${{ steps.version.outputs.version }}
