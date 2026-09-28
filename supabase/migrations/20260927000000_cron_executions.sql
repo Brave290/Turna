@@ -13,6 +13,8 @@ CREATE INDEX IF NOT EXISTS idx_cron_executions_started_at ON cron_executions(sta
 
 ALTER TABLE cron_executions ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "service_role_all" ON cron_executions;
+
 CREATE POLICY "service_role_all" ON cron_executions
   FOR ALL TO service_role
   USING (true) WITH CHECK (true);
