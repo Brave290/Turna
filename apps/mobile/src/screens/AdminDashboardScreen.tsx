@@ -35,6 +35,7 @@ import {
 import { codeInputProps, noteInputProps } from '../lib/input-props';
 import { formatDate } from '../lib/format';
 import { APP_API_URL } from '../lib/supabase';
+import { BUILD_STAMP } from '../lib/build-stamp';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { colors, radius, spacing, typography, type Palette } from '../theme';
 import { usePaletteStyles } from '../context/ThemeContext';
@@ -447,7 +448,7 @@ export function AdminDashboardScreen({ onBack }: { onBack?: () => void }) {
               )}
               <View style={styles.diagRow}>
                 <Text style={styles.diagText} numberOfLines={1} ellipsizeMode="middle">
-                  API base: {APP_API_URL}
+                  build {BUILD_STAMP} · {APP_API_URL}
                 </Text>
               </View>
             </Card>
