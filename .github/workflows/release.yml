@@ -208,8 +208,8 @@ jobs:
           "$BUILD_TOOLS/apksigner" verify --verbose --min-sdk-version 35 "$APK"
           "$BUILD_TOOLS/zipalign" -c -v 4 "$APK"
           BADGING=$("$BUILD_TOOLS/aapt" dump badging "$APK")
-          printf '%s\n' "$BADGING" | grep -q "package: name='com.hx.turna'"
-          printf '%s\n' "$BADGING" | grep -q "targetSdkVersion='34'"
+          grep -F "package: name='com.hx.turna'" <<<"$BADGING" >/dev/null
+          grep -F "targetSdkVersion='34'" <<<"$BADGING" >/dev/null
           echo "APK package, signature, and alignment verified"
 
       - name: Prepare release artifacts
