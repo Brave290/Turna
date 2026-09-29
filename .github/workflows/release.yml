@@ -201,9 +201,13 @@ jobs:
         run: |
           set -euo pipefail
           APK=apps/mobile/android/app/build/outputs/apk/release/app-release.apk
-          apksigner verify --verbose --min-sdk-version 35 "$APK"
-          zipalign -c -v 4 "$APK"
-          BADGING=$(aapt dump badging "$APK")
+          BUILD_TOOLS="$ANDROID_HOME/build-tools/34.0.0"
+          test -x "$BUILD_TOOLS/apksigner"
+          test -x "$BUILD_TOOLS/zipalign"
+          test -x "$BUILD_TOOLS/aapt"
+          "$BUILD_TOOLS/apksigner" verify --verbose --min-sdk-version 35 "$APK"
+          "$BUILD_TOOLS/zipalign" -c -v 4 "$APK"
+          BADGING=$("$BUILD_TOOLS/aapt" dump badging "$APK")
           printf '%s\n' "$BADGING" | grep -q "package: name='com.hx.turna'"
           printf '%s\n' "$BADGING" | grep -q "targetSdkVersion='34'"
           echo "APK package, signature, and alignment verified"
