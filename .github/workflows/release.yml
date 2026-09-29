@@ -23,70 +23,8 @@ env:
   APP_NAME: turna
 
 jobs:
-  # iOS builds in parallel so one push produces BOTH platforms in one release.
-  ios:
-    name: iOS Build
-    runs-on: macos-14
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          run_install: false
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: CocoaPods install
-        working-directory: apps/mobile/ios
-        run: pod install --repo-update
-
-      - name: Build iOS (simulator, unsigned)
-        working-directory: apps/mobile/ios
-        run: |
-          set -euo pipefail
-          xcodebuild \
-            -workspace Turna.xcworkspace \
-            -scheme Turna \
-            -configuration Release \
-            -sdk iphonesimulator \
-            -destination 'generic/platform=iOS Simulator' \
-            CODE_SIGNING_ALLOWED=NO \
-            ONLY_ACTIVE_ARCH=NO \
-            build
-          APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData \
-            -path '*Build/Products/Release-iphonesimulator/Turna.app' \
-            -maxdepth 6 | head -n 1)
-          if [ -z "$APP_PATH" ]; then
-            echo "Could not locate built Turna.app" >&2
-            exit 1
-          fi
-          mkdir -p "$RUNNER_TEMP/ios-out"
-          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "$RUNNER_TEMP/ios-out/turna-ios-simulator.zip"
-          echo "Built: $APP_PATH"
-          ls -la "$RUNNER_TEMP/ios-out"
-
-      - name: Upload iOS artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-build
-          path: ${{ runner.temp }}/ios-out/turna-ios-simulator.zip
-          if-no-files-found: error
-          retention-days: 7
-
   release:
-    name: Build & Release
-    needs: ios
+    name: Android Build & Release
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -259,11 +197,16 @@ jobs:
             exit 1
           fi
 
-      - name: Download iOS artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: ios-build
-          path: release-artifacts
+      - name: Verify APK package and signature
+        run: |
+          set -euo pipefail
+          APK=apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+          apksigner verify --verbose --min-sdk-version 35 "$APK"
+          zipalign -c -v 4 "$APK"
+          BADGING=$(aapt dump badging "$APK")
+          printf '%s\n' "$BADGING" | grep -q "package: name='com.hx.turna'"
+          printf '%s\n' "$BADGING" | grep -q "targetSdkVersion='34'"
+          echo "APK package, signature, and alignment verified"
 
       - name: Prepare release artifacts
         run: |
@@ -289,14 +232,8 @@ jobs:
           sha256sum turna.aab > turna.aab.sha256
           sha256sum turna.apk > turna.apk.sha256
           sha256sum turna-source.tar.gz > turna-source.tar.gz.sha256
-          if [ -f turna-ios-simulator.zip ]; then
-            sha256sum turna-ios-simulator.zip > turna-ios-simulator.zip.sha256
-          fi
-          # Full release bundle: APK + AAB + iOS + source + all checksums
+          # Full Android release bundle: APK + AAB + source + all checksums
           ZIP_FILES="turna.aab turna.apk turna-source.tar.gz turna.aab.sha256 turna.apk.sha256 turna-source.tar.gz.sha256"
-          if [ -f turna-ios-simulator.zip ]; then
-            ZIP_FILES="$ZIP_FILES turna-ios-simulator.zip turna-ios-simulator.zip.sha256"
-          fi
           zip -9 turna-bundle.zip $ZIP_FILES
           sha256sum turna-bundle.zip > turna-bundle.zip.sha256
           cd ..
@@ -332,7 +269,7 @@ jobs:
         run: |
           set -euo pipefail
           BUILT_BY="Akanji Mus'ab • Brave hx Technology • Founda Technologies"
-          NOTES=$(printf '## Turna %s\n\n### Changes\n%s\n\n### Downloads\n- **Android APK (direct install)**: `turna.apk`\n- **Android App Bundle (Play Store)**: `turna.aab`\n- **iOS Simulator build (unsigned)**: `turna-ios-simulator.zip`\n- **Full release bundle (APK + AAB + iOS + source + checksums)**: `turna-bundle.zip`\n- **Source Code**: `turna-source.tar.gz`\n\nBuild %s · versionCode %s\n\n### Verification\nAll artifacts include SHA256 checksums (`.sha256` files).\n\n### Built by\n%s' \
+          NOTES=$(printf '## Turna %s\n\n### Changes\n%s\n\n### Downloads\n- **Android APK (direct install)**: `turna.apk`\n- **Android App Bundle (Play Store)**: `turna.aab`\n- **Full Android release bundle (APK + AAB + source + checksums)**: `turna-bundle.zip`\n- **Source Code**: `turna-source.tar.gz`\n\nBuild %s · versionCode %s\n\n### Verification\nAll artifacts include SHA256 checksums (`.sha256` files).\n\n### Built by\n%s' \
             "$VERSION" "$CHANGELOG" "${GITHUB_SHA::7}" "$CODE" "$BUILT_BY")
 
           if [ "$PRERELEASE" = "true" ]; then
@@ -360,13 +297,6 @@ jobs:
             release-artifacts/turna-source.tar.gz.sha256 \
             release-artifacts/turna-bundle.zip.sha256 \
             --clobber
-          if [ -f release-artifacts/turna-ios-simulator.zip ]; then
-            gh release upload "$TAG" \
-              --repo "$GITHUB_REPOSITORY" \
-              release-artifacts/turna-ios-simulator.zip \
-              release-artifacts/turna-ios-simulator.zip.sha256 \
-              --clobber
-          fi
           gh release edit "$TAG" \
             --repo "$GITHUB_REPOSITORY" \
             "${PRE_ARGS[@]}" \
@@ -476,7 +406,7 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
-      # Every push first lands as a Pre-release, then this step promotes that
+          # Every push first lands as a Pre-release, then this step promotes that
       # exact same build to a full (non-prerelease) Latest release once the
       # artifacts are verified and the app is live. Set the repo variable
       # RELEASE_PRERELEASE=true to pin builds as prereleases permanently.
