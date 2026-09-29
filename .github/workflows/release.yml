@@ -182,6 +182,16 @@ jobs:
           fi
           echo "Keystore restored ($SIZE bytes, magic $MAGIC)"
 
+      - name: Verify build stamp is wired into the app
+        run: |
+          set -euo pipefail
+          STAMP_FILE=apps/mobile/src/lib/build-stamp.ts
+          ADMIN_SCREEN=apps/mobile/src/screens/AdminDashboardScreen.tsx
+          grep -q 'export const BUILD_STAMP' "$STAMP_FILE"
+          grep -q "from '../lib/build-stamp'" "$ADMIN_SCREEN"
+          grep -q 'BUILD_STAMP' "$ADMIN_SCREEN"
+          echo "Build stamp is referenced by the mobile app"
+
       - name: Stamp build with current commit
         run: |
           set -euo pipefail
