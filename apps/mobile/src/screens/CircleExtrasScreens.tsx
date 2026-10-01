@@ -829,8 +829,36 @@ export function NewCircleScreen({ onDone, onBack }: { onDone?: () => void; onBac
       description: description.trim() || null,
     };
     try {
-      const { error: e } = await supabase.from('circles').insert(row);
-      if (e) throw e;
+      const { data: circle, error: circleError } = await supabase
+        .from('circles')
+        .insert(row)
+        .select('id')
+        .single();
+      if (circleError || !circle) throw circleError ?? new Error('Circle was not created.');
+
+      const { error: memberError } = await supabase.from('circle_members').insert({
+        circle_id: circle.id,
+        user_id: user.id,
+        role: 'owner',
+        payout_position: 1,
+        status: 'active',
+        joined_at: new Date().toISOString(),
+      });
+      if (memberError) {
+        // Avoid leaving a circle that cannot be used by its owner.
+        await supabase.from('circles').delete().eq('id', circle.id);
+        throw new Error(`Circle created but owner membership failed: ${memberError.message}`);
+      }
+
+      await supabase.from('ledger_events').insert({
+        circle_id: circle.id,
+        actor_id: user.id,
+        event_type: 'CIRCLE_CREATED',
+        entity_type: 'circle',
+        entity_id: circle.id,
+        payload: { name: row.name },
+        previous_event_id: null,
+      });
       onDone?.();
     } catch (e) {
       if (isOfflineError(e)) {
