@@ -4,6 +4,12 @@ import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  const config = {
+    supabaseUrl: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL),
+    supabaseAnonKey: Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
+    supabaseServiceRole: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
+    smtpPassword: Boolean(process.env.SMTP_PASS),
+  };
   try {
     const supabase = createServerSupabaseClient();
     const { error } = await supabase.from('profiles').select('id').limit(1);
@@ -14,6 +20,7 @@ export async function GET() {
         status: 'ok',
         db: 'degraded',
         message: error.message,
+        config,
         timestamp: new Date().toISOString(),
         service: 'turna',
       });
@@ -22,6 +29,7 @@ export async function GET() {
     return NextResponse.json({
       status: 'ok',
       db: 'ok',
+      config,
       timestamp: new Date().toISOString(),
       service: 'turna',
     });
@@ -30,6 +38,7 @@ export async function GET() {
       {
         status: 'error',
         message: e instanceof Error ? e.message : 'Health check failed',
+        config,
         timestamp: new Date().toISOString(),
         service: 'turna',
       },

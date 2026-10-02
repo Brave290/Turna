@@ -24,9 +24,25 @@ export async function post<T = unknown>(
     let token: string | undefined;
     let authNote = 'no-auth';
     if (opts?.auth) {
-      const { data } = await supabase.auth.getSession();
+      let { data } = await supabase.auth.getSession();
       token = data.session?.access_token;
+      // Vercel returns HTTP 494 when request headers exceed its limit. A stale
+      // Supabase session can contain an unusually large access token after
+      // account metadata changes; refresh it before putting it in a header.
+      if (token && token.length > 6000) {
+        const refreshed = await supabase.auth.refreshSession();
+        data = refreshed.data;
+        token = data.session?.access_token;
+      }
       authNote = token ? 'bearer-ok' : 'NO-SESSION-TOKEN';
+      if (token && token.length > 12000) {
+        return {
+          ok: false,
+          error: 'Session is too large for the production API. Sign out and sign in again.',
+          status: 431,
+          url,
+        };
+      }
     }
     const res = await fetch(url, {
       method: 'POST',
