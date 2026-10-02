@@ -399,7 +399,7 @@ jobs:
           fi
 
       - name: Deploy to Vercel (Production)
-        uses: amondnet/vercel-action@v25
+        uses: amondnet/vercel-action@v42.3.0
         if: steps.check-vercel.outputs.available == 'true'
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
