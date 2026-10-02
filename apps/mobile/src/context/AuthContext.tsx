@@ -120,7 +120,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setPendingPurpose('signup');
         return { needsVerify: true };
       }
-      return { error: res.error };
+      // Keep the HTTP status in the message so a failed send is diagnosable
+      // instead of collapsing into a generic "could not send".
+      return { error: `${res.error ?? 'Signup failed'}${res.status ? ` [HTTP ${res.status}]` : ''}` };
     },
     []
   );

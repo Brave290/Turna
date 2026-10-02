@@ -4,8 +4,8 @@
 
 /**
  * Platform admin identity: the signed-in account with this email gets the
- * in-app admin dashboard (Profile row + auto-offer after login).
- * Server side still gates on the `ADMIN_EMAILS` env allowlist.
+ * in-app admin dashboard. This is the ONLY admin — the server enforces the
+ * same single address (apps/web/src/lib/admin.ts) regardless of env.
  */
 export const ADMIN_EMAIL = 'support.turna@gmail.com';
 

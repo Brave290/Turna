@@ -6,6 +6,12 @@ export type ApiResult<T = unknown> = {
   error?: string;
   /** True when the request never reached the server (connectivity). */
   offline?: boolean;
+  /** HTTP status, for diagnosing unexpected responses. */
+  status?: number;
+  /** Raw body when it was not JSON — reveals HTML error/interstitial pages. */
+  raw?: string;
+  /** The exact URL that was called. */
+  url?: string;
 };
 
 export async function post<T = unknown>(
@@ -13,41 +19,72 @@ export async function post<T = unknown>(
   body: Record<string, unknown>,
   opts?: { auth?: boolean }
 ): Promise<ApiResult<T>> {
+  const url = `${APP_API_URL}${path}`;
   try {
     let token: string | undefined;
+    let authNote = 'no-auth';
     if (opts?.auth) {
       const { data } = await supabase.auth.getSession();
       token = data.session?.access_token;
+      authNote = token ? 'bearer-ok' : 'NO-SESSION-TOKEN';
     }
-    const res = await fetch(`${APP_API_URL}${path}`, {
+    const res = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Accept: 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: JSON.stringify(body),
     });
-    const json = (await res.json().catch(() => ({}))) as T & {
-      error?: string | Record<string, string[]>;
-    };
+
+    // Read as text first: a Vercel/HTML error page would otherwise be silently
+    // discarded by res.json() and surface as a bare "Request failed".
+    const text = await res.text();
+    let json: (T & { error?: string | Record<string, string[]> }) | null = null;
+    try {
+      json = text ? (JSON.parse(text) as T & { error?: string | Record<string, string[]> }) : null;
+    } catch {
+      json = null;
+    }
+
     if (!res.ok) {
       const err = json?.error;
       const msg =
         typeof err === 'string'
           ? err
-          : Array.isArray(err?.form)
-            ? err.form[0]
-            : typeof err === 'object' && err
-              ? Object.values(err).flat()[0]
-              : 'Request failed';
-      return { ok: false, error: msg || 'Request failed' };
+          : Array.isArray((err as { form?: string[] } | undefined)?.form)
+            ? ((err as { form: string[] }).form[0] ?? '')
+            : err && typeof err === 'object'
+              ? (Object.values(err).flat()[0] as string | undefined)
+              : '';
+      if (msg) return { ok: false, error: msg, status: res.status, url, raw: text.slice(0, 400) };
+      // No usable message — surface the real HTTP status and a content hint.
+      const kind = text.trim().startsWith('<') ? 'HTML page' : text.slice(0, 120) || 'empty body';
+      return {
+        ok: false,
+        error: `Request failed (HTTP ${res.status}, ${authNote}, ${kind})`,
+        status: res.status,
+        url,
+        raw: text.slice(0, 400),
+      };
     }
-    return { ok: true, data: json };
-  } catch {
+    if (!json) {
+      return {
+        ok: false,
+        error: `Unexpected non-JSON response (${authNote})`,
+        status: res.status,
+        url,
+        raw: text.slice(0, 400),
+      };
+    }
+    return { ok: true, data: json, status: res.status, url };
+  } catch (e) {
     return {
       ok: false,
-      error: 'Network error — check your connection',
+      error: `Network error — ${e instanceof Error ? e.message : 'check your connection'}`,
       offline: true,
+      url,
     };
   }
 }

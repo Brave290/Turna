@@ -74,6 +74,7 @@ export function AdminDashboardScreen({ onBack }: { onBack?: () => void }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [diag, setDiag] = useState<string>('');
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const [query, setQuery] = useState('');
@@ -87,13 +88,24 @@ export function AdminDashboardScreen({ onBack }: { onBack?: () => void }) {
   const load = useCallback(async () => {
     setError(null);
     const res = await mobileAdmin.overview();
-    if (res.ok && res.data) setData(res.data);
-    else if (!res.offline) {
+    if (res.ok && res.data) {
+      setData(res.data);
+      setDiag(`OK · ${res.status ?? '?'} · ${res.url ?? ''}`);
+    } else if (!res.offline) {
       setError(
         res.error === 'Forbidden'
           ? 'This account is not on the admin allowlist yet.'
           : (res.error ?? 'Could not load the dashboard.')
       );
+      setDiag(
+        [
+          `status=${res.status ?? 'none'}`,
+          `url=${res.url ?? 'unknown'}`,
+          `raw=${(res.raw ?? '').slice(0, 200) || 'n/a'}`,
+        ].join(' · ')
+      );
+    } else {
+      setDiag(`OFFLINE · ${res.error ?? ''} · ${res.url ?? ''}`);
     }
     setLoading(false);
     setRefreshing(false);
@@ -270,6 +282,18 @@ export function AdminDashboardScreen({ onBack }: { onBack?: () => void }) {
                 />
               </Card>
             ) : null}
+
+            <View style={styles.diagRow}>
+              <Text style={styles.diagText} selectable>
+                {diag || 'no request yet'}
+              </Text>
+              <Button
+                label="Copy diagnostics"
+                variant="ghost"
+                onPress={() => void copyOne(`build ${BUILD_STAMP}\napi ${APP_API_URL}\n${diag}`)}
+                style={styles.cronBtn}
+              />
+            </View>
 
             <View style={styles.statGrid}>
               <Card style={styles.statCard}>
