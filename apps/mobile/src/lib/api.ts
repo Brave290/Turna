@@ -35,11 +35,14 @@ export async function post<T = unknown>(
         token = data.session?.access_token;
       }
       authNote = token ? 'bearer-ok' : 'NO-SESSION-TOKEN';
-      if (token && token.length > 12000) {
+      // Never send a token that can trip Vercel's header limit. Clear only the
+      // local session; the account and database data remain untouched.
+      if (token && token.length > 6000) {
+        await supabase.auth.signOut({ scope: 'local' });
         return {
           ok: false,
-          error: 'Session is too large for the production API. Sign out and sign in again.',
-          status: 431,
+          error: 'Your saved session was refreshed. Please sign in again.',
+          status: 401,
           url,
         };
       }
@@ -53,6 +56,16 @@ export async function post<T = unknown>(
       },
       body: JSON.stringify(body),
     });
+
+    if (res.status === 494 || res.status === 431) {
+      await supabase.auth.signOut({ scope: 'local' });
+      return {
+        ok: false,
+        error: 'Your saved session expired. Please sign in again.',
+        status: res.status,
+        url,
+      };
+    }
 
     // Read as text first: a Vercel/HTML error page would otherwise be silently
     // discarded by res.json() and surface as a bare "Request failed".

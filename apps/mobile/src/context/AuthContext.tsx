@@ -57,8 +57,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
       if (!mounted) return;
+      // Old profile avatars were once copied into auth metadata, creating
+      // oversized JWTs that Vercel rejects with HTTP 494. Clear only this
+      // device's cached session; never delete the account or app data.
+      if (data.session?.access_token && data.session.access_token.length > 6000) {
+        await supabase.auth.signOut({ scope: 'local' });
+        if (mounted) applyUser(null);
+        return;
+      }
       applyUser(data.session);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
