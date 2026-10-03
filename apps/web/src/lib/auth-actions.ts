@@ -664,10 +664,6 @@ export async function uploadAvatar(
     }
   }
 
-  await supabase.auth.updateUser({
-    data: { avatar_url: dataUrl },
-  });
-
   revalidatePath('/');
   revalidatePath('/');
   revalidatePath('/');
@@ -710,7 +706,6 @@ export async function removeAvatar(): Promise<AvatarActionState> {
     }
   }
 
-  await supabase.auth.updateUser({ data: { avatar_url: null } });
   revalidatePath('/');
   revalidatePath('/');
   revalidatePath('/');
@@ -758,7 +753,9 @@ export async function getProfile() {
       (meta.display_name as string) ||
       (meta.name as string) ||
       (user.email ?? 'Member').split('@')[0],
-    avatar_url: (meta.avatar_url as string | null) ?? null,
+    // Avatars belong in profiles.avatar_url, not auth metadata. Keeping large
+    // data URLs out of user_metadata prevents oversized Supabase JWTs.
+    avatar_url: null,
   };
 
   const { data: inserted } = await supabase

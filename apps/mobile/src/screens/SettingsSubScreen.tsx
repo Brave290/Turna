@@ -926,11 +926,6 @@ function ProfileSection({ ctx }: { ctx: Ctx }) {
         ctx.toast(error.message, 'error');
         return;
       }
-      try {
-        await supabase.auth.updateUser({ data: { avatar_url: null } });
-      } catch {
-        /* metadata optional */
-      }
       ctx.toast('Profile picture removed.');
     } catch (e) {
       if (isOfflineError(e)) {
@@ -991,11 +986,6 @@ function ProfileSection({ ctx }: { ctx: Ctx }) {
         }
         ctx.toast(error.message, 'error');
         return;
-      }
-      try {
-        await supabase.auth.updateUser({ data: { avatar_url: dataUrl } });
-      } catch {
-        /* metadata optional */
       }
       ctx.toast('Profile picture updated.');
     } catch {
