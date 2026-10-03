@@ -17,15 +17,16 @@ interface WordmarkProps extends HTMLAttributes<HTMLSpanElement> {
 }
 
 const VARIANT_SRC: Record<LogoVariant, string> = {
-  default: "/logo.png",
-  dark: "/logo-dark.png",
-  primary: "/logo.png",
-  "on-dark": "/logo-on-dark.png",
+  default: "/turna-mark-clean-768.png",
+  dark: "/turna-mark-clean-768.png",
+  primary: "/turna-mark-clean-768.png",
+  "on-dark": "/turna-mark-clean-768.png",
 };
 
 /**
  * Turna logo — real brand assets from /public.
- * Variants map to logo.png / logo-dark.png / logo-on-dark.png.
+ * All variants use one centered transparent mark so nav, hero, auth, and
+ * favicon-facing surfaces do not drift or introduce square backgrounds.
  */
 export function Logo({
   variant = "default",

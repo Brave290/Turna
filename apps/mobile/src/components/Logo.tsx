@@ -11,12 +11,12 @@ import {
 import { colors, spacing, type Palette } from '../theme';
 import { usePaletteStyles } from '../context/ThemeContext';
 
-const LOGO = require('../../assets/logo.png');
-const LOGO_ON_DARK = require('../../assets/logo-on-dark.png');
+const LOGO = require('../../assets/logo-clean.png');
+const LOGO_ON_DARK = require('../../assets/logo-clean.png');
 
 /**
- * Turna logo — same brand assets as web (/logo.png, /logo-on-dark.png).
- * Do not invent letter marks or alternate icons.
+ * Turna logo — one centered transparent mark for auth, navigation, hero, and
+ * splash surfaces. The native app icon remains a separate unchanged asset.
  */
 export function Logo({
   size = 40,

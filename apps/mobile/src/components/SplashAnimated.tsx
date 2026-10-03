@@ -3,12 +3,12 @@ import { Animated, Easing, Image, StyleSheet, Text, View } from 'react-native';
 import { useMotion } from '../context/MotionContext';
 import { colors } from '../theme';
 
-const APP_ICON = require('../../assets/app-icon-192.png');
+const BRAND_MARK = require('../../assets/logo-clean.png');
 
 /**
- * The one and only splash: continues the native app-icon splash on the same
- * cream background, then animates the icon (spring scale-in) and the
- * "Animated Turna" wordmark (rise + fade, staggered behind the icon).
+ * The one and only splash: the native app icon is untouched; this in-app
+ * continuation uses the centered transparent brand mark with a restrained
+ * spring and wordmark entrance.
  */
 export function SplashAnimated() {
   const { reduceMotion } = useMotion();
@@ -66,7 +66,7 @@ export function SplashAnimated() {
           transform: [{ scale: iconScale }],
         }}
       >
-        <Image source={APP_ICON} style={styles.icon} resizeMode="contain" />
+        <Image source={BRAND_MARK} style={styles.icon} resizeMode="contain" />
       </Animated.View>
       <Animated.Text
         style={[
@@ -91,9 +91,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cream,
   },
   icon: {
-    width: 92,
-    height: 92,
-    borderRadius: 22,
+    width: 116,
+    height: 116,
   },
   word: {
     marginTop: 18,
